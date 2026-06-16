@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/user/Home';
+import ProductDetail from './pages/user/ProductDetail';
 import Dashboard from './pages/admin/Dashboard';
 import Products from './pages/admin/Products';
 import AddProduct from './pages/admin/AddProduct';
@@ -20,6 +21,7 @@ function App() {
         {/* User Facing Store Routes */}
         <Route path="/" element={<UserLayout />}>
           <Route index element={<Home />} />
+          <Route path="product/:id" element={<ProductDetail />} />
         </Route>
 
         {/* Admin Dashboard Routes */}

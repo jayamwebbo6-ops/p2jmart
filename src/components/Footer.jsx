@@ -15,10 +15,10 @@ const Footer = () => {
       <div className="max-w-[1500px] mx-auto px-6 lg:px-12 pt-12 pb-8">
         
         {/* Top Section */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           
           {/* ABOUT */}
-          <div>
+          <div className="col-span-1">
             <h4 className="text-white font-bold mb-4 text-[14px]">ABOUT</h4>
             <ul className="space-y-2 text-white">
               <li><Link to="/contact" className="text-[13px]">Contact Us</Link></li>
@@ -28,7 +28,7 @@ const Footer = () => {
           </div>
 
           {/* CONSUMER POLICY */}
-          <div>
+          <div className="col-span-1">
             <h4 className="text-white font-bold mb-4 text-[14px]">CONSUMER POLICY</h4>
             <ul className="space-y-2 text-white">
               <li><Link to="/terms" className="text-[13px]">Terms and Condition</Link></li>
@@ -39,13 +39,13 @@ const Footer = () => {
           </div>
 
           {/* Address */}
-          <div>
+          <div className="col-span-2 md:col-span-1 text-center md:text-left flex flex-col items-center md:items-start">
             <h4 className="text-white font-bold mb-4 text-[14px]">Address</h4>
             <p className="text-[13px] text-white leading-relaxed mb-4">
               25, Vembuliamman koil street, west k.k. nagar ,<br/>
               chennai 78
             </p>
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 justify-center md:justify-start">
               <a href="#" className="text-white"><FaInstagram size={16} /></a>
               <a href="#" className="text-white"><FaXTwitter size={16} /></a>
               <a href="#" className="text-white"><FaYoutube size={16} /></a>
@@ -54,7 +54,7 @@ const Footer = () => {
           </div>
 
           {/* Registered Office */}
-          <div>
+          <div className="col-span-2 md:col-span-1 text-center md:text-left flex flex-col items-center md:items-start">
             <h4 className="text-white font-bold mb-4 text-[14px]">Registered Office Address:</h4>
             <div className="leading-relaxed mb-4 space-y-1">
               <p className="text-[13px] text-white m-0">Buildings Alyssa, Begonia &amp; Clove Embassy Tech</p>
@@ -65,12 +65,12 @@ const Footer = () => {
               <p className="text-[13px] text-white m-0">Telephone: 123-456-7890</p>
             </div>
             
-            <div className="flex flex-wrap gap-2 mt-4">
-              <div className="bg-white rounded px-1 flex items-center justify-center"><FaCcVisa size={26} className="text-[#1a1f71]" /></div>
-              <div className="bg-white rounded px-1 flex items-center justify-center"><FaCcAmex size={26} className="text-[#002663]" /></div>
-              <div className="bg-white rounded px-1 flex items-center justify-center"><FaCcMastercard size={26} className="text-[#eb001b]" /></div>
-              <div className="bg-white rounded px-1 flex items-center justify-center"><FaCcPaypal size={26} className="text-[#003087]" /></div>
-              <div className="bg-white rounded px-1 flex items-center justify-center"><FaCcDiscover size={26} className="text-[#ff6000]" /></div>
+            <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
+              <img src={`${import.meta.env.BASE_URL}payment_logos/visa.png`} alt="Visa" className="h-8 w-12 object-cover rounded bg-white" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/amex.png`} alt="Amex" className="h-8 w-12 object-cover rounded bg-white" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/mastercard.png`} alt="Mastercard" className="h-8 w-12 object-cover rounded bg-white" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/paypal.png`} alt="PayPal" className="h-8 w-12 object-cover rounded bg-white" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/discover.png`} alt="Discover" className="h-8 w-12 object-cover rounded bg-white" />
             </div>
           </div>
 
