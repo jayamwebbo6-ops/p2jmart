@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { 
   Search, 
   User, 
@@ -14,7 +14,7 @@ import { FaXTwitter } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 import { categories } from '../utils/constants';
 
-const Header = () => {
+const Header = memo(() => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -31,9 +31,9 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const toggleCategory = (index) => {
-    setOpenCategoryIndex(openCategoryIndex === index ? null : index);
-  };
+  const toggleCategory = useCallback((index) => {
+    setOpenCategoryIndex(prevIndex => prevIndex === index ? null : index);
+  }, []);
 
   return (
     <>
@@ -232,6 +232,6 @@ const Header = () => {
       )}
     </>
   );
-};
+});
 
 export default Header;

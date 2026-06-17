@@ -1,25 +1,31 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Loader from './components/Loader';
+
+// Layouts (usually kept static, but can be lazy if heavy)
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
-import Home from './pages/user/Home';
-import UserProducts from './pages/user/Products';
-import ProductDetail from './pages/user/ProductDetail';
 import AccountLayout from './layouts/AccountLayout';
-import Profile from './pages/user/Profile';
-import Orders from './pages/user/Orders';
-import OrderDetails from './pages/user/OrderDetails';
-import AddressBook from './pages/user/AddressBook';
-import Wishlist from './pages/user/Wishlist';
-import Cart from './pages/user/Cart';
 
-import Dashboard from './pages/admin/Dashboard';
-import Products from './pages/admin/Products';
-import AddProduct from './pages/admin/AddProduct';
-import AdminOrders from './pages/admin/Orders';
-import Users from './pages/admin/Users';
-import Settings from './pages/admin/Settings';
-import ContactPage from './pages/user/ContactPage';
+// Lazy loading user pages
+const Home = lazy(() => import('./pages/user/Home'));
+const UserProducts = lazy(() => import('./pages/user/Products'));
+const ProductDetail = lazy(() => import('./pages/user/ProductDetail'));
+const Profile = lazy(() => import('./pages/user/Profile'));
+const Orders = lazy(() => import('./pages/user/Orders'));
+const OrderDetails = lazy(() => import('./pages/user/OrderDetails'));
+const AddressBook = lazy(() => import('./pages/user/AddressBook'));
+const Wishlist = lazy(() => import('./pages/user/Wishlist'));
+const Cart = lazy(() => import('./pages/user/Cart'));
+const ContactPage = lazy(() => import('./pages/user/ContactPage'));
+
+// Lazy loading admin pages
+const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const Products = lazy(() => import('./pages/admin/Products'));
+const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
+const AdminOrders = lazy(() => import('./pages/admin/Orders'));
+const Users = lazy(() => import('./pages/admin/Users'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
 
 function App() {
   // Vite automatically exposes the configured base URL here
@@ -27,42 +33,44 @@ function App() {
 
   return (
     <BrowserRouter basename={basename}>
-      <Routes>
-        {/* User Facing Store Routes */}
-        <Route path="/" element={<UserLayout />}>
-          <Route index element={<Home />} />
-          <Route path="products" element={<UserProducts />} />
-          <Route path="product/:id" element={<ProductDetail />} />
-          <Route path="cart" element={<Cart />} />
-          <Route path="contact" element={<ContactPage />} />
-
-          
-          {/* Account Routes */}
-          <Route path="my-account" element={<AccountLayout />}>
-            <Route index element={<Profile />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="address" element={<AddressBook />} />
-            <Route path="wishlist" element={<Wishlist />} />
+      <Suspense fallback={<Loader />}>
+        <Routes>
+          {/* User Facing Store Routes */}
+          <Route path="/" element={<UserLayout />}>
+            <Route index element={<Home />} />
+            <Route path="products" element={<UserProducts />} />
+            <Route path="product/:id" element={<ProductDetail />} />
             <Route path="cart" element={<Cart />} />
+            <Route path="contact" element={<ContactPage />} />
+            
+            {/* Account Routes */}
+            <Route path="my-account" element={<AccountLayout />}>
+              <Route index element={<Profile />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="address" element={<AddressBook />} />
+              <Route path="wishlist" element={<Wishlist />} />
+              <Route path="cart" element={<Cart />} />
+            </Route>
+            
+            {/* Order Details Route (Without Sidebar) */}
+            <Route path="my-account/order/:id" element={<OrderDetails />} />
           </Route>
-          
-          {/* Order Details Route (Without Sidebar) */}
-          <Route path="my-account/order/:id" element={<OrderDetails />} />
-        </Route>
 
-        {/* Admin Dashboard Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="products" element={<Products />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="orders" element={<AdminOrders />} />
-          <Route path="users" element={<Users />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
-      </Routes>
+          {/* Admin Dashboard Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="products" element={<Products />} />
+            <Route path="products/add" element={<AddProduct />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="users" element={<Users />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
 
 export default App;
+
