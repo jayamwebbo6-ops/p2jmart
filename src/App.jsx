@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import Home from './pages/user/Home';
+import UserProducts from './pages/user/Products';
 import ProductDetail from './pages/user/ProductDetail';
 import AccountLayout from './layouts/AccountLayout';
 import Profile from './pages/user/Profile';
@@ -29,6 +30,7 @@ function App() {
         {/* User Facing Store Routes */}
         <Route path="/" element={<UserLayout />}>
           <Route index element={<Home />} />
+          <Route path="products" element={<UserProducts />} />
           <Route path="product/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
           
