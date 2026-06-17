@@ -50,17 +50,25 @@ const HeroBanner = () => {
         {slides.map((slide, index) => (
           <div 
             key={index} 
-            className={`absolute px-8 md:px-12 w-full md:w-3/4 transition-all duration-700 ease-in-out transform ${currentSlide === index ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            className={`absolute px-8 md:px-12 w-full md:w-3/4 transition-opacity duration-1000 ease-in-out ${currentSlide === index ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}
           >
-            <p className="text-white text-sm md:text-base font-medium mb-2 opacity-90 tracking-wide drop-shadow-sm">
-              {slide.subtitle}
-            </p>
-            <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-white mb-8 drop-shadow-md leading-tight">
-              {slide.title}
-            </h2>
-            <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all transform hover:-translate-y-0.5 hover:shadow-xl text-sm tracking-wide">
-              SHOP NOW
-            </button>
+            <div className={`transition-all duration-1000 ease-out transform ${currentSlide === index ? 'translate-y-0 opacity-100 delay-300' : 'translate-y-8 opacity-0'}`}>
+              <p className="text-white text-sm md:text-base font-medium mb-2 text-white/90 tracking-wide drop-shadow-sm">
+                {slide.subtitle}
+              </p>
+            </div>
+            
+            <div className={`transition-all duration-1000 ease-out transform ${currentSlide === index ? 'translate-y-0 opacity-100 delay-700' : 'translate-y-8 opacity-0'}`}>
+              <h2 className="text-xl md:text-3xl lg:text-4xl font-bold text-white mb-8 drop-shadow-md leading-tight">
+                {slide.title}
+              </h2>
+            </div>
+            
+            <div className={`transition-all duration-1000 ease-out transform ${currentSlide === index ? 'translate-y-0 opacity-100 delay-1000' : 'translate-y-8 opacity-0'}`}>
+              <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:-translate-y-0.5 hover:shadow-xl text-sm tracking-wide">
+                SHOP NOW
+              </button>
+            </div>
           </div>
         ))}
       </div>

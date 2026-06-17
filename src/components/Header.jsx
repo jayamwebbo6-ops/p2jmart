@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Search, 
   User, 
@@ -17,6 +17,19 @@ import { categories } from '../utils/constants';
 const Header = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  // Handle clicking outside of user menu to close it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleCategory = (index) => {
     setOpenCategoryIndex(openCategoryIndex === index ? null : index);
@@ -102,9 +115,39 @@ const Header = () => {
               <ShoppingBag size={24} strokeWidth={1.5} />
               <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
             </button>
-            <button className="hover:text-secondary transition-colors hover:scale-110 transform">
-              <User size={24} strokeWidth={1.5} />
-            </button>
+            
+            {/* User Profile Menu */}
+            <div className="relative" ref={userMenuRef}>
+              <button 
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="hover:text-secondary transition-colors hover:scale-110 transform flex items-center"
+              >
+                <User size={24} strokeWidth={1.5} />
+              </button>
+
+              {/* User Dropdown Popup */}
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-4 w-48 bg-white rounded-lg shadow-xl py-2 z-[200] border border-gray-100">
+                
+                  <Link 
+                    to="/my-account" 
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    My Account
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      // TODO: Add actual logout logic here
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
