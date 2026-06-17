@@ -3,6 +3,8 @@ import Sidebar from '../../components/Sidebar';
 import HeroBanner from '../../components/HeroBanner';
 import PromoBanners from '../../components/PromoBanners';
 import ProductSection from '../../components/ProductSection';
+import CategoryPage from '../../components/CategoryPage';
+import Collections from '../../components/Collections';
 
 const dummyProducts = [
   {
@@ -70,6 +72,9 @@ const Home = () => {
 
       {/* Electrical Product Section */}
       <ProductSection title="Electrical" products={dummyProducts} />
+
+      <CategoryPage/>
+      <Collections/>
     </div>
   );
 };
