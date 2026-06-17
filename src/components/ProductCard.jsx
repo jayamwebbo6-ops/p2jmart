@@ -32,13 +32,7 @@ const ProductCard = ({ product }) => {
         </div>
         
         <span className="text-green-600 text-[13px] font-medium">{product.discount}% Off</span>
-        
-        <button className="bg-primary text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-secondary transition-colors">
-          <ShoppingCart size={14} />
-          Add to Cart
-        </button>
-        
-        <div className="flex items-center gap-1 mt-auto pt-3">
+           <div className="flex items-center gap-1">
           <div className="flex text-yellow-400">
             {[...Array(5)].map((_, i) => (
               <Star 
@@ -52,6 +46,13 @@ const ProductCard = ({ product }) => {
           </div>
           <span className="text-gray-500 text-[12px] ml-1">({product.reviews})</span>
         </div>
+        
+        <button className="bg-primary text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-secondary transition-colors">
+          <ShoppingCart size={14} />
+          Add to Cart
+        </button>
+        
+     
       </div>
     </div>
   );

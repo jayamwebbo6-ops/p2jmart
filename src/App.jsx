@@ -19,6 +19,7 @@ import AddProduct from './pages/admin/AddProduct';
 import AdminOrders from './pages/admin/Orders';
 import Users from './pages/admin/Users';
 import Settings from './pages/admin/Settings';
+import ContactPage from './pages/user/ContactPage';
 
 function App() {
   // Vite automatically exposes the configured base URL here
@@ -33,6 +34,8 @@ function App() {
           <Route path="products" element={<UserProducts />} />
           <Route path="product/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
+          <Route path="contact" element={<ContactPage />} />
+
           
           {/* Account Routes */}
           <Route path="my-account" element={<AccountLayout />}>
