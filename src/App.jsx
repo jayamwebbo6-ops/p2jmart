@@ -20,6 +20,7 @@ import AdminOrders from './pages/admin/Orders';
 import Users from './pages/admin/Users';
 import Settings from './pages/admin/Settings';
 import ContactPage from './pages/user/ContactPage';
+import Subcategory from './pages/user/subcategory';
 
 function App() {
   // Vite automatically exposes the configured base URL here
@@ -35,6 +36,7 @@ function App() {
           <Route path="product/:id" element={<ProductDetail />} />
           <Route path="cart" element={<Cart />} />
           <Route path="contact" element={<ContactPage />} />
+          <Route path="subCategory" element={<Subcategory />} />
 
           
           {/* Account Routes */}

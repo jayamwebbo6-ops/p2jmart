@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { categories } from '../../utils/constants';
+import { useNavigate } from "react-router-dom";
 
 // Array of diverse product images to use for subcategories
 const subcategoryImages = [
@@ -26,6 +27,7 @@ const CategoryRow = ({ category }) => {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const navigate = useNavigate();
 
   const checkScroll = () => {
     if (scrollRef.current) {
@@ -56,7 +58,6 @@ const CategoryRow = ({ category }) => {
   return (
     <div className="mb-14 relative group">
       <h2 className="text-xl md:text-2xl font-medium text-gray-800 mb-6">{category.name}</h2>
-      
       {/* Scroll Left Button */}
       {canScrollLeft && (
         <button 
@@ -85,17 +86,19 @@ const CategoryRow = ({ category }) => {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {category.subcategories.map((sub, idx) => (
-          <Link 
-            key={idx} 
-            to={`/products?category=${encodeURIComponent(category.name)}&subcategory=${encodeURIComponent(sub)}`}
-            className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44"
-          >
+          <Link
+  key={idx}
+  to="/subCategory"
+  className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44"
+>
             <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
               <img 
                 src={getSubcategoryImage(category.name, sub, idx)} 
                 alt={sub}
                 className="w-full h-full object-contain p-2"
               />
+
+              
             </div>
             <span className="text-sm md:text-base text-gray-600 font-normal text-center">{sub}</span>
           </Link>
