@@ -26,7 +26,8 @@ const Products = lazy(() => import('./pages/admin/Products'));
 const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
-const AdminProfile = lazy(() => import('./pages/admin/Profile'));
+const Settings = lazy(() => import('./pages/admin/Settings'));
+import Subcategory from './pages/user/subcategory';
 
 function App() {
   // Vite automatically exposes the configured base URL here
@@ -43,6 +44,7 @@ function App() {
             <Route path="product/:id" element={<ProductDetail />} />
             <Route path="cart" element={<Cart />} />
             <Route path="contact" element={<ContactPage />} />
+          <Route path="subCategory" element={<Subcategory />} />
             
             {/* Account Routes */}
             <Route path="my-account" element={<AccountLayout />}>
