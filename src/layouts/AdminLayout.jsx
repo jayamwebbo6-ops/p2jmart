@@ -31,7 +31,7 @@ const AdminLayout = () => {
       <aside className="w-64 bg-white shadow-md flex flex-col z-10">
         <div className="p-4 border-b flex items-center justify-center h-20">
           <Link to="/">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="P2J Mart Logo" className="h-10 w-auto object-contain" />
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="P2J Mart Logo" className="h-16 w-auto object-contain" />
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">

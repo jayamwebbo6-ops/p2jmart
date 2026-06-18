@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ShoppingCart, Heart, Star, Share2, ShoppingBag } from 'lucide-react';
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import { Navigation } from "swiper/modules";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+import "swiper/css";
+import "swiper/css/pagination";
 import ProductCard from '../../components/ProductCard';
 
 const ProductDetail = () => {
@@ -85,8 +92,8 @@ const ProductDetail = () => {
   ];
 
   return (
-    <div className="w-full bg-white min-h-screen py-8 px-4 md:px-8 lg:px-12 font-sans">
-      <div className="max-w-6xl mx-auto">
+    <div className="w-full  min-h-screen py-8 font-sans">
+      <div className="max-w-6xl ">
         
         {/* Breadcrumbs */}
         <div className="text-sm text-gray-500 mb-8 font-medium flex items-center gap-2">
@@ -99,41 +106,79 @@ const ProductDetail = () => {
           <span className="text-gray-900 font-bold">{product.title}</span>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 lg:gap-14">
+        <div className="flex flex-col md:flex-row gap-6 lg:gap-10">
         
         {/* Left: Product Images (Vertical Strip Layout) */}
-        <div className="w-full md:w-1/2 flex flex-col sm:flex-row gap-4 h-[500px]">
-          
-          {/* Vertical Thumbnails */}
-          <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto sm:w-20 flex-shrink-0 scrollbar-hide py-1">
-            {product.images.map((img, idx) => (
-              <div 
-                key={idx} 
-                onClick={() => setActiveImageIndex(idx)}
-                className={`w-16 h-16 sm:w-full sm:h-20 rounded-md overflow-hidden cursor-pointer border-2 transition-all flex-shrink-0 ${
-                  activeImageIndex === idx ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200 hover:border-primary/50'
-                }`}
-              >
-                <img src={img} alt={`Thumbnail ${idx + 1}`} className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
+     {/* Product Images Slider */}
+<div className="w-full md:w-1/2">
 
-          {/* Main Large Image */}
-          <div className="flex-1 relative rounded-lg overflow-hidden bg-white flex items-center justify-center border border-gray-200 h-full">
-            <img 
-              src={product.images[activeImageIndex]} 
-              alt={product.title} 
-              className="w-full h-full object-cover" 
+  {/* Mobile Slider */}
+  <div className="block sm:hidden">
+    <Swiper
+      modules={[Pagination]}
+      pagination={{ clickable: true }}
+      spaceBetween={10}
+      slidesPerView={1}
+      className="product-swiper rounded-lg overflow-hidden border border-gray-200"
+    >
+      {product.images.map((img, index) => (
+        <SwiperSlide key={index}>
+          <div className="relative">
+            <img
+              src={img}
+              alt={`Product ${index + 1}`}
+              className="w-full h-[350px] object-cover"
             />
-            {/* Discount Badge */}
-            {product.discount > 0 && (
-              <div className="absolute top-4 left-4 bg-primary text-white text-[13px] font-bold px-3 py-1 rounded-sm shadow-sm tracking-wide z-10">
-                -{product.discount}%
-              </div>
-            )}
+
+            <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold">
+              -{product.discount}%
+            </div>
           </div>
-        </div>
+        </SwiperSlide>
+      ))}
+    </Swiper>
+  </div>
+
+  {/* Desktop Gallery */}
+  <div className="hidden sm:flex gap-4 h-[500px]">
+
+    {/* Thumbnails */}
+    <div className="flex flex-col gap-3 w-20">
+      {product.images.map((img, idx) => (
+        <button
+          key={idx}
+          onClick={() => setActiveImageIndex(idx)}
+          className={`h-20 overflow-hidden rounded-md border-2 ${
+            activeImageIndex === idx
+              ? "border-blue-500"
+              : "border-gray-200"
+          }`}
+        >
+          <img
+            src={img}
+            alt=""
+            className="w-full h-full object-cover"
+          />
+        </button>
+      ))}
+    </div>
+
+    {/* Main Image */}
+    <div className="flex-1 relative overflow-hidden">
+      <img
+        src={product.images[activeImageIndex]}
+        alt={product.title}
+        className="w-full h-full object-cover"
+      />
+
+      <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold">
+        -{product.discount}%
+      </div>
+    </div>
+
+  </div>
+
+</div>
 
         {/* Right: Product Info & Variants */}
         <div className="w-full md:w-1/2 flex flex-col py-2">
@@ -258,14 +303,54 @@ const ProductDetail = () => {
       </div>
 
       {/* Related Products Section */}
-      <div className="max-w-6xl mx-auto mt-16">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Related Products</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {relatedProducts.map((prod) => (
-            <ProductCard key={prod.id} product={prod} />
-          ))}
-        </div>
-      </div>
+     <div className="max-w-6xl">
+
+  {/* Header */}
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-xl font-bold text-gray-900">
+      Related Products
+    </h2>
+
+    <div className="flex gap-2">
+      <button className="related-prev w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition">
+        <ChevronLeft size={20} />
+      </button>
+
+      <button className="related-next w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition">
+        <ChevronRight size={20} />
+      </button>
+    </div>
+  </div>
+
+  {/* Slider */}
+  <Swiper
+    modules={[Navigation]}
+    navigation={{
+      prevEl: ".related-prev",
+      nextEl: ".related-next",
+    }}
+    spaceBetween={16}
+    slidesPerView={1.2}
+    breakpoints={{
+      640: {
+        slidesPerView: 2,
+      },
+      768: {
+        slidesPerView: 3,
+      },
+      1024: {
+        slidesPerView: 4,
+      },
+    }}
+  >
+    {relatedProducts.map((prod) => (
+      <SwiperSlide key={prod.id}>
+        <ProductCard product={prod} />
+      </SwiperSlide>
+    ))}
+  </Swiper>
+
+</div>
 
     </div>
   );

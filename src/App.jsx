@@ -28,7 +28,8 @@ const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
-import Subcategory from './pages/user/subcategory';
+// Lazy loading subcategory page
+const Subcategory = lazy(() => import('./pages/user/Subcategory'));
 
 function App() {
   // Vite automatically exposes the configured base URL here
