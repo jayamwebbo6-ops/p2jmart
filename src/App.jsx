@@ -20,12 +20,13 @@ const Cart = lazy(() => import('./pages/user/Cart'));
 const ContactPage = lazy(() => import('./pages/user/ContactPage'));
 
 // Lazy loading admin pages
+const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
 const Products = lazy(() => import('./pages/admin/Products'));
 const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
-const Settings = lazy(() => import('./pages/admin/Settings'));
+const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
 function App() {
   // Vite automatically exposes the configured base URL here
@@ -57,6 +58,9 @@ function App() {
             <Route path="my-account/order/:id" element={<OrderDetails />} />
           </Route>
 
+          {/* Admin Login Route (No Layout) */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+
           {/* Admin Dashboard Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Dashboard />} />
@@ -64,7 +68,7 @@ function App() {
             <Route path="products/add" element={<AddProduct />} />
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<Users />} />
-            <Route path="settings" element={<Settings />} />
+            <Route path="profile" element={<AdminProfile />} />
           </Route>
         </Routes>
       </Suspense>

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 import { Link } from 'react-router-dom';
 import { categories } from '../../utils/constants';
 
@@ -55,28 +55,29 @@ const CategoryRow = memo(({ category }) => {
   }, []);
 
   return (
-    <div className="mb-14 relative group">
-      <h2 className="text-xl md:text-2xl font-medium text-gray-800 mb-6">{category.name}</h2>
-      
-      {/* Scroll Left Button */}
-      {canScrollLeft && (
-        <button 
-          onClick={() => scroll('left')}
-          className="absolute left-0 top-[55%] -translate-y-1/2 -ml-3 md:-ml-5 w-8 h-8 md:w-10 md:h-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full shadow-md z-10 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-      )}
-      
-      {/* Scroll Right Button */}
-      {canScrollRight && (
-        <button 
-          onClick={() => scroll('right')}
-          className="absolute right-0 top-[55%] -translate-y-1/2 -mr-3 md:-mr-5 w-8 h-8 md:w-10 md:h-10 bg-gray-500 hover:bg-gray-600 text-white rounded-full shadow-md z-10 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-        </button>
-      )}
+    <div className=" relative group">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl md:text-2xl font-medium text-gray-800">{category.name}</h2>
+        
+        {/* Navigation Arrows in Top Right */}
+        <div className="flex items-center space-x-2 mr-2">
+          <button 
+            onClick={() => scroll('left')}
+            disabled={!canScrollLeft}
+            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          
+          <button 
+            onClick={() => scroll('right')}
+            disabled={!canScrollRight}
+            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
 
       {/* Carousel Container */}
       <div 
@@ -106,26 +107,94 @@ const CategoryRow = memo(({ category }) => {
   );
 });
 
-const Products = () => {
-  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+// Extracted Header to dynamically measure its own height
+const HeaderRow = memo(({ setHeaderHeight }) => {
+  const ref = useRef(null);
 
   useEffect(() => {
-    const handleResize = () => setWindowHeight(window.innerHeight);
+    if (!ref.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0].target.offsetHeight;
+      setHeaderHeight(height);
+    });
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [setHeaderHeight]);
+
+  return (
+    <div ref={ref}>
+      {/* Use padding (pb-*) instead of margin (mb-*) so the observer can measure the gap! */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6 ">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
+        <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
+          <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+          <span className="mx-1.5 font-bold">&gt;</span>
+          <span className="text-gray-600">Categories</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+const Products = () => {
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [headerHeight, setHeaderHeight] = useState(80); // Default guess
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowHeight(window.innerHeight);
+      setWindowWidth(window.innerWidth);
+      if (listRef.current) {
+        listRef.current.resetAfterIndex(0);
+      }
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const handleHeaderHeightChange = useCallback((height) => {
+    setHeaderHeight((prev) => {
+      if (prev !== height) {
+        // Reset the list cache so it uses the newly measured height
+        setTimeout(() => {
+          if (listRef.current) listRef.current.resetAfterIndex(0);
+        }, 0);
+        return height;
+      }
+      return prev;
+    });
+  }, []);
+
+  // Define dynamic sizes for items
+  const getItemSize = useCallback((index) => {
+    if (index === 0) return headerHeight;
+    // Mobile content is ~236px, Desktop is ~288px. Adding ~30-40px padding between categories.
+    return windowWidth < 768 ? 270 : 330;
+  }, [headerHeight, windowWidth]);
+
   // Render individual virtualized row
   const Row = useCallback(({ index, style }) => {
+    if (index === 0) {
+      return (
+        <div style={style}>
+          <HeaderRow setHeaderHeight={handleHeaderHeightChange} />
+        </div>
+      );
+    }
+
     return (
       <div style={style}>
-        <CategoryRow category={categories[index]} />
+        <div className="">
+          <CategoryRow category={categories[index - 1]} />
+        </div>
       </div>
     );
   }, []);
 
   return (
-    <div className="min-h-screen py-8 overflow-hidden flex flex-col">
+    <div className="min-h-screen  flex flex-col">
       {/* Note: Use standard tailwind styles to hide scrollbar if 'scrollbar-hide' plugin is not installed */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
@@ -133,23 +202,14 @@ const Products = () => {
         }
       `}</style>
       <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pt-4 px-4 md:px-8 lg:px-12 shrink-0">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
-          <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
-            <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-            <span className="mx-1.5 font-bold">&gt;</span>
-            <span className="text-gray-600">Categories</span>
-          </div>
-        </div>
 
-        {/* Virtualized Categories List */}
-        <div className="flex-1 w-full pl-4 md:pl-8 lg:pl-12">
+        {/* Virtualized Categories List (Now includes Header) */}
+        <div className="flex-1 w-full">
           <List
-            height={windowHeight - 180} // Approx viewport height minus headers/padding
-            itemCount={categories.length}
-            itemSize={340} // Estimated height of CategoryRow
+            ref={listRef}
+            height={windowHeight - 80} // Approx viewport height minus padding
+            itemCount={categories.length + 1}
+            itemSize={getItemSize}
             width="100%"
             className="scrollbar-hide"
             style={{ overflowX: 'hidden' }}

@@ -59,15 +59,7 @@ const Header = memo(() => {
       <header className="w-full bg-white px-4 md:px-8 lg:px-12 py-0 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm">
         
         <div className="flex items-center">
-          {/* Hamburger Menu Icon (Mobile Only) */}
-          <button 
-            className="lg:hidden mr-3 text-gray-700 hover:text-primary transition-colors"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <Menu size={28} />
-          </button>
-
-          {/* Logo */}
+          {/* Logo (Left side only on mobile) */}
           <Link to="/" className="flex items-center">
             <img 
               src={`${import.meta.env.BASE_URL}logo.png`} 
@@ -148,13 +140,21 @@ const Header = memo(() => {
                 </div>
               )}
             </div>
+
+            {/* Hamburger Menu Icon (Mobile Only - Moved to right) */}
+            <button 
+              className="lg:hidden ml-1 text-gray-700 hover:text-primary transition-colors"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={28} />
+            </button>
           </div>
         </div>
       </header>
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[200] lg:hidden flex">
+        <div className="fixed inset-0 z-[200] lg:hidden flex justify-end">
           {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
@@ -162,7 +162,7 @@ const Header = memo(() => {
           ></div>
           
           {/* Drawer */}
-          <div className="relative w-[85%] max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-y-auto transform transition-transform duration-300 ease-in-out">
+          <div className="relative w-[85%] max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-y-auto transform transition-transform duration-300 ease-in-out translate-x-0">
             {/* Drawer Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <img 
@@ -180,10 +180,10 @@ const Header = memo(() => {
 
             {/* Navigation Links */}
             <div className="p-4 border-b border-gray-100 flex flex-col space-y-4">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-lg hover:text-primary transition-colors">Home</Link>
-              <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-lg hover:text-primary transition-colors">Products</Link>
-              <Link to="/customized" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-lg hover:text-primary transition-colors">Customized Products</Link>
-              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-lg hover:text-primary transition-colors">Contact Us</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Home</Link>
+              <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Products</Link>
+              <Link to="/customized" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Customized Products</Link>
+              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Contact Us</Link>
             </div>
 
             {/* Categories Accordion */}

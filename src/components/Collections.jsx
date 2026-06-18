@@ -108,7 +108,7 @@ const Collections = () => {
     <div className="bg-[#f5f5f5]">
       
       {/* Banner */}
-     <section className="bg-[#002050] text-white w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
+     <section className="bg-primary text-white w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
   <div className="px-6 py-11 flex flex-col md:flex-row items-center justify-between gap-5">
           <div className="flex items-center gap-4">
             <Send size={48} className="text-white/60" />

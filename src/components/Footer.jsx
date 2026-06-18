@@ -11,7 +11,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-[#132337] font-sans text-white">
+    <footer className="bg-primary font-sans text-white">
       <div className="max-w-[1500px] mx-auto px-6 lg:px-12 pt-12 pb-8">
         
         {/* Top Section */}

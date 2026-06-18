@@ -142,7 +142,7 @@ const ProductDetail = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2.5">{product.title}</h1>
           
           {/* Ratings */}
-          <div className="flex items-center gap-3 mb-5">
+          <div className="flex items-center gap-3 mb-2">
             <div className="flex text-[#ffc107]">
               {[...Array(5)].map((_, i) => (
                 <Star 
@@ -159,20 +159,20 @@ const ProductDetail = () => {
           </div>
 
           {/* Meta Information */}
-          <div className="text-sm space-y-1.5 mb-6">
+          <div className="text-sm space-y-1.5 mb-3">
             <p><span className="font-bold text-gray-800">Category:</span> <span className="text-gray-600">{product.category}</span></p>
           
           </div>
 
           {/* Pricing Section */}
-          <div className="flex items-end gap-3 mb-8">
+          <div className="flex items-end gap-3 mb-4">
             <span className="text-lg text-gray-400 line-through mb-1 font-medium">₹{product.originalPrice}</span>
             <span className="text-4xl font-bold text-gray-900 tracking-tight">₹{product.price}</span>
             <span className="text-xl text-primary font-light mb-1 ml-2 tracking-wide">-{product.discount}%</span>
           </div>
 
           {/* Variants: Color */}
-          <div className="mb-6">
+          <div className="mb-3">
             <p className="font-bold text-gray-800 mb-3 text-sm">Color: <span className="font-normal text-gray-600 ml-1">{selectedColor}</span></p>
             <div className="flex gap-3">
               {product.colors.map(color => (
@@ -191,7 +191,7 @@ const ProductDetail = () => {
           </div>
 
           {/* Variants: Size */}
-          <div className="mb-6">
+          <div className="mb-3">
             <p className="font-bold text-gray-800 mb-3 text-sm">Size: <span className="font-normal text-gray-600 ml-1">{selectedSize}</span></p>
             <div className="flex gap-3">
               {product.sizes.map(size => (
