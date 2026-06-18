@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ProductCard from "../../components/ProductCard"; 
-import OfferSlider from "../../components/OfferSlider"; // Assuming file is saved in same directory
+import OfferSlider from "../../components/OfferSlider";
 
 // 1. High-Fidelity Dummy Data Array matching products
 const DUMMY_PRODUCTS = [
@@ -157,7 +157,8 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-const SubCategoryPage = () => {
+// Added wishlist props directly to the main component function signature layout 
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist }) => {
   const [sortOption, setSortOption] = useState("default");
   const [minPrice, setMinPrice] = useState(100);
   const [maxPrice, setMaxPrice] = useState(10000);
@@ -357,11 +358,18 @@ const SubCategoryPage = () => {
             </div>
           ) : (
             /* PRECISE CUSTOM VIEWPORT GRID TRACKS */
-          <div className="grid grid-cols-2 min-[850px]:grid-cols-3 min-[1010px]:grid-cols-4 gap-4">
-  {filteredAndSortedProducts.map((product) => (
-    <ProductCard key={product.id} product={product} />
-  ))}
-</div>
+            <div className="grid grid-cols-2 min-[850px]:grid-cols-3 min-[1010px]:grid-cols-4 gap-4">
+              {filteredAndSortedProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  // Injected prop tracking parameters down to our component instances
+                  isWishlisted={wishlist.some(item => item.id === product.id)}
+                  onWishlist={addToWishlist}
+                  onRemoveWishlist={removeFromWishlist}
+                />
+              ))}
+            </div>
           )}
         </div>
       </div>

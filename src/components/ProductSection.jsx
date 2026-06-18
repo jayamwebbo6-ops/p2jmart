@@ -1,8 +1,9 @@
 import React from 'react';
-import { Eye, Speaker } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import ProductCard from './ProductCard';
 
-const ProductSection = ({ title, products }) => {
+// 1. Add wishlist props down from your main app state handler here
+const ProductSection = ({ title, products, wishlist = [], onWishlist, onRemoveWishlist }) => {
   return (
     <div className="w-full mt-2">
       {/* Header */}
@@ -18,15 +19,25 @@ const ProductSection = ({ title, products }) => {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Products Grid */}
         <div className="flex-1 grid grid-cols-1 min-[350px]:grid-cols-2 min-[768px]:grid-cols-4 gap-6">
-          {products.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+          {products.map(product => {
+            // 2. Dynamically look through wishlist array to see if this card's item is saved
+            const isSaved = wishlist.some(item => item.id === product.id);
+
+            return (
+              <ProductCard 
+                key={product.id} 
+                product={product} 
+                isWishlisted={isSaved}
+                onWishlist={onWishlist}
+                onRemoveWishlist={onRemoveWishlist}
+              />
+            );
+          })}
         </div>
 
         {/* Promo Banner Side */}
         <div className="hidden lg:block w-full lg:w-1/4 xl:w-[22%] flex-shrink-0">
           <div className="w-full h-full min-h-[350px] bg-gradient-to-br from-[#FDBB49] to-[#F99F24] p-6 flex flex-col items-center text-center relative overflow-hidden group shadow-sm border border-orange-200">
-            
             {/* Background Decorations */}
             <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
               <div className="absolute -top-12 -right-12 w-40 h-40 bg-white rounded-full"></div>

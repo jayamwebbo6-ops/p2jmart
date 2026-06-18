@@ -1,8 +1,8 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Loader from './components/Loader';
 
-// Layouts (usually kept static, but can be lazy if heavy)
+// Layouts
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
@@ -31,37 +31,81 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 import Subcategory from './pages/user/subcategory';
 
 function App() {
-  // Vite automatically exposes the configured base URL here
   const basename = import.meta.env.BASE_URL;
+
+  /* ==========================================================================
+     GLOBAL WISHLIST STATE MANAGEMENT
+     ========================================================================== */
+  const [wishlist, setWishlist] = useState(() => {
+    const saved = localStorage.getItem("user_wishlist");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // Automatically update localStorage whenever the wishlist array changes
+  useEffect(() => {
+    localStorage.setItem("user_wishlist", JSON.stringify(wishlist));
+  }, [wishlist]);
+
+  const addToWishlist = (product) => {
+    if (!wishlist.some((item) => item.id === product.id)) {
+      setWishlist([...wishlist, product]);
+    }
+  };
+
+  const removeFromWishlist = (productId) => {
+    setWishlist(wishlist.filter((item) => item.id !== productId));
+  };
 
   return (
     <BrowserRouter basename={basename}>
       <Suspense fallback={<Loader />}>
         <Routes>
-          {/* User Facing Store Routes */}
-          <Route path="/" element={<UserLayout />}>
-            <Route index element={<Home />} />
+          {/* User Facing Store Routes — PASSED WISHLIST PROP HERE */}
+          <Route path="/" element={<UserLayout wishlist={wishlist} />}>
+            <Route index element={<Home wishlist={wishlist} addToWishlist={addToWishlist} removeFromWishlist={removeFromWishlist} />} />
             <Route path="products" element={<UserProducts />} />
             <Route path="product/:id" element={<ProductDetail />} />
             <Route path="cart" element={<Cart />} />
             <Route path="contact" element={<ContactPage />} />
-          <Route path="subCategory" element={<Subcategory />} />
+            <Route 
+                path="wishlist" 
+                element={
+                  <Wishlist 
+                    wishlist={wishlist}
+                    removeFromWishlist={removeFromWishlist}
+                  />
+                } 
+              />
+              
+              <Route path="cart" element={<Cart />} />
             
+            <Route 
+              path="subCategory" 
+              element={
+                <Subcategory 
+                  wishlist={wishlist}
+                  addToWishlist={addToWishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
+
             {/* Account Routes */}
             <Route path="my-account" element={<AccountLayout />}>
               <Route index element={<Profile />} />
               <Route path="profile" element={<Profile />} />
               <Route path="orders" element={<Orders />} />
               <Route path="address" element={<AddressBook />} />
-              <Route path="wishlist" element={<Wishlist />} />
-              <Route path="cart" element={<Cart />} />
+              
+              
             </Route>
+
+
             
-            {/* Order Details Route (Without Sidebar) */}
             <Route path="my-account/order/:id" element={<OrderDetails />} />
           </Route>
 
-          {/* Admin Login Route (No Layout) */}
+          {/* Admin Login Route */}
           <Route path="/admin/login" element={<AdminLogin />} />
 
           {/* Admin Dashboard Routes */}
@@ -80,4 +124,3 @@ function App() {
 }
 
 export default App;
-
