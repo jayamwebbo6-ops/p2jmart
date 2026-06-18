@@ -26,7 +26,8 @@ const Products = lazy(() => import('./pages/admin/Products'));
 const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
-const Settings = lazy(() => import('./pages/admin/Settings'));
+const AdminProfile = lazy(() => import('./pages/admin/Profile'));
+
 import Subcategory from './pages/user/subcategory';
 
 function App() {
