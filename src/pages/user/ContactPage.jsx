@@ -79,10 +79,10 @@ export default function ContactPage() {
       </div>
 
       {/* Form & Map */}
-      <div className="grid lg:grid-cols-2 gap-8 mt-16">
+      <div className="grid lg:grid-cols-2 gap-8 mt-16 items-stretch">
 
         {/* Left */}
-        <div>
+        <div className="flex flex-col h-full">
 
           <h2 className="text-3xl font-bold text-gray-900">
             Get In Touch
@@ -94,43 +94,44 @@ export default function ContactPage() {
             simply want to share feedback, our team is ready to help.
           </p>
 
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm mt-6">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm mt-6 flex-1 flex flex-col">
 
-            <div className="grid md:grid-cols-2 gap-4 p-5">
+            <div className="grid md:grid-cols-2 gap-5 p-6 flex-1">
 
               <input
                 type="text"
                 placeholder="Your Name"
-                className="h-11 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
+                className="h-12 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
               />
 
               <input
                 type="email"
                 placeholder="Your Email"
-                className="h-11 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
+                className="h-12 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
               />
 
               <input
                 type="text"
                 placeholder="Phone Number"
-                className="h-11 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
+                className="h-12 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
               />
 
               <input
                 type="text"
                 placeholder="Subject"
-                className="h-11 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
+                className="h-12 border border-gray-300 rounded-md px-3 text-sm outline-none focus:border-[#002060]"
               />
 
               <textarea
-                rows="5"
                 placeholder="Your Message"
-                className="md:col-span-2 border border-gray-300 rounded-md p-3 text-sm resize-none outline-none focus:border-[#002060]"
+                className="md:col-span-2 border border-gray-300 rounded-md p-3 text-sm resize-none outline-none focus:border-[#002060] flex-1 min-h-[120px]"
               />
 
-              <button className="bg-[#002060] text-white h-11 px-6 rounded-md text-sm font-medium hover:bg-[#001746] transition">
-                Send Message
-              </button>
+              <div className="md:col-span-2 flex items-end">
+                <button className="bg-[#002060] text-white h-12 px-8 rounded-md text-sm font-medium hover:bg-[#001746] transition w-full md:w-auto">
+                  Send Message
+                </button>
+              </div>
 
             </div>
 
@@ -138,13 +139,12 @@ export default function ContactPage() {
         </div>
 
         {/* Right Map */}
-        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm h-full min-h-[450px]">
 
           <iframe
             title="P2J Mart Location"
             src="https://www.google.com/maps?q=Tambaram,Chennai,Tamil%20Nadu&output=embed"
-            width="100%"
-            height="550"
+            className="w-full h-full"
             style={{ border: 0 }}
             loading="lazy"
             allowFullScreen=""

@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import { Link } from 'react-router-dom';
 import { categories } from '../../utils/constants';
 import { useNavigate } from "react-router-dom";
@@ -23,27 +24,27 @@ const getSubcategoryImage = (catName, subName, idx) => {
   return subcategoryImages[hash % subcategoryImages.length];
 };
 
-const CategoryRow = ({ category }) => {
+const CategoryRow = memo(({ category }) => {
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const navigate = useNavigate();
 
-  const checkScroll = () => {
+  const checkScroll = useCallback(() => {
     if (scrollRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
       setCanScrollLeft(scrollLeft > 0);
       setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1); // 1px buffer for rounding
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkScroll();
     window.addEventListener('resize', checkScroll);
     return () => window.removeEventListener('resize', checkScroll);
-  }, [category.subcategories]);
+  }, [category.subcategories, checkScroll]);
 
-  const scroll = (direction) => {
+  const scroll = useCallback((direction) => {
     if (scrollRef.current) {
       const { current } = scrollRef;
       const scrollAmount = current.clientWidth * 0.75; // Scroll by 75% of container width
@@ -53,7 +54,7 @@ const CategoryRow = ({ category }) => {
         current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       }
     }
-  };
+  }, []);
 
   return (
     <div className="mb-14 relative group">
@@ -106,21 +107,38 @@ const CategoryRow = ({ category }) => {
       </div>
     </div>
   );
-};
+});
 
 const Products = () => {
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+
+  useEffect(() => {
+    const handleResize = () => setWindowHeight(window.innerHeight);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Render individual virtualized row
+  const Row = useCallback(({ index, style }) => {
+    return (
+      <div style={style}>
+        <CategoryRow category={categories[index]} />
+      </div>
+    );
+  }, []);
+
   return (
-    <div className=" min-h-screen py-8">
+    <div className="min-h-screen py-8 overflow-hidden flex flex-col">
       {/* Note: Use standard tailwind styles to hide scrollbar if 'scrollbar-hide' plugin is not installed */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto ">
+      <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 pt-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 pt-4 px-4 md:px-8 lg:px-12 shrink-0">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
           <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
             <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -129,11 +147,18 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Categories List */}
-        <div className="space-y-4">
-          {categories.map((cat, idx) => (
-            <CategoryRow key={idx} category={cat} />
-          ))}
+        {/* Virtualized Categories List */}
+        <div className="flex-1 w-full pl-4 md:pl-8 lg:pl-12">
+          <List
+            height={windowHeight - 180} // Approx viewport height minus headers/padding
+            itemCount={categories.length}
+            itemSize={340} // Estimated height of CategoryRow
+            width="100%"
+            className="scrollbar-hide"
+            style={{ overflowX: 'hidden' }}
+          >
+            {Row}
+          </List>
         </div>
 
       </div>
