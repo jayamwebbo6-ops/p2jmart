@@ -18,6 +18,7 @@ const AddressBook = lazy(() => import('./pages/user/AddressBook'));
 const Wishlist = lazy(() => import('./pages/user/Wishlist'));
 const Cart = lazy(() => import('./pages/user/Cart'));
 const ContactPage = lazy(() => import('./pages/user/ContactPage'));
+const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -68,6 +69,7 @@ function App() {
             <Route path="product/:id" element={<ProductDetail />} />
             <Route path="cart" element={<Cart />} />
             <Route path="contact" element={<ContactPage />} />
+            <Route path="customized" element={<CustomizedProduct />} />
             <Route 
                 path="wishlist" 
                 element={
