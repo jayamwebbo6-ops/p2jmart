@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { 
   Search, 
   User, 
@@ -14,7 +14,8 @@ import { FaXTwitter } from 'react-icons/fa6';
 import { Link } from 'react-router-dom';
 import { categories } from '../utils/constants';
 
-const Header = memo(() => {
+// The wishlist prop is safely accepted here
+const Header = memo(({ wishlist = [] }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -38,7 +39,7 @@ const Header = memo(() => {
   return (
     <>
       {/* Top Bar (Scrolls away) */}
-     <div className="hidden md:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-12 justify-between items-center font-sans">
+      <div className="hidden md:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-12 justify-between items-center font-sans">
         <div>
           <span className="tracking-wide text-[12px] text-white">Free Shipping Over ₹500</span>
         </div>
@@ -59,7 +60,7 @@ const Header = memo(() => {
       <header className="w-full bg-white px-4 md:px-8 lg:px-12 py-0 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm">
         
         <div className="flex items-center">
-          {/* Logo (Left side only on mobile) */}
+          {/* Logo */}
           <Link to="/" className="flex items-center">
             <img 
               src={`${import.meta.env.BASE_URL}logo.png`} 
@@ -99,10 +100,17 @@ const Header = memo(() => {
           {/* Action Icons */}
           <div className="flex items-center space-x-4 md:space-x-5 text-primary">
             
-            <button className="hover:text-secondary transition-colors hover:scale-110 transform relative">
+            {/* Dynamic Global Wishlist Indicator Link */}
+            <Link 
+              to="/wishlist" 
+              className="hover:text-secondary transition-colors hover:scale-110 transform relative block"
+            >
               <Heart size={24} strokeWidth={1.5} />
-              <span className="absolute -top-1 -right-1.5 bg-secondary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
-            </button>
+              <span className="absolute -top-1 -right-1.5 bg-secondary text-white text-[0.6rem] font-bold min-w-[16px] h-4 flex items-center justify-center px-1 rounded-full border border-white shadow-sm">
+                {wishlist.length}
+              </span>
+            </Link>
+
             <button className="hover:text-secondary transition-colors hover:scale-110 transform relative">
               <ShoppingBag size={24} strokeWidth={1.5} />
               <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
@@ -120,7 +128,6 @@ const Header = memo(() => {
               {/* User Dropdown Popup */}
               {isUserMenuOpen && (
                 <div className="absolute right-0 mt-4 w-48 bg-white rounded-lg shadow-xl py-2 z-[200] border border-gray-100">
-                
                   <Link 
                     to="/my-account" 
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary transition-colors"
@@ -131,7 +138,6 @@ const Header = memo(() => {
                   <button 
                     onClick={() => {
                       setIsUserMenuOpen(false);
-                      // TODO: Add actual logout logic here
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50"
                   >
@@ -141,7 +147,7 @@ const Header = memo(() => {
               )}
             </div>
 
-            {/* Hamburger Menu Icon (Mobile Only - Moved to right) */}
+            {/* Hamburger Menu Icon */}
             <button 
               className="lg:hidden ml-1 text-gray-700 hover:text-primary transition-colors"
               onClick={() => setIsMobileMenuOpen(true)}
@@ -155,15 +161,12 @@ const Header = memo(() => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[200] lg:hidden flex justify-end">
-          {/* Backdrop */}
           <div 
             className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
             onClick={() => setIsMobileMenuOpen(false)}
           ></div>
           
-          {/* Drawer */}
           <div className="relative w-[85%] max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-y-auto transform transition-transform duration-300 ease-in-out translate-x-0">
-            {/* Drawer Header */}
             <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <img 
                 src={`${import.meta.env.BASE_URL}logo.png`} 
@@ -178,7 +181,6 @@ const Header = memo(() => {
               </button>
             </div>
 
-            {/* Navigation Links */}
             <div className="p-4 border-b border-gray-100 flex flex-col space-y-4">
               <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Home</Link>
               <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Products</Link>
@@ -186,7 +188,6 @@ const Header = memo(() => {
               <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Contact Us</Link>
             </div>
 
-            {/* Categories Accordion */}
             <div className="p-4">
               <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Categories</h3>
               <ul className="flex flex-col space-y-1">
@@ -204,7 +205,6 @@ const Header = memo(() => {
                       )}
                     </button>
                     
-                    {/* Subcategories Dropdown */}
                     {openCategoryIndex === idx && (
                       <ul className="pl-4 py-2 space-y-3 bg-gray-50/80 rounded-md mt-1 mb-2 border-l-2 border-primary/30">
                         {cat.subcategories.map((sub, i) => (
@@ -224,9 +224,6 @@ const Header = memo(() => {
                 ))}
               </ul>
             </div>
-            
-        
-
           </div>
         </div>
       )}

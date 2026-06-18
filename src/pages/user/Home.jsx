@@ -49,7 +49,8 @@ const dummyProducts = [
   }
 ];
 
-const Home = () => {
+// 1. Accept the global wishlist state and handlers via props here
+const Home = ({ wishlist = [], addToWishlist, removeFromWishlist }) => {
   return (
     <div className="w-full flex flex-col gap-10">
       {/* Top Row: Sidebar, Hero, Promos */}
@@ -71,8 +72,14 @@ const Home = () => {
       </div>
 
       {/* Electrical Product Section */}
-      <ProductSection title="Electrical" products={dummyProducts} />
-
+      <ProductSection 
+        title="Featured Products" 
+        products={dummyProducts} // 2. Swapped placeholder 'featuredProductsList' for your 'dummyProducts' array
+        wishlist={wishlist}
+        onWishlist={addToWishlist} // 3. Connected parent handlers
+        onRemoveWishlist={removeFromWishlist}
+      />
+      
       <CategoryPage/>
       <Collections/>
     </div>

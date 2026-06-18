@@ -1,37 +1,71 @@
 import React from 'react';
-import { Heart, ShoppingCart, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ 
+  product, 
+  variant = "default",
+  isWishlisted = false, // Check if this product is currently saved
+  onWishlist,
+  onRemoveWishlist
+}) => {
   return (
     <div className="border border-gray-200 bg-white group hover:shadow-md transition-shadow duration-300 flex flex-col h-full">
       {/* Image Container */}
-      <Link 
-        to={`/product/${product.id}`} 
-        state={{ product }} 
-        className="relative aspect-square bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden block"
-      >
-        {/* Actual Image with absolute fallback structure */}
-        {product.image ? (
-          <img 
-            src={product.image} 
-            alt={product.title} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        ) : (
-          <div className="w-full h-full bg-[#FAFAFA] flex flex-col items-center justify-center text-gray-400 font-sans text-center">
-            <span className="text-sm font-medium">📷 No Image</span>
-          </div>
-        )}
-        
-        {/* Wishlist Button */}
-        <button 
-          className="absolute top-3 right-3 bg-white p-1.5 rounded-full shadow border border-gray-100 text-primary hover:text-secondary hover:shadow-md transition-all z-10" 
-          onClick={(e) => e.preventDefault()}
+      <div className="relative aspect-square bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden block">
+        <Link 
+          to={`/product/${product.id}`} 
+          state={{ product }} 
+          className="w-full h-full absolute inset-0"
         >
-          <Heart size={16} strokeWidth={2} />
-        </button>
-      </Link>
+          {product.image ? (
+            <img 
+              src={product.image} 
+              alt={product.title} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          ) : (
+            <div className="w-full h-full bg-[#FAFAFA] flex flex-col items-center justify-center text-gray-400 font-sans text-center">
+              <span className="text-sm font-medium">📷 No Image</span>
+            </div>
+          )}
+        </Link>
+        
+        {/* Wishlist Action Toggle Button */}
+        {variant === "wishlist" ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onRemoveWishlist?.(product.id);
+            }}
+            className="absolute top-3 right-3 bg-white p-2 rounded-full shadow border border-gray-100 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 z-10 cursor-pointer transition-all duration-200"
+            title="Remove from Wishlist"
+          >
+            <Trash2 size={14} strokeWidth={2} />
+          </button>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (isWishlisted) {
+                onRemoveWishlist?.(product.id);
+              } else {
+                onWishlist?.(product);
+              }
+            }}
+            className="absolute top-3 right-3 bg-white p-1.5 rounded-full shadow border border-gray-100 z-10 cursor-pointer transition-colors"
+          >
+            <Heart 
+              size={16} 
+              strokeWidth={2} 
+              fill={isWishlisted ? "#EF4444" : "none"} 
+              className={isWishlisted ? "text-red-500" : "text-gray-600 hover:text-red-500"} 
+            />
+          </button>
+        )}
+      </div>
 
       {/* Content */}
       <div className="p-4 flex flex-col gap-1.5 flex-1">
@@ -43,7 +77,6 @@ const ProductCard = ({ product }) => {
           {product.title}
         </Link>
         
-        {/* Price Row Guarding Against Null Values */}
         <div className="flex items-center gap-2 mt-1">
           {product.price !== null && product.price !== undefined ? (
             <>
@@ -63,14 +96,12 @@ const ProductCard = ({ product }) => {
           )}
         </div>
         
-        {/* Discount Guard */}
         {product.discount > 0 ? (
           <span className="text-green-600 text-[13px] font-medium">{product.discount}% Off</span>
         ) : (
           <span className="text-gray-400 text-[13px] font-medium">Standard Pack</span>
         )}
 
-        {/* Ratings block */}
         <div className="flex items-center gap-1">
           <div className="flex text-yellow-400">
             {[...Array(5)].map((_, i) => (
@@ -88,9 +119,8 @@ const ProductCard = ({ product }) => {
           </span>
         </div>
         
-        {/* Add to Cart button */}
         {product.price !== null && product.price !== undefined && (
-          <button className="bg-primary text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-secondary transition-colors">
+          <button className="bg-primary text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-secondary transition-colors cursor-pointer">
             <ShoppingCart size={14} />
             Add to Cart
           </button>
