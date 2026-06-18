@@ -1,10 +1,27 @@
-import React from "react";
+import React, { useState } from "react";
 import { XCircle, ShoppingBag } from "lucide-react";
 import { Link } from "react-router-dom";
 import ProductCard from "../../components/ProductCard";
+import ConfirmationModal from "../../components/ConfirmationModal"; // Adjust path as per your directory structure
 
 // Accept the shared state and handlers directly from App.jsx props
 const Wishlist = ({ wishlist = [], removeFromWishlist }) => {
+  // State to handle modal open/close state and track which item to delete
+  const [productToDelete, setProductToDelete] = useState(null);
+
+  const handleOpenConfirmation = (productId) => {
+    // Find the complete product item to show its title inside the modal description message if needed
+    const targetProduct = wishlist.find((item) => item.id === productId);
+    setProductToDelete(targetProduct);
+  };
+
+  const handleConfirmRemove = () => {
+    if (productToDelete) {
+      removeFromWishlist(productToDelete.id);
+      setProductToDelete(null);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -47,21 +64,32 @@ const Wishlist = ({ wishlist = [], removeFromWishlist }) => {
           - From 825px to 1020px: min-[825px]:grid-cols-3 (3 columns)
           - Above 1020px: min-[1020px]:grid-cols-4 (4 columns)
         */
-        <div className="grid grid-cols-2 min-[955px]:grid-cols-3 min-[1020px]:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 min-[825px]:grid-cols-3 min-[1020px]:grid-cols-4 gap-4">
           {wishlist.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
               variant="wishlist"
               isWishlisted={true}
-              onRemoveWishlist={removeFromWishlist} // Calls the global state updater
+              onRemoveWishlist={handleOpenConfirmation} // Catch action to open modal overlay first
             />
           ))}
         </div>
       )}
+
+      {/* Reusable Confirmation Overlay Portal Trigger */}
+      <ConfirmationModal
+        isOpen={Boolean(productToDelete)}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleConfirmRemove}
+        title="Remove Item"
+        message={`Are you sure you want to remove "${productToDelete?.title || 'this item'}" from your wishlist?`}
+        confirmText="Remove"
+        cancelText="Keep"
+        isDanger={true}
+      />
     </div>
   );
 };
 
 export default Wishlist;
-

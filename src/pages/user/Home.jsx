@@ -50,22 +50,18 @@ const dummyProducts = [
 ];
 
 // 1. Accept the global wishlist state and handlers via props here
-const Home = ({ wishlist = [], addToWishlist, removeFromWishlist }) => {
+// 1. Accept the global cart addition handler prop here
+const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart }) => {
   return (
     <div className="w-full flex flex-col gap-10">
       {/* Top Row: Sidebar, Hero, Promos */}
       <div className="w-full flex flex-col lg:flex-row gap-5 mt-6">
-        {/* Left Sidebar: 20-25% width - Hidden on mobile/tablet */}
         <div className="hidden lg:block lg:w-1/4 xl:w-[22%] flex-shrink-0 lg:h-[460px]">
           <Sidebar />
         </div>
-        
-        {/* Center Hero: Flexible width */}
         <div className="w-full lg:flex-1 h-[350px] md:h-[400px] lg:h-[460px]">
           <HeroBanner />
         </div>
-
-        {/* Right Promo Banners: 20-25% width */}
         <div className="w-full lg:w-1/4 xl:w-[22%] flex-shrink-0 flex flex-col min-[360px]:flex-row lg:flex-col gap-5 h-[auto] min-[360px]:h-[200px] lg:h-[460px]">
           <PromoBanners />
         </div>
@@ -74,10 +70,11 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist }) => {
       {/* Electrical Product Section */}
       <ProductSection 
         title="Featured Products" 
-        products={dummyProducts} // 2. Swapped placeholder 'featuredProductsList' for your 'dummyProducts' array
+        products={dummyProducts}
         wishlist={wishlist}
-        onWishlist={addToWishlist} // 3. Connected parent handlers
-        onRemoveWishlist={removeFromWishlist}
+        onWishlist={addToWishlist}
+        onRemoveWishlist={removeFromWishlist} 
+        onAddToCart={onAddToCart} // 2. Forward your prop connection down cleanly
       />
       
       <CategoryPage/>

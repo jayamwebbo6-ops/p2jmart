@@ -111,10 +111,16 @@ const Header = memo(({ wishlist = [] }) => {
               </span>
             </Link>
 
-            <button className="hover:text-secondary transition-colors hover:scale-110 transform relative">
+   <Link 
+              to="/cart" 
+              className="hover:text-secondary transition-colors hover:scale-110 transform relative block"
+            >
+<button className="hover:text-secondary transition-colors hover:scale-110 transform relative">
               <ShoppingBag size={24} strokeWidth={1.5} />
               <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
             </button>
+            </Link>
+            
             
             {/* User Profile Menu */}
             <div className="relative" ref={userMenuRef}>
