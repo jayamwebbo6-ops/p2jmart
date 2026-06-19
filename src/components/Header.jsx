@@ -11,15 +11,42 @@ import {
 } from 'lucide-react';
 import { FaFacebookF, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { categories } from '../utils/constants';
 
 // The wishlist prop is safely accepted here
-const Header = memo(({ wishlist = [] }) => {
+const Header = memo(({ wishlist = [], cart = [] }) => {
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+
+  const isActive = (path) => {
+    const normalize = (p) => {
+      let val = p.trim();
+      if (!val.startsWith('/')) val = '/' + val;
+      if (val.length > 1 && val.endsWith('/')) val = val.slice(0, -1);
+      return val;
+    };
+    const current = normalize(location.pathname);
+    const target = normalize(path);
+    const isMatched = target === '/' ? current === '/' : current.startsWith(target);
+    return isMatched ? 'text-secondary font-bold' : 'text-gray-700 font-medium hover:text-secondary';
+  };
+
+  const isActiveMobile = (path) => {
+    const normalize = (p) => {
+      let val = p.trim();
+      if (!val.startsWith('/')) val = '/' + val;
+      if (val.length > 1 && val.endsWith('/')) val = val.slice(0, -1);
+      return val;
+    };
+    const current = normalize(location.pathname);
+    const target = normalize(path);
+    const isMatched = target === '/' ? current === '/' : current.startsWith(target);
+    return isMatched ? 'text-secondary font-bold' : 'text-gray-800 font-medium hover:text-secondary';
+  };
 
   // Handle clicking outside of user menu to close it
   useEffect(() => {
@@ -72,10 +99,10 @@ const Header = memo(({ wishlist = [] }) => {
 
         {/* Navigation Links (Desktop) */}
         <nav className="hidden lg:flex items-center space-x-8">
-          <Link to="/" className="text-gray-700 font-medium hover:text-secondary transition-colors">Home</Link>
-          <Link to="/products" className="text-gray-700 font-medium hover:text-secondary transition-colors">Products</Link>
-          <Link to="/customized" className="text-gray-700 font-medium hover:text-secondary transition-colors">Customized Products</Link>
-          <Link to="/contact" className="text-gray-700 font-medium hover:text-secondary transition-colors">Contact Us</Link>
+          <Link to="/" className={`${isActive('/')} transition-colors`}>Home</Link>
+          <Link to="/products" className={`${isActive('/products')} transition-colors`}>Products</Link>
+          <Link to="/customized" className={`${isActive('/customized')} transition-colors`}>Customized Products</Link>
+          <Link to="/contact" className={`${isActive('/contact')} transition-colors`}>Contact Us</Link>
         </nav>
 
         {/* Search & Actions */}
@@ -111,14 +138,14 @@ const Header = memo(({ wishlist = [] }) => {
               </span>
             </Link>
 
-   <Link 
+    <Link 
               to="/cart" 
               className="hover:text-secondary transition-colors hover:scale-110 transform relative block"
             >
-<button className="hover:text-secondary transition-colors hover:scale-110 transform relative">
               <ShoppingBag size={24} strokeWidth={1.5} />
-              <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
-            </button>
+              <span className="absolute -top-1 -right-1.5 bg-primary text-white text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                {cart.length}
+              </span>
             </Link>
             
             
@@ -188,10 +215,10 @@ const Header = memo(({ wishlist = [] }) => {
             </div>
 
             <div className="p-4 border-b border-gray-100 flex flex-col space-y-4">
-              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Home</Link>
-              <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Products</Link>
-              <Link to="/customized" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Customized Products</Link>
-              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-800 font-medium text-base hover:text-primary transition-colors">Contact Us</Link>
+              <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className={`${isActiveMobile('/')} text-base transition-colors`}>Home</Link>
+              <Link to="/products" onClick={() => setIsMobileMenuOpen(false)} className={`${isActiveMobile('/products')} text-base transition-colors`}>Products</Link>
+              <Link to="/customized" onClick={() => setIsMobileMenuOpen(false)} className={`${isActiveMobile('/customized')} text-base transition-colors`}>Customized Products</Link>
+              <Link to="/contact" onClick={() => setIsMobileMenuOpen(false)} className={`${isActiveMobile('/contact')} text-base transition-colors`}>Contact Us</Link>
             </div>
 
             <div className="p-4">

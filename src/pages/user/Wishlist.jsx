@@ -23,7 +23,7 @@ const Wishlist = ({ wishlist = [], removeFromWishlist }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto  py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
           My Wishlist

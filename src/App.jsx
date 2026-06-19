@@ -1,11 +1,14 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Loader from './components/Loader';
+import ScrollToTop from './components/ScrollToTop';
+import { toast, ToastContainer } from './components/toast';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
+
 
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));
@@ -17,8 +20,10 @@ const OrderDetails = lazy(() => import('./pages/user/OrderDetails'));
 const AddressBook = lazy(() => import('./pages/user/AddressBook'));
 const Wishlist = lazy(() => import('./pages/user/Wishlist'));
 const Cart = lazy(() => import('./pages/user/Cart'));
+const Checkout = lazy(() => import('./pages/user/Checkout'));
 const ContactPage = lazy(() => import('./pages/user/ContactPage'));
 const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
+const ReturnPolicy = lazy(() => import('./pages/user/ReturnPolicy'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -52,11 +57,18 @@ function App() {
   const addToWishlist = (product) => {
     if (!wishlist.some((item) => item.id === product.id)) {
       setWishlist([...wishlist, product]);
+      toast.success(`"${product.title || 'Product'}" added to Wishlist!`);
+    } else {
+      toast.info(`"${product.title || 'Product'}" is already in your Wishlist.`);
     }
   };
 
   const removeFromWishlist = (productId) => {
+    const item = wishlist.find((item) => item.id === productId);
     setWishlist(wishlist.filter((item) => item.id !== productId));
+    if (item) {
+      toast.info(`"${item.title}" removed from Wishlist.`);
+    }
   };
 
   /* ==========================================================================
@@ -65,10 +77,11 @@ function App() {
   const addToCart = (product) => {
     const exists = cart.find(item => item.id === product.id);
     if (exists) {
-      alert("The product was already in cart");
+      toast.info(`"${product.title || 'Product'}" is already in your Cart.`);
       return;
     }
     setCart([...cart, { ...product, quantity: 1 }]);
+    toast.success(`"${product.title || 'Product'}" added to Cart!`);
   };
 
   const updateQuantity = (id, amount) => {
@@ -78,11 +91,17 @@ function App() {
   };
 
   const removeFromCart = (id) => {
+    const item = cart.find(item => item.id === id);
     setCart(prev => prev.filter(item => item.id !== id));
+    if (item) {
+      toast.info(`"${item.title}" removed from Cart.`);
+    }
   };
 
   return (
     <BrowserRouter basename={basename}>
+      <ScrollToTop />
+      <ToastContainer />
       <Suspense fallback={<Loader />}>
         <Routes>
           {/* User Facing Store Routes */}
@@ -104,7 +123,6 @@ function App() {
             <Route path="products" element={<UserProducts />} />
             <Route path="product/:id" element={<ProductDetail />} />
             
-            {/* 2. FIXED: Linked data arrays and event handlers directly into Cart component */}
             <Route 
               path="cart" 
               element={
@@ -115,8 +133,17 @@ function App() {
                 />
               } 
             />
-            
+            <Route 
+              path="checkout" 
+              element={
+                <Checkout 
+                  cart={cart} 
+                  setCart={setCart}
+                />
+              } 
+            />            
             <Route path="contact" element={<ContactPage />} />
+            <Route path="returns-policy" element={<ReturnPolicy />} />
             
             <Route 
               path="wishlist" 

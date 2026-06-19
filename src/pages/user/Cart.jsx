@@ -151,14 +151,14 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart }) => {
           </div>
         </div>
 
-        <button className="w-full bg-[#003147] hover:bg-[#009EDB] active:scale-[0.99] text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer text-[11px] sm:text-sm mt-1">
+        <Link to="/checkout" className="w-full bg-[#003147] hover:bg-[#009EDB] active:scale-[0.99] text-white font-bold py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer text-[11px] sm:text-sm mt-1 text-center">
           <span className="truncate">Proceed to Checkout</span>
           <ArrowRight size={12} className="flex-shrink-0" />
-        </button>
+        </Link>
 
         <div className="text-center">
           <p className="text-[8px] sm:text-[10px] text-gray-400 leading-tight">
-            By proceeding: <a href="#" className="text-red-500 underline">Terms</a> & <a href="#" className="text-red-500 underline">Privacy</a>.
+            By proceeding: <Link to="/returns-policy" className="text-secondary hover:underline">Terms & Conditions</Link> 
           </p>
         </div>
       </div>

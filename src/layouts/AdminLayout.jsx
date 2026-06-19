@@ -1,12 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaTachometerAlt, FaBox, FaShoppingCart, FaUsers, FaUser, FaSignOutAlt } from 'react-icons/fa';
 
 const AdminLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+
   const [adminData, setAdminData] = useState({
     username: 'Admin User',
-    photo: 'https://via.placeholder.com/150'
+    photo: ''
   });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
   
   useEffect(() => {
     const loadData = () => {
@@ -21,25 +27,68 @@ const AdminLayout = () => {
     return () => window.removeEventListener('adminProfileUpdate', loadData);
   }, []);
 
+  useEffect(() => {
+    setImgError(false);
+  }, [adminData.photo]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const isActive = (path) => {
-    return location.pathname === path ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100 hover:text-primary';
+    const current = location.pathname.replace(/\/$/, '') || '/admin';
+    const target = path.replace(/\/$/, '');
+    
+    const isMatched = target === '/admin' 
+      ? (current === '/admin') 
+      : current.startsWith(target);
+      
+    return isMatched 
+      ? 'bg-primary text-white font-bold shadow-md shadow-primary/10' 
+      : 'text-[#003147] hover:bg-gray-100 hover:text-[#003147] font-medium';
+  };
+
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    navigate('/admin/login');
   };
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md flex flex-col z-10">
+      <aside className="w-54 bg-white shadow-md flex flex-col z-10">
         <div className="p-4 border-b flex items-center justify-center h-20">
           <Link to="/">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="P2J Mart Logo" className="h-16 w-auto object-contain" />
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          <Link to="/admin" className={`block p-3 rounded font-medium transition-colors ${isActive('/admin')}`}>Dashboard</Link>
-          <Link to="/admin/products" className={`block p-3 rounded font-medium transition-colors ${isActive('/admin/products') || location.pathname.includes('/admin/products/')} `}>Products</Link>
-          <Link to="/admin/orders" className={`block p-3 rounded font-medium transition-colors ${isActive('/admin/orders')}`}>Orders</Link>
-          <Link to="/admin/users" className={`block p-3 rounded font-medium transition-colors ${isActive('/admin/users')}`}>Users</Link>
-          <Link to="/admin/profile" className={`block p-3 rounded font-medium transition-colors ${isActive('/admin/profile')}`}>Profile</Link>
+          <Link to="/admin" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin')}`}>
+            <FaTachometerAlt className="w-5 h-5 flex-shrink-0" />
+            <span>Dashboard</span>
+          </Link>
+          <Link to="/admin/products" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/products') || location.pathname.includes('/admin/products/')} `}>
+            <FaBox className="w-5 h-5 flex-shrink-0" />
+            <span>Products</span>
+          </Link>
+          <Link to="/admin/orders" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/orders')}`}>
+            <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
+            <span>Orders</span>
+          </Link>
+          <Link to="/admin/users" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/users')}`}>
+            <FaUsers className="w-5 h-5 flex-shrink-0" />
+            <span>Customers</span>
+          </Link>
+          <Link to="/admin/profile" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/profile')}`}>
+            <FaUser className="w-5 h-5 flex-shrink-0" />
+            <span>Profile</span>
+          </Link>
         </nav>
       </aside>
 
@@ -51,17 +100,49 @@ const AdminLayout = () => {
           <div className="flex items-center space-x-4">
           
 
-            {/* User Profile in Header */}
-            <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
-              <div className="flex flex-col text-right">
-                <span className="text-sm font-bold text-gray-800">{adminData.username || 'Admin User'}</span>
-                <span className="text-xs text-gray-500">Administrator</span>
-              </div>
-              <img 
-                src={adminData.photo || 'https://via.placeholder.com/150'} 
-                alt="Admin" 
-                className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm"
-              />
+            {/* User Profile Dropdown */}
+            <div className="relative pl-4 border-l border-gray-200" ref={dropdownRef}>
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center space-x-3 focus:outline-none hover:opacity-80 transition-opacity"
+              >
+                <div className="flex flex-col text-right">
+                  <span className="text-sm font-bold text-gray-800">{adminData.username || 'Admin User'}</span>
+                  <span className="text-xs text-gray-500">Administrator</span>
+                </div>
+                {imgError || !adminData.photo ? (
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold shadow-sm text-sm border border-gray-200">
+                    {adminData.username ? adminData.username.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                ) : (
+                  <img 
+                    src={adminData.photo} 
+                    alt="Admin" 
+                    onError={() => setImgError(true)}
+                    className="w-10 h-10 rounded-full object-cover border border-gray-200 shadow-sm"
+                  />
+                )}
+              </button>
+
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-xl py-2 z-50 border border-gray-100 animate-slideIn">
+                  <Link 
+                    to="/admin/profile" 
+                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors"
+                    onClick={() => setIsDropdownOpen(false)}
+                  >
+                    <FaUser className="w-4 h-4 text-gray-400" />
+                    <span>View Profile</span>
+                  </Link>
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-50 mt-1"
+                  >
+                    <FaSignOutAlt className="w-4 h-4 text-red-400" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>

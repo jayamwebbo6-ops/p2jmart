@@ -10,6 +10,10 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleLinkClick = () => {
+    scrollToTop();
+  };
+
   return (
     <footer className="bg-primary font-sans text-white">
       <div className="max-w-[1500px] mx-auto px-6 lg:px-12 pt-12 pb-8">
@@ -21,9 +25,10 @@ const Footer = () => {
           <div className="col-span-1">
             <h4 className="text-white font-bold mb-4 text-[14px]">ABOUT</h4>
             <ul className="space-y-2 text-white">
-              <li><Link to="/contact" className="text-[13px]">Contact Us</Link></li>
-              <li><Link to="/wishlist" className="text-[13px]">Wishlist</Link></li>
-              <li><Link to="/returns" className="text-[13px]">Cancellation &amp; Returns</Link></li>
+              <li><Link to="/contact" onClick={handleLinkClick} className="text-[13px]">Contact Us</Link></li>
+              <li><Link to="/cart" onClick={handleLinkClick} className="text-[13px]">Cart</Link></li>
+              <li><Link to="/wishlist" onClick={handleLinkClick} className="text-[13px]">Wishlist</Link></li>
+              <li><Link to="/returns-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
             </ul>
           </div>
 
@@ -31,10 +36,10 @@ const Footer = () => {
           <div className="col-span-1">
             <h4 className="text-white font-bold mb-4 text-[14px]">CONSUMER POLICY</h4>
             <ul className="space-y-2 text-white">
-              <li><Link to="/terms" className="text-[13px]">Terms and Condition</Link></li>
-              <li><Link to="/privacy" className="text-[13px]">Privacy Policy</Link></li>
-              <li><Link to="/shipping" className="text-[13px]">Delivery and Shipping</Link></li>
-              <li><Link to="/returns-policy" className="text-[13px]">Cancellation &amp; Returns</Link></li>
+              <li><Link to="/terms" onClick={handleLinkClick} className="text-[13px]">Terms and Condition</Link></li>
+              <li><Link to="/privacy" onClick={handleLinkClick} className="text-[13px]">Privacy Policy</Link></li>
+              <li><Link to="/shipping" onClick={handleLinkClick} className="text-[13px]">Delivery and Shipping</Link></li>
+              <li><Link to="/returns-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
             </ul>
           </div>
 
