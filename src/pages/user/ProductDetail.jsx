@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingCart, Heart, Star, Share2, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Heart, Star, Share2, ShoppingBag, Eye } from 'lucide-react';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import { Navigation } from "swiper/modules";
@@ -29,9 +29,9 @@ const ProductDetail = () => {
     rating: 4.0,
     reviews: 1,
     images: [
-      'https://images.unsplash.com/photo-1544531586-fde5298cdd40?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&q=80'
+      'https://images.unsplash.com/photo-1544531586-fde5298cdd40?auto=format&fit=crop&w=800&h=800&q=80',
+      'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80',
+      'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=800&h=800&q=80'
     ],
     colors: [
       { name: 'Blue', hex: '#0000FF' },
@@ -47,6 +47,26 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('5 inch');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const [zoomStyle, setZoomStyle] = useState({ transformOrigin: 'center center', transform: 'scale(1)' });
+  const containerRef = useRef(null);
+
+  const handleMouseMoveZoom = (e) => {
+    if (!containerRef.current) return;
+    const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+    
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: 'scale(2.2)' 
+    });
+  };
+
+  const handleMouseLeaveZoom = () => {
+    setZoomStyle({ transformOrigin: 'center center', transform: 'scale(1)' });
+  };
   
 
   const relatedProducts = [
@@ -122,15 +142,15 @@ const ProductDetail = () => {
                 pagination={{ clickable: true }}
                 spaceBetween={10}
                 slidesPerView={1}
-                className="product-swiper rounded-lg overflow-hidden border border-gray-200"
+                className="product-swiper rounded-lg overflow-hidden border border-gray-200 aspect-square"
               >
                 {product.images.map((img, index) => (
                   <SwiperSlide key={index}>
-                    <div className="relative">
+                    <div className="relative w-full h-full">
                       <img
                         src={img}
                         alt={`Product ${index + 1}`}
-                        className="w-full h-[260px] sm:h-[350px] object-cover"
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute top-2 left-2 sm:top-4 sm:left-4 bg-red-600 text-white px-2 py-0.5 sm:px-3 sm:py-1 rounded text-xs sm:text-sm font-bold">
                         -{product.discount}%
@@ -141,7 +161,7 @@ const ProductDetail = () => {
               </Swiper>
             </div>
             {/* Desktop Gallery - Modification 5 & 11: Updated responsive desktop gallery height */}
-            <div className="hidden sm:flex gap-3 lg:gap-4 h-[420px] md:h-[500px] lg:h-[600px] w-full">
+            <div className="hidden sm:flex gap-3 lg:gap-4 w-full">
              {/* Thumbnails - Modification 12: Responsive thumbnail panel size */}
               <div className="flex flex-col gap-2 md:gap-3 w-16 md:w-20 shrink-0">
                 {product.images.map((img, idx) => (
@@ -164,13 +184,22 @@ const ProductDetail = () => {
                 ))}
               </div>
              {/* Main Image - Modification 6: Fixed h-full on Main Product Image wrapper */}
-              <div className="flex-1 h-full relative overflow-hidden rounded-lg border border-gray-200">
+              <div 
+                ref={containerRef}
+                onMouseMove={handleMouseMoveZoom}
+                onMouseLeave={handleMouseLeaveZoom}
+                className="flex-1 aspect-square relative overflow-hidden rounded-lg border border-gray-200 cursor-zoom-in bg-gray-50 flex items-center justify-center"
+              >
                 <img
                   src={product.images[activeImageIndex]}
                   alt={product.title}
-                  className="w-full h-full object-cover"
+                  style={zoomStyle}
+                  className="w-full h-full object-cover transition-transform duration-75 ease-out pointer-events-none select-none"
                 />
-                <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold">
+                <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
+                  <Eye size={16} />
+                </button>
+                <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold pointer-events-none z-10">
                   -{product.discount}%
                 </div>
               </div>

@@ -34,6 +34,8 @@ const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
+const AdminAttributes = lazy(() => import('./pages/admin/Attributes'));
+const AdminEnquiries = lazy(() => import('./pages/admin/Enquiries'));
 
 // Lazy loading subcategory page
 const Subcategory = lazy(() => import('./pages/user/Subcategory'));
@@ -193,6 +195,8 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<Users />} />
             <Route path="profile" element={<AdminProfile />} />
+            <Route path="attributes" element={<AdminAttributes />} />
+            <Route path="enquiries" element={<AdminEnquiries />} />
           </Route>
         </Routes>
       </Suspense>

@@ -31,21 +31,60 @@ const CustomizedProductDetails = () => {
     discount: 9,
     rating: 4.0,
     reviews: 21,
-    image: "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=800&q=80"
+    image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80"
   };
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
-  const [activePreviewImage, setActivePreviewImage] = useState(product.image);
+  const [customImageURL, setCustomImageURL] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [swiperRef, setSwiperRef] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showTextInputPanel, setShowTextInputPanel] = useState(false);
   const [customUserText, setCustomUserText] = useState('');
+
+  // Image adjust variables
+  const [imageFit, setImageFit] = useState('contain'); // 'cover' or 'contain'
+  const [imageScale, setImageScale] = useState(1.0);
+  const [imageX, setImageX] = useState(0);
+  const [imageY, setImageY] = useState(0);
 
   // Zoom Transform Setup (In-container bounds constraint)
   const [zoomStyle, setZoomStyle] = useState({ transformOrigin: 'center center', transform: 'scale(1)' });
   const containerRef = useRef(null);
 
-  const productGalleryThumbnails = Array(4).fill(product.image);
+  // Synchronize zoom style when user adjusts the manual sliders
+  useEffect(() => {
+    setZoomStyle({
+      transformOrigin: 'center center',
+      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
+    });
+  }, [imageScale, imageX, imageY]);
+
+  // Clean up object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (customImageURL) {
+        URL.revokeObjectURL(customImageURL);
+      }
+    };
+  }, [customImageURL]);
+
+  const productGalleryThumbnails = [
+    customImageURL || product.image,
+    'https://images.unsplash.com/photo-1579783928621-7a13d66a6211?auto=format&fit=crop&w=800&h=800&q=80',
+    'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?auto=format&fit=crop&w=800&h=800&q=80',
+    'https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&h=800&q=80'
+  ];
+
+  const activePreviewImage = productGalleryThumbnails[activeImageIndex];
+
+  // Synchronize swiper when activeImageIndex changes
+  useEffect(() => {
+    if (swiperRef) {
+      swiperRef.slideTo(activeImageIndex);
+    }
+  }, [activeImageIndex, swiperRef]);
 
   const RELATED_PRODUCTS_MOCK = [
     { id: 101, title: "Glass Photo", price: 540, originalPrice: 550, image: product.image },
@@ -64,7 +103,16 @@ const CustomizedProductDetails = () => {
 
   const handleFileChangeAction = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedImageFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedImageFile(file);
+
+      if (customImageURL) {
+        URL.revokeObjectURL(customImageURL);
+      }
+
+      const url = URL.createObjectURL(file);
+      setCustomImageURL(url);
+      setActiveImageIndex(0);
     }
   };
 
@@ -77,12 +125,15 @@ const CustomizedProductDetails = () => {
     
     setZoomStyle({
       transformOrigin: `${x}% ${y}%`,
-      transform: 'scale(2.2)' 
+      transform: `scale(${imageScale * 2.2}) translate(${imageX}px, ${imageY}px)`
     });
   };
 
   const handleMouseLeaveZoom = () => {
-    setZoomStyle({ transformOrigin: 'center center', transform: 'scale(1)' });
+    setZoomStyle({
+      transformOrigin: 'center center',
+      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
+    });
   };
 
   return (
@@ -110,11 +161,23 @@ const CustomizedProductDetails = () => {
               pagination={{ clickable: true }}
               spaceBetween={10}
               slidesPerView={1}
-              className="w-full aspect-square rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
+              onSwiper={setSwiperRef}
+              onSlideChange={(swiper) => setActiveImageIndex(swiper.activeIndex)}
+              className="product-swiper w-full aspect-square rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
             >
               {productGalleryThumbnails.map((imgUrl, idx) => (
-                <SwiperSlide key={idx} className="w-full h-full flex items-center justify-center">
-                  <img src={imgUrl} alt={`Product Slide ${idx}`} className="w-full h-full object-cover select-none" />
+                <SwiperSlide key={idx} className="w-full h-full flex items-center justify-center overflow-hidden">
+                  <img 
+                    src={imgUrl} 
+                    alt={`Product Slide ${idx}`} 
+                    style={idx === 0 ? {
+                      objectFit: imageFit,
+                      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
+                    } : {
+                      objectFit: 'cover'
+                    }}
+                    className="w-full h-full select-none" 
+                  />
                 </SwiperSlide>
               ))}
             </Swiper>
@@ -126,12 +189,22 @@ const CustomizedProductDetails = () => {
               {productGalleryThumbnails.map((thumbUrl, idx) => (
                 <div 
                   key={idx}
-                  onClick={() => setActivePreviewImage(thumbUrl)}
+                  onClick={() => setActiveImageIndex(idx)}
                   className={`aspect-square w-full rounded border overflow-hidden cursor-pointer bg-gray-50 transition-all ${
-                    activePreviewImage === thumbUrl ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-400'
+                    activeImageIndex === idx ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200 hover:border-gray-400'
                   }`}
                 >
-                  <img src={thumbUrl} alt="Gallery Thumb" className="w-full h-full object-cover" />
+                  <img 
+                    src={thumbUrl} 
+                    alt="Gallery Thumb" 
+                    style={idx === 0 ? {
+                      objectFit: imageFit,
+                      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
+                    } : {
+                      objectFit: 'cover'
+                    }}
+                    className="w-full h-full" 
+                  />
                 </div>
               ))}
             </div>
@@ -145,8 +218,11 @@ const CustomizedProductDetails = () => {
               <img 
                 src={activePreviewImage} 
                 alt={product.title} 
-                style={zoomStyle}
-                className="w-full h-full object-cover transition-transform duration-75 ease-out pointer-events-none select-none"
+                style={{
+                  ...zoomStyle,
+                  objectFit: imageFit
+                }}
+                className="w-full h-full transition-transform duration-75 ease-out pointer-events-none select-none"
               />
               <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
                 <Eye size={16} />
@@ -252,6 +328,66 @@ const CustomizedProductDetails = () => {
               <div className="px-3 py-2 text-gray-500 truncate flex-grow bg-white min-w-0">
                 {selectedImageFile ? selectedImageFile.name : "No file chosen"}
               </div>
+            </div>
+
+            {/* Scale, Fit, and Position Controls */}
+            <div className="border-t border-gray-200/80 pt-3 flex flex-col gap-3">
+
+              {/* Scale slider: Increase / Decrease Size */}
+              <div className="flex flex-col gap-1 text-xs">
+                <div className="flex justify-between font-semibold text-gray-700">
+                  <span>Image Size:</span>
+                  <span>{Math.round(imageScale * 100)}%</span>
+                </div>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="2.5" 
+                  step="0.05" 
+                  value={imageScale}
+                  onChange={(e) => setImageScale(parseFloat(e.target.value))}
+                  className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Offset adjustment controls */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-gray-700">Move Horizontally:</span>
+                  <input 
+                    type="range" 
+                    min="-100" 
+                    max="100" 
+                    value={imageX}
+                    onChange={(e) => setImageX(parseInt(e.target.value))}
+                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold text-gray-700">Move Vertically:</span>
+                  <input 
+                    type="range" 
+                    min="-100" 
+                    max="100" 
+                    value={imageY}
+                    onChange={(e) => setImageY(parseInt(e.target.value))}
+                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Reset button */}
+              <button
+                onClick={() => {
+                  setImageFit('contain');
+                  setImageScale(1.0);
+                  setImageX(0);
+                  setImageY(0);
+                }}
+                className="text-[11px] text-gray-500 hover:text-red-500 font-medium w-fit self-end mt-1"
+              >
+                Reset Image Adjustments
+              </button>
             </div>
             
             <p className="text-[10px] text-gray-400">Max file size constraints: 5MB (JPG, PNG, GIF)</p>

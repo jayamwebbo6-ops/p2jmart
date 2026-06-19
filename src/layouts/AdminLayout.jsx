@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaBox, FaShoppingCart, FaUsers, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import { FaTachometerAlt, FaBox, FaShoppingCart, FaUsers, FaUser, FaSignOutAlt, FaTags, FaEnvelope } from 'react-icons/fa';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -13,6 +13,7 @@ const AdminLayout = () => {
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   useEffect(() => {
     const loadData = () => {
@@ -25,6 +26,23 @@ const AdminLayout = () => {
 
     window.addEventListener('adminProfileUpdate', loadData);
     return () => window.removeEventListener('adminProfileUpdate', loadData);
+  }, []);
+
+  useEffect(() => {
+    const updateUnreadCount = () => {
+      const saved = localStorage.getItem('p2j_mart_enquiries');
+      if (saved) {
+        const list = JSON.parse(saved);
+        const unread = list.filter(e => !e.read);
+        setUnreadCount(unread.length);
+      } else {
+        setUnreadCount(0);
+      }
+    };
+    
+    updateUnreadCount();
+    window.addEventListener('enquiriesUpdated', updateUnreadCount);
+    return () => window.removeEventListener('enquiriesUpdated', updateUnreadCount);
   }, []);
 
   useEffect(() => {
@@ -81,9 +99,24 @@ const AdminLayout = () => {
             <FaBox className="w-5 h-5 flex-shrink-0" />
             <span>Products</span>
           </Link>
+          <Link to="/admin/attributes" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/attributes')}`}>
+            <FaTags className="w-5 h-5 flex-shrink-0" />
+            <span>Attributes</span>
+          </Link>
           <Link to="/admin/orders" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/orders')}`}>
             <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
             <span>Orders</span>
+          </Link>
+          <Link to="/admin/enquiries" className={`flex items-center justify-between p-3 rounded font-medium transition-colors ${isActive('/admin/enquiries')}`}>
+            <div className="flex items-center gap-3">
+              <FaEnvelope className="w-5 h-5 flex-shrink-0" />
+              <span>Enquiries</span>
+            </div>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center min-w-5">
+                {unreadCount}
+              </span>
+            )}
           </Link>
           <Link to="/admin/users" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/users')}`}>
             <FaUsers className="w-5 h-5 flex-shrink-0" />

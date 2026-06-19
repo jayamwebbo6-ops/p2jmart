@@ -31,14 +31,17 @@ const ProductCard = ({
       className="border border-gray-200 bg-white group hover:shadow-md transition-shadow duration-300 flex flex-col h-full font-['Inter'] w-full min-w-0 overflow-hidden cursor-pointer"
     >
       {/* Image Container */}
-      <div className="relative aspect-square bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
+      <div className="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
         {product.image ? (
-          <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <img src={product.image} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
         ) : (
           <div className="w-full h-full bg-[#FAFAFA] flex flex-col items-center justify-center text-gray-400 font-sans text-center">
             <span className="text-sm font-medium">📷 No Image</span>
           </div>
         )}
+        
+        {/* Bottom border divider overlay */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gray-200/80 pointer-events-none z-10"></div>
         
         {/* Wishlist Actions (e.stopPropagation prevents the card's main handleNavigation from running) */}
         {variant === "wishlist" ? (

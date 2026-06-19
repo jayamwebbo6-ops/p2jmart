@@ -43,7 +43,7 @@ const sections = [
         id: 5,
         name: "Electronics",
         image:
-          "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=500&q=80",
+          "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&h=500&q=80",
         discount: "35% OFF",
       },
       {

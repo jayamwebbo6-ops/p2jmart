@@ -9,44 +9,45 @@ import Collections from '../../components/Collections';
 const dummyProducts = [
   {
     id: 1,
-    title: 'Ele Pro 2',
-    price: 211.00,
-    originalPrice: 222.00,
-    discount: 5,
+    title: 'Premium Wireless Headphones',
+    price: 199.00,
+    originalPrice: 249.00,
+    discount: 20,
     rating: 4.5,
-    reviews: 15,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&q=80'
+    reviews: 28,
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&h=500&q=80'
   },
   {
     id: 2,
-    title: 'Ele 3',
-    price: 222.00,
-    originalPrice: 1333.00,
-    discount: 83,
-    rating: 4.0,
-    reviews: 15,
-    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&w=500&q=80'
+    title: 'Smart Watch Series 9',
+    price: 299.00,
+    originalPrice: 349.00,
+    discount: 14,
+    rating: 4.8,
+    reviews: 42,
+    image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=500&h=500&q=80'
   },
   {
     id: 3,
-    title: 'Ele Pro 1',
-    price: 54.00,
-    originalPrice: 55.00,
-    discount: 2,
-    rating: 4.5,
-    reviews: 15,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=500&q=80'
+    title: 'Portable Bluetooth Speaker',
+    price: 79.00,
+    originalPrice: 99.00,
+    discount: 20,
+    rating: 4.3,
+    reviews: 19,
+    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&w=500&h=500&q=80'
   },
   {
     id: 4,
-    title: 'Ele Pro Max',
-    price: 199.00,
-    originalPrice: 250.00,
-    discount: 20,
-    rating: 5.0,
-    reviews: 42,
-    image: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=500&q=80'
-  }
+    title: 'Minimalist Wall Clock',
+    price: 45.00,
+    originalPrice: 59.00,
+    discount: 23,
+    rating: 4.6,
+    reviews: 14,
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=500&h=500&q=80'
+  },
+  
 ];
 
 // 1. Accept the global wishlist state and handlers via props here
