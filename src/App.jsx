@@ -37,6 +37,8 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
 // Lazy loading subcategory page
 const Subcategory = lazy(() => import('./pages/user/Subcategory'));
+const HomeContentManager = lazy(() => import('./pages/admin/HomeCMS/HomeContentManager'));
+
 
 function App() {
   const basename = import.meta.env.BASE_URL;
@@ -193,6 +195,8 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<Users />} />
             <Route path="profile" element={<AdminProfile />} />
+            <Route path="homeCMS" element={<HomeContentManager/>} />
+
           </Route>
         </Routes>
       </Suspense>
