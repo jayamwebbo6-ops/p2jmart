@@ -292,8 +292,24 @@ const ProductDetail = () => {
                 <ShoppingBag size={18} /> Buy Now
               </button>
             </div>
+           
 
           </div>
+              <div className="w-full max-w-[2500px] mx-auto px-4 mt-6">
+        <div className="border-b border-gray-200 flex items-center">
+          <button className="border-b-2 border-blue-900 px-4 py-2.5 text-xs font-bold uppercase text-blue-900 tracking-wider">
+            Additional Info Specification
+          </button>
+        </div>
+        <div className="py-5 text-xs text-gray-600 leading-relaxed max-w-4xl border-b border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
+            <span className="font-bold text-gray-900 text-sm sm:col-span-1">Description:</span>
+            <span className="sm:col-span-3 text-gray-600 text-xs font-medium">
+              {product.title} Perfect design payload for birthday celebrations, valentine memory books, wedding anniversary milestones, or customized gift tokens for family and friends.
+            </span>
+          </div>
+        </div>
+      </div>
         </div>
       </div>
 

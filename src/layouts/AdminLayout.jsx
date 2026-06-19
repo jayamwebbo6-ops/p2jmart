@@ -69,6 +69,10 @@ const AdminLayout = () => {
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <Link to="/admin" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/homecms')}`}>
+            <FaTachometerAlt className="w-5 h-5 flex-shrink-0" />
+            <span>Home CMS</span>
+          </Link>
           <Link to="/admin" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin')}`}>
             <FaTachometerAlt className="w-5 h-5 flex-shrink-0" />
             <span>Dashboard</span>

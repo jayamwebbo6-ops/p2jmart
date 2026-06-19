@@ -23,6 +23,7 @@ const Cart = lazy(() => import('./pages/user/Cart'));
 const Checkout = lazy(() => import('./pages/user/Checkout'));
 const ContactPage = lazy(() => import('./pages/user/ContactPage'));
 const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
+const CustomizedProductDetails = lazy(() => import('./pages/user/CustomizedProductDetails'));
 const ReturnPolicy = lazy(() => import('./pages/user/ReturnPolicy'));
 
 // Lazy loading admin pages
@@ -107,7 +108,6 @@ function App() {
           {/* User Facing Store Routes */}
           <Route path="/" element={<UserLayout wishlist={wishlist} cart={cart} />}>
             
-            {/* 1. FIXED: Added onAddToCart prop to Home component */}
             <Route 
               index 
               element={
@@ -143,6 +143,11 @@ function App() {
               } 
             />            
             <Route path="contact" element={<ContactPage />} />
+            <Route path="customized" element={<CustomizedProduct />} />
+            
+            {/* 2. ADDED: New dynamic route capturing path for the product customizer layout */}
+            <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
+
             <Route path="returns-policy" element={<ReturnPolicy />} />
             
             <Route 
@@ -155,8 +160,6 @@ function App() {
               } 
             />
 
-            
-            
             <Route 
               path="subCategory" 
               element={
