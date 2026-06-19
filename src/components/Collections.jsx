@@ -1,5 +1,6 @@
 import React from "react";
 import { Send } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const sections = [
   {
@@ -114,9 +115,9 @@ const Collections = () => {
             <Send size={48} className="text-white/60" />
 
             <div>
-              <h2 className="text-2xl text-white font-semibold">
+             <Link to="/contact"> <h2  className="text-2xl text-white font-semibold">
                 Contact Us now
-              </h2>
+              </h2></Link>
 
               <p className="text-sm md:text-base text-gray-200 mt-1">
                 Explore Our Products Today to get unbelievable Discounts!!
@@ -124,9 +125,9 @@ const Collections = () => {
             </div>
           </div>
 
-          <button className="bg-[#2c2c2c] hover:bg-black px-10 py-3 rounded-full text-white font-medium transition">
+         <Link to="/products"> <button className="bg-[#2c2c2c] hover:bg-black px-10 py-3 rounded-full text-white font-medium transition">
             Explore Our Products
-          </button>
+          </button></Link>
         </div>
       </section>
 

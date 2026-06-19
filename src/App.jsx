@@ -18,6 +18,8 @@ const AddressBook = lazy(() => import('./pages/user/AddressBook'));
 const Wishlist = lazy(() => import('./pages/user/Wishlist'));
 const Cart = lazy(() => import('./pages/user/Cart'));
 const ContactPage = lazy(() => import('./pages/user/ContactPage'));
+const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
+const CustomizedProductDetails = lazy(() => import('./pages/user/CustomizedProductDetails'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -87,7 +89,6 @@ function App() {
           {/* User Facing Store Routes */}
           <Route path="/" element={<UserLayout wishlist={wishlist} cart={cart} />}>
             
-            {/* 1. FIXED: Added onAddToCart prop to Home component */}
             <Route 
               index 
               element={
@@ -103,7 +104,6 @@ function App() {
             <Route path="products" element={<UserProducts />} />
             <Route path="product/:id" element={<ProductDetail />} />
             
-            {/* 2. FIXED: Linked data arrays and event handlers directly into Cart component */}
             <Route 
               path="cart" 
               element={
@@ -116,7 +116,11 @@ function App() {
             />
             
             <Route path="contact" element={<ContactPage />} />
+            <Route path="customized" element={<CustomizedProduct />} />
             
+            {/* 2. ADDED: New dynamic route capturing path for the product customizer layout */}
+            <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
+
             <Route 
               path="wishlist" 
               element={
@@ -127,8 +131,6 @@ function App() {
               } 
             />
 
-            
-            
             <Route 
               path="subCategory" 
               element={

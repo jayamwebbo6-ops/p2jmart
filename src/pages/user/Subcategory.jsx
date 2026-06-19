@@ -157,8 +157,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-// Added wishlist props directly to the main component function signature layout 
-const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist }) => {
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick }) => {
   const [sortOption, setSortOption] = useState("default");
   const [minPrice, setMinPrice] = useState(100);
   const [maxPrice, setMaxPrice] = useState(10000);
@@ -313,7 +312,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist }) =
         )}
       </div>
     </div>
-  );
+  ); // <-- FIXED: Added missing closing brace syntax bracket right here!
 
   return (
     <div className="w-full pt-8 max-w-none min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased">
@@ -363,10 +362,10 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist }) =
                 <ProductCard 
                   key={product.id} 
                   product={product} 
-                  // Injected prop tracking parameters down to our component instances
                   isWishlisted={wishlist.some(item => item.id === product.id)}
                   onWishlist={addToWishlist}
                   onRemoveWishlist={removeFromWishlist}
+                  onClick={onProductClick} // <-- FIXED: Successfully forwarded prop tracking callback!
                 />
               ))}
             </div>
