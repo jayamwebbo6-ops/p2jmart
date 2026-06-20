@@ -27,6 +27,8 @@ const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
 const CustomizedProductDetails = lazy(() => import('./pages/user/CustomizedProductDetails'));
 const ReturnPolicy = lazy(() => import('./pages/user/ReturnPolicy'));
 const PrivacyPolicy = lazy(() => import('./pages/user/PrivacyPolicy'));
+const UserLogin = lazy(() => import('./pages/user/Login'));
+
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -152,6 +154,7 @@ function App() {
             />            
             <Route path="contact" element={<ContactPage />} />
             <Route path="customized" element={<CustomizedProduct />} />
+            <Route path="login" element={<UserLogin />} />
             
             {/* 2. ADDED: New dynamic route capturing path for the product customizer layout */}
             <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
