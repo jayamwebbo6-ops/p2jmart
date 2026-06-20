@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/toast';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { DeleteBtn } from '../../components/AdminButtons';
+import PageHeader from '../../components/PageHeader';
+import AdminTable from '../../components/AdminTable';
 
 const INITIAL_CUSTOMERS = [
   {
@@ -258,17 +261,10 @@ const Users = () => {
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[#001E3C] tracking-tight">
-            Customer Registry
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Analyze client accounts, historical ordering trends, spent revenues, and profiles.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Customer Registry"
+        subtitle="Analyze client accounts, historical ordering trends, spent revenues, and profiles."
+      />
 
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -291,7 +287,7 @@ const Users = () => {
           <div>
             <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider block">Active Accounts</span>
             <span className="text-lg font-bold text-gray-900 leading-tight">
-              {activeCount} <span className="text-xs font-medium text-gray-400">({totalCustomers > 0 ? Math.round((activeCount/totalCustomers)*100) : 0}%)</span>
+              {activeCount}
             </span>
           </div>
         </div>
@@ -357,159 +353,111 @@ const Users = () => {
       </div>
 
       {/* Main Table Card */}
-      <div className="bg-white border border-gray-200/80 rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gray-50/75 border-b border-gray-100 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                <th className="py-4 px-6 select-none cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => handleSort('name')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Customer</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 select-none cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => handleSort('email')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Contact Info</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 text-center select-none cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => handleSort('orders')}>
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span>Orders</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 text-right select-none cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => handleSort('totalSpent')}>
-                  <div className="flex items-center justify-end gap-1.5">
-                    <span>Total Spent</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 select-none cursor-pointer hover:bg-gray-100/50 transition-colors" onClick={() => handleSort('lastOrder')}>
-                  <div className="flex items-center gap-1.5">
-                    <span>Last Order</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 select-none cursor-pointer hover:bg-gray-100/50 transition-colors text-center" onClick={() => handleSort('status')}>
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span>Status</span>
-                    <ArrowUpDown size={11} className="text-gray-400" />
-                  </div>
-                </th>
-                <th className="py-4 px-6 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-xs">
-              {filteredCustomers.map((customer) => (
-                <tr 
-                  key={customer.id}
-                  onClick={() => handleOpenDetail(customer)}
-                  className="hover:bg-gray-50/50 cursor-pointer transition-colors group"
-                >
-                  {/* Customer Identity */}
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-sm shadow-sm shrink-0 ${getAvatarBg(customer.name)}`}>
-                        {getInitials(customer.name)}
-                      </div>
-                      <div className="min-w-0">
-                        <span className="font-bold text-gray-900 group-hover:text-primary transition-colors block truncate">
-                          {customer.name}
-                        </span>
-                        <span className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
-                          <Calendar size={10} />
-                          Joined {new Date(customer.joinedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
+      <AdminTable
+        headers={[
+          { key: 'name', label: 'Customer',  },
+          { key: 'email', label: 'Contact Info', },
+          { key: 'orders', label: 'Orders',  align: 'center' },
+          { key: 'totalSpent', label: 'Total Spent', align: 'right' },
+          { key: 'lastOrder', label: 'Last Order', },
+          { key: 'status', label: 'Status',align: 'center' },
+          { key: 'actions', label: 'Actions', align: 'center' }
+        ]}
+        data={filteredCustomers}
+        onSort={handleSort}
+        sortConfig={sortConfig}
+        containerClassName="border border-gray-200/80 rounded-xl overflow-hidden"
+        emptyMessage={
+          <div className="flex flex-col items-center justify-center gap-3">
+            <UsersIcon size={32} className="text-gray-300" />
+            <span>No matching customers found.</span>
+          </div>
+        }
+        renderRow={(customer) => (
+          <tr 
+            key={customer.id}
+            onClick={() => handleOpenDetail(customer)}
+            className="hover:bg-gray-50/50 cursor-pointer transition-colors group"
+          >
+            {/* Customer Identity */}
+            <td className="py-4 px-6">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-sm shadow-sm shrink-0 ${getAvatarBg(customer.name)}`}>
+                  {getInitials(customer.name)}
+                </div>
+                <div className="min-w-0">
+                  <span className="font-bold text-gray-900 group-hover:text-primary transition-colors block truncate">
+                    {customer.name}
+                  </span>
+                  <span className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
+                    <Calendar size={10} />
+                    Joined {new Date(customer.joinedDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+            </td>
 
-                  {/* Contact Info */}
-                  <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex flex-col gap-1 text-[11px] text-gray-600">
-                      <a href={`mailto:${customer.email}`} className="flex items-center gap-1.5 hover:text-blue-600 hover:underline">
-                        <Mail size={12} className="text-gray-400" />
-                        <span>{customer.email}</span>
-                      </a>
-                      <a href={`tel:${customer.phone}`} className="flex items-center gap-1.5 hover:text-blue-600 hover:underline">
-                        <Phone size={12} className="text-gray-400" />
-                        <span>{customer.phone}</span>
-                      </a>
-                    </div>
-                  </td>
+            {/* Contact Info */}
+            <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-col gap-1 text-[11px] text-gray-600">
+                <a href={`mailto:${customer.email}`} className="flex items-center gap-1.5 hover:text-blue-600 hover:underline">
+                  <Mail size={12} className="text-gray-400" />
+                  <span>{customer.email}</span>
+                </a>
+                <a href={`tel:${customer.phone}`} className="flex items-center gap-1.5 hover:text-blue-600 hover:underline">
+                  <Phone size={12} className="text-gray-400" />
+                  <span>{customer.phone}</span>
+                </a>
+              </div>
+            </td>
 
-                  {/* Orders */}
-                  <td className="py-4 px-6 text-center font-semibold text-gray-800">
-                    {customer.orders}
-                  </td>
+            {/* Orders */}
+            <td className="py-4 px-6 text-center font-semibold text-gray-800">
+              {customer.orders}
+            </td>
 
-                  {/* Total Spent */}
-                  <td className="py-4 px-6 text-right font-bold text-gray-900">
-                    {formatCurrency(customer.totalSpent)}
-                  </td>
+            {/* Total Spent */}
+            <td className="py-4 px-6 text-right font-bold text-gray-900">
+              {formatCurrency(customer.totalSpent)}
+            </td>
 
-                  {/* Last Order Date */}
-                  <td className="py-4 px-6 text-gray-500 font-medium">
-                    {formatDate(customer.lastOrder)}
-                  </td>
+            {/* Last Order Date */}
+            <td className="py-4 px-6 text-gray-500 font-medium">
+              {formatDate(customer.lastOrder)}
+            </td>
 
-                  {/* Status Badges */}
-                  <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${
-                      customer.status === 'Active'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
-                        : 'bg-gray-50 text-gray-500 border-gray-200'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
-                      {customer.status}
-                    </span>
-                  </td>
+            {/* Status Badges */}
+            <td className="py-4 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-colors ${
+                customer.status === 'Active'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
+                  : 'bg-gray-50 text-gray-500 border-gray-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'Active' ? 'bg-emerald-500' : 'bg-gray-400'}`}></span>
+                {customer.status}
+              </span>
+            </td>
 
-                  {/* Action Buttons */}
-                  <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        onClick={() => handleOpenDetail(customer)}
-                        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-blue-600 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteCustomer(customer.id, customer.name, e)}
-                        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-650 transition-colors"
-                        title="Delete Customer"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+            {/* Action Buttons */}
+            <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center gap-1.5">
+                <DeleteBtn
+                  size={14}
+                  onClick={(e) => handleDeleteCustomer(customer.id, customer.name, e)}
+                  title="Delete Customer"
+                />
+              </div>
+            </td>
+          </tr>
+        )}
+      />
 
-              {filteredCustomers.length === 0 && (
-                <tr>
-                  <td colSpan="7" className="text-center py-20 text-xs text-gray-400">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                      <UsersIcon size={32} className="text-gray-300" />
-                      <span>No matching customers found.</span>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Table footer info */}
-        <div className="bg-gray-50/50 border-t border-gray-100 px-6 py-4 flex items-center justify-between text-[11px] font-medium text-gray-500">
-          <span>Showing {filteredCustomers.length} of {totalCustomers} customers</span>
-          {statusFilter !== 'All' && (
-            <span>Filtered by status: <strong>{statusFilter}</strong></span>
-          )}
-        </div>
+      {/* Table footer info */}
+      <div className="bg-gray-50/50 border border-gray-250 border-t-0 rounded-b-xl px-6 py-4 flex items-center justify-between text-[11px] font-medium text-gray-500 -mt-[1px] relative z-10">
+        <span>Showing {filteredCustomers.length} of {totalCustomers} customers</span>
+        {statusFilter !== 'All' && (
+          <span>Filtered by status: <strong>{statusFilter}</strong></span>
+        )}
       </div>
 
 
@@ -643,17 +591,15 @@ const Users = () => {
 
             {/* Footer Buttons */}
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-              <button
+              <DeleteBtn
+                size={13}
                 onClick={(e) => {
                   setDetailModalOpen(false);
                   handleDeleteCustomer(selectedCustomer.id, selectedCustomer.name, e);
                 }}
-                className="flex items-center gap-1 text-xs font-bold text-red-650 hover:text-red-800 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
-              >
-                <Trash2 size={13} />
-                <span>Delete Account</span>
-              </button>
-              
+                title="Delete Account"
+                className="px-3 py-2 gap-1.5"
+              />
               <div className="flex gap-2">
                 <button
                   onClick={() => setDetailModalOpen(false)}

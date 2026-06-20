@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Save, Edit2, X } from 'lucide-react';
+import PageHeader from '../../components/PageHeader';
 
 const AdminProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState({
     username: 'Admin User',
     email: 'admin@p2jmart.com',
-    photo: 'https://via.placeholder.com/150'
+    photo: ''
   });
   
   // Keep a copy of the original profile for canceling edits
-  const [originalProfile, setOriginalProfile] = useState({ ...profile });
+  const [originalProfile, setOriginalProfile] = useState({
+    username: 'Admin User',
+    email: 'admin@p2jmart.com',
+    photo: ''
+  });
 
   const [passwords, setPasswords] = useState({
     current: '',
@@ -76,8 +81,7 @@ const AdminProfile = () => {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Profile Settings</h2>
+      <PageHeader title="Profile Settings">
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
@@ -87,7 +91,7 @@ const AdminProfile = () => {
             <span>Edit Profile</span>
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {message.text && (
         <div className={`p-4 mb-6 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
@@ -106,12 +110,19 @@ const AdminProfile = () => {
           {/* Profile Photo Area */}
           <div className="relative flex justify-between items-end -mt-16 mb-8">
             <div className="relative group">
-              <div className={`w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-white ${isEditing ? 'cursor-pointer' : ''}`}>
-                <img 
-                  src={profile.photo || 'https://via.placeholder.com/150'} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
+              <div className={`w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center ${isEditing ? 'cursor-pointer' : ''}`}>
+                {profile.photo ? (
+                  <img 
+                    src={profile.photo} 
+                    alt="Profile" 
+                    onError={() => setProfile(prev => ({ ...prev, photo: '' }))}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-primary text-white flex items-center justify-center font-black text-4xl uppercase select-none">
+                    {profile.username ? profile.username.charAt(0).toUpperCase() : 'A'}
+                  </div>
+                )}
               </div>
               {isEditing && (
                 <label className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
