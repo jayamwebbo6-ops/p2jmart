@@ -70,7 +70,7 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
 
       {/* Electrical Product Section */}
       <ProductSection 
-        title="Featured Products" 
+        title="Electronic " 
         products={dummyProducts}
         wishlist={wishlist}
         onWishlist={addToWishlist}

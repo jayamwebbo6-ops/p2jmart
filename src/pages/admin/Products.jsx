@@ -14,9 +14,13 @@ import {
   Tag, 
   DollarSign, 
   Percent, 
-  Star 
+  Star,
+  Maximize2,
+  Minimize2,
+  Eye
 } from 'lucide-react';
 import { toast } from '../../components/toast';
+import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 // Initial pre-populated catalog tree data matching user theme
@@ -106,6 +110,7 @@ const INITIAL_CATALOG = [
 ];
 
 const Products = () => {
+  const navigate = useNavigate();
   const [catalog, setCatalog] = useState(() => {
     const saved = localStorage.getItem('p2j_mart_catalog');
     return saved ? JSON.parse(saved) : INITIAL_CATALOG;
@@ -115,6 +120,7 @@ const Products = () => {
   const [selectedCatId, setSelectedCatId] = useState(catalog[0]?.id || '');
   const [selectedSubId, setSelectedSubId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Confirmation modal states
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -136,7 +142,7 @@ const Products = () => {
 
   // Form states
   const [catForm, setCatForm] = useState({ name: '', image: '' });
-  const [subForm, setSubForm] = useState({ name: '' });
+  const [subForm, setSubForm] = useState({ name: '', image: '' });
   const [prodForm, setProdForm] = useState({
     title: '',
     price: '',
@@ -240,10 +246,10 @@ const Products = () => {
   const handleOpenSubModal = (editSub = null, catId = null) => {
     setParentId(catId || selectedCatId);
     if (editSub) {
-      setSubForm({ name: editSub.name });
+      setSubForm({ name: editSub.name, image: editSub.image || '' });
       setEditItem(editSub);
     } else {
-      setSubForm({ name: '' });
+      setSubForm({ name: '', image: '' });
       setEditItem(null);
     }
     setModalType('sub');
@@ -257,7 +263,7 @@ const Products = () => {
       setCatalog(prev => prev.map(c => ({
         ...c,
         subcategories: c.subcategories.map(s => 
-          s.id === editItem.id ? { ...s, name: subForm.name } : s
+          s.id === editItem.id ? { ...s, name: subForm.name, image: subForm.image || '' } : s
         )
       })));
       toast.success('Subcategory updated successfully');
@@ -265,6 +271,7 @@ const Products = () => {
       const newSub = {
         id: `sub-${Date.now()}`,
         name: subForm.name,
+        image: subForm.image || '',
         products: []
       };
       setCatalog(prev => prev.map(c => 
@@ -447,124 +454,135 @@ const Products = () => {
 
       {/* Tree Grid Manager Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        
-        {/* Step 1: Categories Panel (3 cols) */}
-        <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-              <LayoutGrid size={13} className="text-[#001E3C]" /> 1. Categories
-            </span>
-            <button 
-              onClick={() => handleOpenCatModal()}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors"
-              title="Add New Category"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-
-          <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
-            {catalog.map(cat => (
-              <div 
-                key={cat.id}
-                onClick={() => setSelectedCatId(cat.id)}
-                className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
-                  selectedCatId === cat.id 
-                    ? 'bg-blue-50/50 border border-blue-100 text-blue-900 font-semibold' 
-                    : 'hover:bg-gray-50 border border-transparent text-gray-700'
-                }`}
+             {/* Step 1: Categories Panel (3 cols) */}
+        {!isExpanded && (
+          <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+            <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                <LayoutGrid size={13} className="text-[#001E3C]" /> 1. Categories
+              </span>
+              <button 
+                onClick={() => handleOpenCatModal()}
+                className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors"
+                title="Add New Category"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <img 
-                    src={cat.image} 
-                    alt={cat.name} 
-                    className="w-7 h-7 rounded object-cover border border-gray-200 shrink-0" 
-                  />
-                  <span className="text-xs truncate">{cat.name}</span>
+                <Plus size={14} />
+              </button>
+            </div>
+
+            <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {catalog.map(cat => (
+                <div 
+                  key={cat.id}
+                  onClick={() => setSelectedCatId(cat.id)}
+                  className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                    selectedCatId === cat.id 
+                      ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
+                      : 'hover:bg-gray-50 border border-transparent text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <img 
+                      src={cat.image} 
+                      alt={cat.name} 
+                      className="w-7 h-7 rounded object-cover border border-gray-200 shrink-0" 
+                    />
+                    <span className="text-xs truncate">{cat.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenCatModal(cat); }}
+                      className={`p-1 rounded transition-colors ${selectedCatId === cat.id ? 'hover:bg-white/20 text-white/80 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-blue-600'}`}
+                    >
+                      <Edit3 size={11} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteCategory(cat.id, e)}
+                      className={`p-1 rounded transition-colors ${selectedCatId === cat.id ? 'text-red-400 hover:text-red-300 hover:bg-white/10' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                    <ChevronRight size={12} className={selectedCatId === cat.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleOpenCatModal(cat); }}
-                    className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-blue-600"
-                  >
-                    <Edit3 size={11} />
-                  </button>
-                  <button 
-                    onClick={(e) => handleDeleteCategory(cat.id, e)}
-                    className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-600"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                  <ChevronRight size={12} className="text-gray-400 ml-0.5" />
-                </div>
-              </div>
-            ))}
-            {catalog.length === 0 && (
-              <div className="text-center py-8 text-xs text-gray-400">No categories found. Click Add Category to begin.</div>
-            )}
+              ))}
+              {catalog.length === 0 && (
+                <div className="text-center py-8 text-xs text-gray-400">No categories found. Click Add Category to begin.</div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Step 2: Subcategories Panel (3 cols) */}
-        <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm">
-          <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-              <Folder size={13} className="text-amber-500" /> 2. Subcategories
-            </span>
-            <button 
-              onClick={() => handleOpenSubModal()}
-              disabled={!selectedCatId}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Add Subcategory to Selected Category"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-
-          <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
-            {activeCategory?.subcategories.map(sub => (
-              <div 
-                key={sub.id}
-                onClick={() => setSelectedSubId(sub.id)}
-                className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
-                  selectedSubId === sub.id 
-                    ? 'bg-amber-50/50 border border-amber-100 text-amber-900 font-semibold' 
-                    : 'hover:bg-gray-50 border border-transparent text-gray-700'
-                }`}
+        {!isExpanded && (
+          <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+            <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Folder size={13} className="text-amber-500" /> 2. Subcategories
+              </span>
+              <button 
+                onClick={() => handleOpenSubModal()}
+                disabled={!selectedCatId}
+                className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                title="Add Subcategory to Selected Category"
               >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 shrink-0">
-                    <Folder size={13} />
-                  </div>
-                  <span className="text-xs truncate">{sub.name}</span>
-                </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); handleOpenSubModal(sub); }}
-                    className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-blue-600"
-                  >
-                    <Edit3 size={11} />
-                  </button>
-                  <button 
-                    onClick={(e) => handleDeleteSubcategory(sub.id, e)}
-                    className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-600"
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                  <ChevronRight size={12} className="text-gray-400 ml-0.5" />
-                </div>
-              </div>
-            ))}
-            {(!activeCategory || activeCategory.subcategories.length === 0) && (
-              <div className="text-center py-8 text-xs text-gray-400">
-                {!selectedCatId ? "Select a Category first" : "No subcategories found. Click '+' to add."}
-              </div>
-            )}
-          </div>
-        </div>
+                <Plus size={14} />
+              </button>
+            </div>
 
-        {/* Step 3: Products Panel (6 cols) */}
-        <div className="lg:col-span-6 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px]">
+            <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
+              {activeCategory?.subcategories.map(sub => (
+                <div 
+                  key={sub.id}
+                  onClick={() => setSelectedSubId(sub.id)}
+                  className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                    selectedSubId === sub.id 
+                      ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
+                      : 'hover:bg-gray-50 border border-transparent text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded overflow-hidden border shrink-0 bg-white flex items-center justify-center">
+                      {sub.image ? (
+                        <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center ${
+                          selectedSubId === sub.id ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+                        }`}>
+                          <Folder size={13} />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-xs truncate">{sub.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleOpenSubModal(sub); }}
+                      className={`p-1 rounded transition-colors ${selectedSubId === sub.id ? 'hover:bg-white/20 text-white/80 hover:text-white' : 'hover:bg-gray-200 text-gray-500 hover:text-blue-600'}`}
+                    >
+                      <Edit3 size={11} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteSubcategory(sub.id, e)}
+                      className={`p-1 rounded transition-colors ${selectedSubId === sub.id ? 'text-red-400 hover:text-red-300 hover:bg-white/10' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                    <ChevronRight size={12} className={selectedSubId === sub.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
+                  </div>
+                </div>
+              ))}
+              {(!activeCategory || activeCategory.subcategories.length === 0) && (
+                <div className="text-center py-8 text-xs text-gray-400">
+                  {!selectedCatId ? "Select a Category first" : "No subcategories found. Click '+' to add."}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Products Panel (6 cols or 12 cols depending on isExpanded) */}
+        <div className={`${isExpanded ? 'lg:col-span-12' : 'lg:col-span-6'} bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-all duration-300`}>
           <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
               <Package size={13} className="text-emerald-500" /> 3. Products ({filteredProducts.length})
@@ -581,74 +599,212 @@ const Products = () => {
                 <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
               <button 
-                onClick={() => handleOpenProductModal()}
+                onClick={() => navigate(`/admin/products/add?catId=${selectedCatId}&subId=${selectedSubId}`)}
                 disabled={!selectedSubId}
                 className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white px-2.5 py-1 rounded text-[11px] font-semibold transition-colors disabled:cursor-not-allowed"
               >
                 <Plus size={11} /> Add Product
               </button>
+              
+              <button 
+                onClick={() => setIsExpanded(prev => !prev)}
+                className="p-1.5 hover:bg-gray-200 border border-gray-200 rounded text-gray-600 hover:text-gray-800 transition-colors"
+                title={isExpanded ? "Exit Full Screen" : "Open Full Page"}
+              >
+                {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              </button>
             </div>
           </div>
 
-          {/* Products List Grid */}
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto custom-scrollbar">
-            {filteredProducts.map(prod => (
-              <div 
-                key={prod.id} 
-                className="border border-gray-100 hover:border-gray-200 rounded-lg p-3 bg-gray-50/30 flex gap-3 relative group transition-all hover:shadow-sm"
-              >
-                <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 shrink-0 bg-white aspect-square">
-                  <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+          {/* Products List Grid / Table */}
+          {isExpanded ? (
+            <div className="p-4 overflow-x-auto max-h-[500px] custom-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-150 text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Product</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Variants</th>
+                    <th className="py-3 px-4 text-center">Total Qty</th>
+                    <th className="py-3 px-4 text-center">Availability</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-center">Reviews</th>
+                    <th className="py-3 px-4 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs">
+                  {filteredProducts.map(prod => {
+                    const subcategoryName = activeSubcategory?.name || "Standard";
+                    return (
+                      <tr key={prod.id} className="hover:bg-gray-50/40 transition-colors">
+                        {/* Product */}
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
+                              {prod.image ? (
+                                <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+                              ) : (
+                                <span>No Image</span>
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-gray-900 leading-tight">{prod.title}</h4>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{subcategoryName}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Category */}
+                        <td className="py-4 px-4">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                            {activeCategory?.name || "Category"}
+                          </span>
+                        </td>
+
+                        {/* Variants */}
+                        <td className="py-4 px-4">
+                          <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal">
+                            <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
+                              <span className="w-2 h-2 rounded-full bg-yellow-400 block"></span>
+                              <span>Yellow</span>
+                            </div>
+                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">Size: 8 inch</div>
+                            <div className="text-[9px] font-bold text-purple-600 mt-1">Price: ₹{prod.price}</div>
+                            <div className="text-[9px] font-bold text-pink-600">Inv: 10 units</div>
+                          </div>
+                        </td>
+
+                        {/* Total Qty */}
+                        <td className="py-4 px-4 text-center font-bold text-gray-800 text-xs">
+                          10
+                        </td>
+
+                        {/* Availability */}
+                        <td className="py-4 px-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-pink-50 text-pink-600 border border-pink-100 uppercase tracking-wider">
+                            IN STOCK
+                          </span>
+                        </td>
+
+                        {/* Status */}
+                        <td className="py-4 px-4 text-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-pink-50 text-pink-600 border border-pink-100 uppercase tracking-wider">
+                            ACTIVE
+                          </span>
+                        </td>
+
+                        {/* Reviews */}
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="flex items-center gap-1">
+                              <Star size={10} className="text-gray-300 fill-none" />
+                              <span className="font-bold text-gray-800 text-[10px]">{prod.rating ? prod.rating.toFixed(1) : "0.0"}</span>
+                            </div>
+                            <span className="text-[9px] text-gray-400 font-medium block mt-0.5">{prod.reviews || 0} reviews</span>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)}
+                              className="p-1 text-pink-500 hover:text-pink-600 hover:bg-pink-50 rounded transition-colors"
+                              title="View Product"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button 
+                              onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)}
+                              className="p-1 text-red-500 hover:text-red-650 hover:bg-red-50 rounded transition-colors"
+                              title="Edit Product"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button 
+                              onClick={(e) => handleDeleteProduct(prod.id, e)}
+                              className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {filteredProducts.length === 0 && (
+                <div className="text-center py-16 text-xs text-gray-400 flex flex-col items-center gap-2 justify-center">
+                  <Package size={24} className="text-gray-300" />
+                  <span>
+                    {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
+                  </span>
                 </div>
-                
-                <div className="flex-grow min-w-0 pr-6">
-                  <h4 className="text-xs font-bold text-gray-900 line-clamp-2 leading-tight tracking-wide">{prod.title}</h4>
+              )}
+            </div>
+          ) : (
+            /* Products List Grid */
+            <div className="p-4 grid gap-3 max-h-[500px] overflow-y-auto custom-scrollbar grid-cols-1 md:grid-cols-2">
+              {filteredProducts.map(prod => (
+                <div 
+                  key={prod.id} 
+                  className="border border-gray-100 hover:border-gray-200 rounded-lg p-3 bg-gray-50/30 flex gap-3 relative group transition-all hover:shadow-sm"
+                >
+                  <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 shrink-0 bg-white aspect-square">
+                    <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+                  </div>
                   
-                  <div className="flex items-baseline gap-1.5 mt-1.5">
-                    <span className="text-xs font-bold text-gray-950">₹{prod.price}</span>
-                    {prod.originalPrice && (
-                      <span className="text-[10px] text-gray-400 line-through">₹{prod.originalPrice}</span>
-                    )}
-                    {prod.discount > 0 && (
-                      <span className="text-[9px] text-emerald-600 font-bold">{prod.discount}% Off</span>
-                    )}
+                  <div className="flex-grow min-w-0 pr-6">
+                    <h4 className="text-xs font-bold text-gray-900 line-clamp-2 leading-tight tracking-wide">{prod.title}</h4>
+                    
+                    <div className="flex items-baseline gap-1.5 mt-1.5">
+                      <span className="text-xs font-bold text-gray-950">₹{prod.price}</span>
+                      {prod.originalPrice && (
+                        <span className="text-[10px] text-gray-400 line-through">₹{prod.originalPrice}</span>
+                      )}
+                      {prod.discount > 0 && (
+                        <span className="text-[9px] text-emerald-600 font-bold">{prod.discount}% Off</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 mt-1">
+                      <Star size={10} fill="currentColor" className="text-amber-400" />
+                      <span className="text-[10px] font-bold text-gray-600">{prod.rating.toFixed(1)}</span>
+                      <span className="text-[10px] text-gray-400">({prod.reviews})</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1 mt-1">
-                    <Star size={10} fill="currentColor" className="text-amber-400" />
-                    <span className="text-[10px] font-bold text-gray-600">{prod.rating.toFixed(1)}</span>
-                    <span className="text-[10px] text-gray-400">({prod.reviews})</span>
+                  <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)}
+                      className="p-1.5 bg-white hover:bg-blue-50 border border-gray-200 rounded text-gray-600 hover:text-blue-600 shadow-sm"
+                      title="Edit Product"
+                    >
+                      <Edit3 size={11} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteProduct(prod.id, e)}
+                      className="p-1.5 bg-white hover:bg-red-50 border border-gray-200 rounded text-gray-600 hover:text-red-650 shadow-sm"
+                      title="Delete Product"
+                    >
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 </div>
+              ))}
 
-                <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={() => handleOpenProductModal(prod)}
-                    className="p-1.5 bg-white hover:bg-blue-50 border border-gray-200 rounded text-gray-600 hover:text-blue-600 shadow-sm"
-                    title="Edit Product"
-                  >
-                    <Edit3 size={11} />
-                  </button>
-                  <button 
-                    onClick={(e) => handleDeleteProduct(prod.id, e)}
-                    className="p-1.5 bg-white hover:bg-red-50 border border-gray-200 rounded text-gray-600 hover:text-red-600 shadow-sm"
-                    title="Delete Product"
-                  >
-                    <Trash2 size={11} />
-                  </button>
+              {filteredProducts.length === 0 && (
+                <div className="col-span-full text-center py-16 text-xs text-gray-400 flex flex-col items-center gap-2 justify-center">
+                  <Package size={24} className="text-gray-300" />
+                  <span>
+                    {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
+                  </span>
                 </div>
-              </div>
-            ))}
-
-            {filteredProducts.length === 0 && (
-              <div className="col-span-full text-center py-16 text-xs text-gray-400 flex flex-col items-center gap-2 justify-center">
-                <Package size={24} className="text-gray-300" />
-                <span>
-                  {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
-                </span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
       </div>
@@ -701,34 +857,74 @@ const Products = () => {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
-                      <Image size={11} /> Image Link
+                      <Image size={11} /> Upload Category Image
                     </label>
                     <input 
-                      type="text" 
-                      placeholder="https://images.unsplash.com/... (optional)"
-                      value={catForm.image}
-                      onChange={(e) => setCatForm({ ...catForm, image: e.target.value })}
-                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setCatForm({ ...catForm, image: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"
                     />
+                    {catForm.image && (
+                      <div className="mt-1.5 w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                        <img src={catForm.image} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
                   </div>
                 </>
               )}
 
               {/* SUBCATEGORY FORM */}
               {modalType === 'sub' && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
-                    <Tag size={11} /> Subcategory Name
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Personalized Gifts"
-                    value={subForm.name}
-                    onChange={(e) => setSubForm({ name: e.target.value })}
-                    className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
-                    required
-                  />
-                </div>
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
+                      <Tag size={11} /> Subcategory Name
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Personalized Gifts"
+                      value={subForm.name}
+                      onChange={(e) => setSubForm({ ...subForm, name: e.target.value })}
+                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
+                      <Image size={11} /> Upload Subcategory Image
+                    </label>
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setSubForm({ ...subForm, image: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"
+                    />
+                    {subForm.image && (
+                      <div className="mt-1.5 w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center">
+                        <img src={subForm.image} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
 
               {/* PRODUCT FORM */}
@@ -820,14 +1016,22 @@ const Products = () => {
 
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
-                      <Image size={11} /> Image Link
+                      <Image size={11} /> Upload Product Image
                     </label>
                     <input 
-                      type="text" 
-                      placeholder="https://images.unsplash.com/... (optional)"
-                      value={prodForm.image}
-                      onChange={(e) => setProdForm({ ...prodForm, image: e.target.value })}
-                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
+                      type="file" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setProdForm({ ...prodForm, image: reader.result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"
                     />
                   </div>
                 </>
