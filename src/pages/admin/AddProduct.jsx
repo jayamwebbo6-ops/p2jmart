@@ -19,6 +19,7 @@ import {
   Upload
 } from 'lucide-react';
 import { toast } from '../../components/toast';
+import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, UpdateBtn, PrevBtn, NextBtn } from '../../components/AdminButtons';
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -648,7 +649,7 @@ const AddProduct = () => {
                     <h3 className="text-base font-bold text-[#0f172a]">
                       Product Variants
                     </h3>
-                    <button
+                    <AddBtn
                       type="button"
                       onClick={() => {
                         setShowVariantForm(!showVariantForm);
@@ -658,10 +659,9 @@ const AddProduct = () => {
                           }, 100);
                         }
                       }}
-                      className="bg-primary hover:bg-[#002A54] text-white text-xs font-semibold py-2 px-4 rounded-lg transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
                     >
-                      <Plus size={14} /> Add Variant
-                    </button>
+                      Add Variant
+                    </AddBtn>
                   </div>
                 );
               })()}
@@ -775,29 +775,11 @@ const AddProduct = () => {
                       <div className="md:col-span-3 flex gap-2">
                         {editingVariantId ? (
                           <>
-                            <button 
-                              type="button"
-                              onClick={handleUpdateVariant}
-                              className="flex-grow bg-primary hover:bg-[#002A54] text-white font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1 active:scale-98 shadow-sm"
-                            >
-                              Update
-                            </button>
-                            <button 
-                              type="button"
-                              onClick={handleCancelEdit}
-                              className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition-colors active:scale-98"
-                            >
-                              Cancel
-                            </button>
+                            <UpdateBtn onClick={handleUpdateVariant}>Update</UpdateBtn>
+                            <CancelBtn onClick={handleCancelEdit} className="py-2 px-3" />
                           </>
                         ) : (
-                          <button 
-                            type="button"
-                            onClick={handleAddVariant}
-                            className="w-full bg-primary hover:bg-[#002A54] text-white font-bold py-2 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-98 shadow-sm"
-                          >
-                            Save
-                          </button>
+                          <SaveBtn type="button" onClick={handleAddVariant} className="w-full justify-center py-2">Save</SaveBtn>
                         )}
                       </div>
                     </div>
@@ -849,21 +831,9 @@ const AddProduct = () => {
                                 {v.stock}
                               </td>
                               <td className="py-4 px-4 text-right pr-6">
-                                <div className="flex items-center justify-end gap-3.5">
-                                  <button 
-                                    type="button"
-                                    onClick={() => handleEditVariant(v)}
-                                    className="text-pink-550 hover:text-pink-700 transition-colors"
-                                  >
-                                    <Edit3 size={16} />
-                                  </button>
-                                  <button 
-                                    type="button"
-                                    onClick={() => handleRemoveVariant(v.id)}
-                                    className="text-red-500 hover:text-red-750 transition-colors"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
+                                <div className="flex items-center justify-end gap-2">
+                                  <EditBtn size={14} onClick={() => handleEditVariant(v)} title="Edit Variant" />
+                                  <DeleteBtn size={14} onClick={() => handleRemoveVariant(v.id)} title="Remove Variant" />
                                 </div>
                               </td>
                             </tr>
@@ -1101,42 +1071,18 @@ const AddProduct = () => {
           <div className="flex items-center justify-between gap-3 border-t border-gray-150 pt-5 mt-4">
             {/* Left side: Cancel + Prev */}
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/admin/products')}
-                className="px-4 py-2.5 border border-gray-300 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
+              <CancelBtn onClick={() => navigate('/admin/products')} />
               {!isFirstTab && (
-                <button
-                  type="button"
-                  onClick={goPrevTab}
-                  className="px-4 py-2.5 border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-98"
-                >
-                  ← Previous
-                </button>
+                <PrevBtn onClick={goPrevTab} />
               )}
             </div>
 
             {/* Right side: Next or Save */}
             <div className="flex items-center gap-2">
               {!isLastTab ? (
-                <button
-                  type="button"
-                  onClick={goNextTab}
-                  className="px-5 py-2.5 bg-[#001E3C] hover:bg-[#002A54] text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-98 flex items-center gap-1.5"
-                >
-                  Next →
-                </button>
+                <NextBtn onClick={goNextTab} />
               ) : (
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow active:scale-98 flex items-center gap-1.5"
-                >
-                  <CheckCircle size={14} />
-                  Save Product
-                </button>
+                <SaveBtn type="submit">Save Product</SaveBtn>
               )}
             </div>
           </div>

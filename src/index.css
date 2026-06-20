@@ -72,3 +72,75 @@
   border-radius: 999px;
   background: red;
 }
+
+/* ==========================================================================
+   ADMIN PANEL BLACK TEXT COLOR OVERRIDES
+   ========================================================================== */
+.admin-panel,
+.admin-panel p,
+.admin-panel span,
+.admin-panel div,
+.admin-panel h1,
+.admin-panel h2,
+.admin-panel h3,
+.admin-panel h4,
+.admin-panel h5,
+.admin-panel h6,
+.admin-panel label,
+.admin-panel small {
+  --color-slate-400: #000000;
+  --color-slate-500: #000000;
+  --color-slate-600: #000000;
+  --color-slate-700: #000000;
+  --color-slate-800: #000000;
+  --color-gray-400: #000000;
+  --color-gray-500: #000000;
+  --color-gray-600: #000000;
+  --color-gray-700: #000000;
+  --color-gray-800: #000000;
+}
+
+.admin-panel .text-gray-400,
+.admin-panel .text-gray-500,
+.admin-panel .text-gray-650,
+.admin-panel .text-gray-600,
+.admin-panel .text-gray-700,
+.admin-panel .text-gray-800,
+.admin-panel .text-slate-400,
+.admin-panel .text-slate-500,
+.admin-panel .text-slate-600,
+.admin-panel .text-slate-700,
+.admin-panel .text-slate-800 {
+  color: #000000 !important;
+}
+
+.admin-panel p {
+  color: #000000 !important;
+}
+
+/* ==========================================================================
+   SLEEK CUSTOM SCROLLBARS FOR ADMIN PANEL
+   ========================================================================== */
+.admin-panel *::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.admin-panel *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-panel *::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+.admin-panel *::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Hide scrollbar helper class */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Plus, X, Edit2, Trash2, ShieldCheck, MapPin } from 'lucide-react';
+import { X, ShieldCheck, MapPin } from 'lucide-react';
+import { AddBtn, EditBtn, DeleteBtn, SaveBtn } from '../../components/AdminButtons';
+import PageHeader from '../../components/PageHeader';
+import AdminTable from '../../components/AdminTable';
 
 const INITIAL_SHIPPING_DATA = [
   { id: 1, stateName: 'Tamil Nadu', baseWeight: 250, baseCost: '55.00', additionalWeight: 300, additionalCost: '20.00' },
@@ -88,24 +91,14 @@ const ShippingCostManager = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#f3f4f9] font-['Inter',sans-serif] antialiased p-4 sm:p-6 md:p-8 relative">
-      
-      {/* HEADER CONTROL WRAPPER BAR */}
-      <div className="w-full max-w-7xl mx-auto flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-xl sm:text-2xl font-semibold text-[#5a6a85] tracking-tight">
-            Shipping Cost
-          </h1>
-        </div>
-        <button
-          type="button"
-          onClick={openAddModal}
-          className="bg-[#1e88e5] hover:bg-[#1565c0] text-white px-5 py-2 rounded-lg text-sm font-medium tracking-wide shadow-sm hover:shadow transition-all duration-150 active:scale-98 flex items-center gap-1.5 cursor-pointer"
-        >
-          <Plus size={16} strokeWidth={2.5} />
-          <span>Add State</span>
-        </button>
-      </div>
+    <div className="w-full text-slate-800 antialiased min-h-screen">
+
+      <PageHeader
+        title="Shipping Cost Manager"
+        subtitle="Configure regional shipping rates, base weights, and additional cost per unit."
+      >
+        <AddBtn onClick={openAddModal}>Add State</AddBtn>
+      </PageHeader>
 
       {/* CORE DATA SHEET HOUSING CONTAINER CARD */}
       <div className="w-full max-w-7xl mx-auto bg-white border border-gray-200/60 rounded-xl shadow-xs overflow-hidden">
@@ -116,61 +109,37 @@ const ShippingCostManager = () => {
           </h2>
         </div>
 
-        {/* DATA REGISTER ROW LOGIC GRID TABLE FRAMEWORK */}
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
-              <tr className="border-b border-gray-100 bg-white text-[11px] font-bold text-[#5a6a85]/80 uppercase tracking-wider">
-                <th className="py-4 px-6 w-16 text-center">Id</th>
-                <th className="py-4 px-6">State Name</th>
-                <th className="py-4 px-6">Base Weight (G)</th>
-                <th className="py-4 px-6">Base Cost ($)</th>
-                <th className="py-4 px-6">Additional Weight Unit (G)</th>
-                <th className="py-4 px-6">Additional Cost Per Unit ($)</th>
-                <th className="py-4 px-6 text-center w-36">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-[13px] font-medium text-slate-600">
-              {shippingRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-slate-50/60 transition-colors duration-100">
-                  <td className="py-4 px-6 text-center font-normal text-gray-400">{record.id}</td>
-                  <td className="py-4 px-6 text-[#111c43] font-semibold">{record.stateName}</td>
-                  <td className="py-4 px-6 font-mono text-gray-500">{record.baseWeight}</td>
-                  <td className="py-4 px-6 font-mono text-gray-900">${record.baseCost}</td>
-                  <td className="py-4 px-6 font-mono text-gray-500">{record.additionalWeight}</td>
-                  <td className="py-4 px-6 font-mono text-gray-900">${record.additionalCost}</td>
-                  <td className="py-4 px-6 text-center">
-                    <div className="flex flex-col gap-1.5 max-w-[100px] mx-auto">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(record)}
-                        className="w-full bg-[#1e88e5] hover:bg-[#1565c0] text-white text-[11px] font-semibold py-1.5 px-3 rounded shadow-xs transition-colors cursor-pointer text-center"
-                      >
-                        Edit
-                      </button>
-                    
-
-                       <button 
-                        onClick={() => handleDeleteRow(record.id)}
-                                            className="p-2 pl-9.5 w-0 rounded-xl text-red-600 transition-colors"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
-
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* EMPTY STATE REGISTER BOUNDARY FALLBACK */}
-        {shippingRecords.length === 0 && (
-          <div className="w-full text-center py-16 text-sm font-medium text-gray-400 bg-slate-50/30">
-            No dynamic regional shipping matrix definitions found. Click "Add State" to declare configurations.
-          </div>
-        )}
+        <AdminTable
+          headers={[
+            { label: 'Id', align: 'center' },
+            { label: 'State Name' },
+            { label: 'Base Weight (G)' },
+            { label: 'Base Cost ($)' },
+            { label: 'Additional Weight Unit (G)' },
+            { label: 'Additional Cost Per Unit ($)' },
+            { label: 'Actions', align: 'center' }
+          ]}
+          data={shippingRecords}
+          minWidth="min-w-[900px]"
+          containerClassName="border-0 shadow-none rounded-none"
+          emptyMessage="No dynamic regional shipping matrix definitions found. Click 'Add State' to declare configurations."
+          renderRow={(record) => (
+            <tr key={record.id} className="hover:bg-slate-50/60 transition-colors duration-100">
+              <td className="py-4 px-6 text-center font-normal text-gray-400">{record.id}</td>
+              <td className="py-4 px-6 text-[#111c43] font-semibold">{record.stateName}</td>
+              <td className="py-4 px-6 font-mono text-gray-500">{record.baseWeight}</td>
+              <td className="py-4 px-6 font-mono text-gray-900">${record.baseCost}</td>
+              <td className="py-4 px-6 font-mono text-gray-500">{record.additionalWeight}</td>
+              <td className="py-4 px-6 font-mono text-gray-900">${record.additionalCost}</td>
+              <td className="py-4 px-6 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <EditBtn size={13} onClick={() => openEditModal(record)} title="Edit record" />
+                  <DeleteBtn size={13} onClick={() => handleDeleteRow(record.id)} title="Delete record" />
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
 
       {/* POPUP MODAL CONTROL OVERLAY MECHANISM */}
@@ -269,12 +238,7 @@ const ShippingCostManager = () => {
 
               {/* INTERACTION COMMIT FOOTER BUTTON SUBMIT BLOCK */}
               <div className="pt-4 border-t border-gray-100 flex items-center justify-start">
-                <button
-                  type="submit"
-                  className="bg-primary hover:bg-secondary text-white px-6 py-2 rounded-lg text-sm font-semibold tracking-wide shadow-xs transition-colors cursor-pointer active:scale-98"
-                >
-                  Save
-                </button>
+                <SaveBtn type="submit">Save</SaveBtn>
               </div>
 
             </form>

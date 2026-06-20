@@ -10,6 +10,8 @@ import {
 import { toast } from '../../components/toast';
 import { GetColorName } from 'hex-color-to-color-name';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { AddBtn, EditBtn, DeleteBtn, SaveBtn, CancelBtn } from '../../components/AdminButtons';
+import PageHeader from '../../components/PageHeader';
 
 const SUGGESTED_COLORS = [
   { name: 'Red', hex: '#FF0000' },
@@ -256,19 +258,12 @@ const Attributes = () => {
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-[#001E3C]">Product Attributes</h1>
-          <p className="text-xs text-gray-500 mt-1">Manage variation attributes (Colors, Sizes, Materials, Design Variations, etc.)</p>
-        </div>
-        <button 
-          onClick={() => handleOpenAttrModal()}
-          className="flex items-center gap-1.5 bg-[#001E3C] hover:bg-[#003147] text-white px-4 py-2 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 self-start"
-        >
-          <Plus size={14} /> Add Attribute
-        </button>
-      </div>
+      <PageHeader
+        title="Product Attributes"
+        subtitle="Manage variation attributes (Colors, Sizes, Materials, Design Variations, etc.)"
+      >
+        <AddBtn onClick={() => handleOpenAttrModal()} className="self-start">Add Attribute</AddBtn>
+      </PageHeader>
 
       {/* Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -302,20 +297,8 @@ const Attributes = () => {
 
                 <div className="flex items-center gap-2">
                   <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleOpenAttrModal(attr); }}
-                      className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-blue-600"
-                      title="Edit Attribute"
-                    >
-                      <Edit3 size={12} />
-                    </button>
-                    <button 
-                      onClick={(e) => handleDeleteAttribute(attr.id, e)}
-                      className="p-1 hover:bg-gray-200 rounded text-gray-500 hover:text-red-600"
-                      title="Delete Attribute"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <EditBtn size={12} onClick={(e) => { e.stopPropagation(); handleOpenAttrModal(attr); }} title="Edit Attribute" />
+                    <DeleteBtn size={12} onClick={(e) => handleDeleteAttribute(attr.id, e)} title="Delete Attribute" />
                   </div>
                   <ChevronRight size={14} className={`text-gray-400 transition-transform ${activeAttrId === attr.id ? 'translate-x-1 text-blue-600' : ''}`} />
                 </div>
@@ -483,12 +466,7 @@ const Attributes = () => {
                         />
                       </div>
 
-                      <button 
-                        type="submit"
-                        className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors shadow-sm"
-                      >
-                        <Plus size={14} /> Add Color
-                      </button>
+                      <AddBtn type="submit">Add Color</AddBtn>
                     </div>
                   </form>
                 ) : (
@@ -500,12 +478,7 @@ const Attributes = () => {
                       onChange={(e) => setNewTermValue(e.target.value)}
                       className="flex-grow border border-gray-300 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                     />
-                    <button 
-                      type="submit"
-                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-colors shadow-sm"
-                    >
-                      <Plus size={14} /> Add Value
-                    </button>
+                    <AddBtn type="submit">Add Value</AddBtn>
                   </form>
                 )}
               </div>
@@ -559,19 +532,8 @@ const Attributes = () => {
 
               {/* Actions */}
               <div className="flex justify-end gap-2 border-t border-gray-100 pt-4 mt-2">
-                <button 
-                  type="button" 
-                  onClick={() => setAttrFormOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 bg-[#001E3C] hover:bg-[#003147] text-white rounded-md text-xs font-bold transition-colors shadow-sm"
-                >
-                  Save Changes
-                </button>
+                <CancelBtn onClick={() => setAttrFormOpen(false)} />
+                <SaveBtn type="submit">Save Changes</SaveBtn>
               </div>
 
             </form>

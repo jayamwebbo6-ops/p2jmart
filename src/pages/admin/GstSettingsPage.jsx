@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { FaPercent, FaPlus, FaTrash, FaEdit, FaEye, FaSave, FaUndo, FaCheckCircle, FaTimes } from 'react-icons/fa';
-import { toast } from '../../components/toast'; // Uses your local toast system setup
+import { FaPercent } from 'react-icons/fa';
+import { toast } from '../../components/toast';
 import ConfirmationModal from "../../components/ConfirmationModal";
-import {Trash2} from 'lucide-react';
+import { AddBtn, EditBtn, DeleteBtn, SaveBtn, CancelBtn, ViewBtn } from '../../components/AdminButtons';
+import PageHeader from '../../components/PageHeader';
+import AdminTable from '../../components/AdminTable';
 
 const INITIAL_GST_DATA = [
   { id: 1, gstStatus: 'Yes', gstPercentage: 2, categoryName: 'Furniture' },
@@ -114,102 +116,64 @@ const GSTSettingsPage = () => {
   };
 
   return (
-    <div className="bg-[#f4f6f9] min-h-screen p-4 md:p-8 font-sans antialiased text-slate-800">
-      
-      {/* HEADER ACTION CONTROL PANEL BAR */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-[#002B49] flex items-center gap-2 tracking-tight uppercase">
-            <FaPercent className="text-blue-600 w-5 h-5" /> GST Settings Panel
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">Manage global tax categories, configuration states, and standard threshold rules percentages maps dynamically.</p>
+    <div className="w-full text-slate-800 antialiased min-h-screen">
+
+      <PageHeader
+        title="GST Settings"
+        subtitle="Manage global tax categories, configuration states, and threshold rules."
+      >
+        <AddBtn onClick={handleCreateNewRule}>Add New GST Rule</AddBtn>
+      </PageHeader>
+
+      {/* CORE MASTER TABLE WORKSPACE CONTAINER */}
+      <div className="w-full bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
+        <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">Active GST Categories Metrics Registry</h3>
         </div>
-        <button
-          onClick={handleCreateNewRule}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-        >
-          <FaPlus size={12} /> Add New GST Rule
-        </button>
+        <AdminTable
+          headers={[
+            { label: 'ID', align: 'center' },
+            { label: 'GST Status' },
+            { label: 'GST Percentage' },
+            { label: 'Category Name' },
+            { label: 'Actions', align: 'right' }
+          ]}
+          data={gstRules}
+          minWidth="min-w-[600px]"
+          containerClassName="border-0 shadow-none rounded-none"
+          emptyMessage="No configuration rules recorded in the system."
+          renderRow={(rule) => (
+            <tr 
+              key={rule.id} 
+              className={`hover:bg-slate-50/80 transition-colors ${selectedRule?.id === rule.id ? 'bg-blue-50/30' : ''}`}
+            >
+              <td className="py-4 px-6 font-bold text-slate-400 text-center">{rule.id}</td>
+              <td className="py-4 px-6">
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${rule.gstStatus === 'Yes' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {rule.gstStatus}
+                </span>
+              </td>
+              <td className="py-4 px-6 font-black text-blue-600 text-base">{rule.gstPercentage}%</td>
+              <td className="py-4 px-6 font-bold text-slate-700 capitalize">{rule.categoryName}</td>
+              <td className="py-4 px-6">
+                <div className="flex items-center justify-end gap-2">
+                  <ViewBtn size={13} onClick={() => handleSelectRule(rule, false)} title="View configuration detail" />
+                  <EditBtn size={13} onClick={() => handleSelectRule(rule, true)} title="Edit configuration" />
+                  <DeleteBtn size={13} onClick={() => triggerDeletePrompt(rule.id)} title="Delete rule" />
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-        
-        {/* CORE MASTER TABLE WORKSPACE GRID (Matches image_be22ca.png Layout exactly) */}
-        <div className="xl:col-span-2 bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-hidden">
-          <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">Active GST Categories Metrics Registry</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
-              <thead>
-                <tr className="bg-slate-50/60 text-[11px] font-black tracking-wider text-slate-400 uppercase border-b border-slate-100">
-                  <th className="py-4 px-6 w-16 text-center">ID</th>
-                  <th className="py-4 px-6">GST Status</th>
-                  <th className="py-4 px-6">GST Percentage</th>
-                  <th className="py-4 px-6">Category Name</th>
-                  <th className="py-4 px-6 text-right pr-8">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-600">
-                {gstRules.map((rule) => (
-                  <tr 
-                    key={rule.id} 
-                    className={`hover:bg-slate-50/80 transition-colors ${selectedRule?.id === rule.id ? 'bg-blue-50/30' : ''}`}
-                  >
-                    <td className="py-4 px-6 font-bold text-slate-400 text-center">{rule.id}</td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${rule.gstStatus === 'Yes' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {rule.gstStatus}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 font-black text-blue-600 text-base">{rule.gstPercentage}%</td>
-                    <td className="py-4 px-6 font-bold text-slate-700 capitalize">{rule.categoryName}</td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleSelectRule(rule, false)}
-                          title="View configuration detail"
-                          className="flex items-center gap-1 bg-[#1e88e5] text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-xs hover:bg-[#1565c0] transition-colors"
-                        >
-                          <FaEye size={11} /> View
-                        </button>
-                        <button
-                          onClick={() => handleSelectRule(rule, true)}
-                          title="Modify configuration params"
-                          className="flex items-center gap-1 bg-[#29b6f6] text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-xs hover:bg-[#0288d1] transition-colors"
-                        >
-                          <FaEdit size={11} /> Edit
-                        </button>
-               
-
-
- <button 
-  onClick={() => triggerDeletePrompt(rule.id)}
-                      className="p-2 bg-red-50 hover:bg-red-100 border border-red-150 rounded-xl text-red-600 transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {gstRules.length === 0 && (
-            <div className="text-center py-12 text-xs font-bold italic text-slate-400 bg-slate-50">
-              No configuration rules recorded in the system.
-            </div>
-          )}
-        </div>
-
-        {/* DETAILS/EDITING CONFIGURATION COMPONENT VIEW (Matches image_be2292.png layout fields exactly) */}
-        <div className="xl:col-span-1">
-          {selectedRule ? (
-            <form onSubmit={handleSaveChanges} className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden space-y-6 p-6">
+      {/* ADD/EDIT/VIEW GST RULE POPUP MODAL OVERLAY */}
+      {selectedRule && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-100 flex flex-col animate-in zoom-in-95 duration-200">
+            <form onSubmit={handleSaveChanges} className="space-y-6 p-6">
               
-              {/* Header Action Blocks Row element layout context panels wrapper */}
+              {/* Header Action Blocks */}
               <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-black text-[#002B49]">
@@ -220,24 +184,13 @@ const GSTSettingsPage = () => {
                   </p>
                 </div>
                 {isEditing ? (
-                  <button
-                    type="submit"
-                    className="flex items-center gap-1.5 bg-[#1e88e5] text-white px-4 py-1.5 rounded-lg font-black text-xs shadow-xs hover:bg-[#1565c0] transition-colors"
-                  >
-                    <FaSave size={12} /> Save Changes
-                  </button>
+                  <SaveBtn type="submit">Save Changes</SaveBtn>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 bg-[#29b6f6] text-white px-4 py-1.5 rounded-lg font-black text-xs shadow-xs hover:bg-[#0288d1] transition-colors"
-                  >
-                    <FaEdit size={12} /> Unlock Field Edit
-                  </button>
+                  <EditBtn size={13} type="button" onClick={() => setIsEditing(true)} title="Unlock Field Edit" />
                 )}
               </div>
 
-              {/* ENABLE GST RADIO CONTROL BLOCKS ROW (Image Reference Item Match) */}
+              {/* ENABLE GST RADIO CONTROL BLOCKS ROW */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black tracking-wider text-slate-400 uppercase block">Enable GST Status</label>
                 <div className="flex items-center gap-6 pt-1">
@@ -311,25 +264,15 @@ const GSTSettingsPage = () => {
 
               {/* Operational Cancellation Footer Panel Row */}
               <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => { setSelectedRule(null); setIsEditing(false); }}
-                  className="w-full text-[11px] font-black tracking-wider uppercase bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 py-2.5 rounded-xl flex items-center justify-center gap-1 transition-colors"
-                >
-                  <FaTimes size={10} /> Exit Panel View
-                </button>
+                <CancelBtn type="button" onClick={() => { setSelectedRule(null); setIsEditing(false); }} className="w-full justify-center uppercase tracking-wider">
+                  Cancel
+                </CancelBtn>
               </div>
 
             </form>
-          ) : (
-            <div className="bg-slate-50 border border-dashed border-slate-200 p-8 rounded-2xl text-center text-slate-400 space-y-2">
-              <FaPercent size={24} className="mx-auto text-slate-300" />
-              <p className="text-xs font-bold leading-relaxed">No dynamic rule context selected.<br />Click standard inspect buttons on your data rows to begin tuning configurations inline blocks models.</p>
-            </div>
-          )}
+          </div>
         </div>
-
-      </div>
+      )}
 
       {/* RENDER DYNAMIC CONFIRMATION POPUP MODAL HOOK */}
       {deleteModalOpen && (

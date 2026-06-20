@@ -90,18 +90,7 @@ const CategoryGridTab = () => {
   return (
     <div className="bg-[#f8fafc] min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto space-y-6">
       
-      {/* RECOMMENDED VIEWPORT PROPORTIONS BANNER */}
-      <div className={`${THEME.secondaryBg} border ${THEME.secondaryBorder} rounded-2xl p-5 flex items-start gap-4 shadow-3xs`}>
-        <div className="bg-[#0099FF] text-white p-2 rounded-xl mt-0.5">
-          <ImageIcon size={18} />
-        </div>
-        <div className="space-y-1">
-          <h2 className={`text-base font-bold ${THEME.primaryText} tracking-tight`}>Recommended Viewport Proportions</h2>
-          <p className="text-xs text-[#005580] font-medium leading-relaxed">
-            For a perfect full-width fit, upload images of size <span className="text-red-500 font-bold">1920 × 500</span> pixels for left slides. Ensure your main subjects are centered to avoid being cropped.
-          </p>
-        </div>
-      </div>
+
 
       {/* DEDICATED MANAGEMENT SECTION: RIGHT SIDE BANNER AD (Ref: image_3c72c7.jpg Rightmost Panel) */}
       

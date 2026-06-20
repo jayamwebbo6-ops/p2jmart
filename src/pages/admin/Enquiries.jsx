@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Mail, MailOpen, Trash2, Search, Calendar, Phone, User, Clock, CheckCircle } from 'lucide-react';
 import { toast } from '../../components/toast';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { DeleteBtn } from '../../components/AdminButtons';
+import PageHeader from '../../components/PageHeader';
 
 const STATIC_ENQUIRIES = [
   {
@@ -135,17 +137,10 @@ const Enquiries = () => {
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl font-extrabold text-[#001E3C] tracking-tight">
-            Customer Enquiries
-          </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Read and manage contact form requests sent by visitors.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Customer Enquiries"
+        subtitle="Read and manage contact form requests sent by visitors."
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* Left Side: Inbox List */}
@@ -207,13 +202,7 @@ const Enquiries = () => {
                   >
                     {item.read ? <Mail size={13} /> : <MailOpen size={13} />}
                   </button>
-                  <button
-                    onClick={(e) => handleDeleteEnquiry(item.id, e)}
-                    className="p-1 hover:bg-gray-150 rounded text-gray-400 hover:text-red-500 transition-colors"
-                    title="Delete Message"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <DeleteBtn size={13} onClick={(e) => handleDeleteEnquiry(item.id, e)} title="Delete Message" />
                 </div>
               </div>
             ))}
@@ -249,21 +238,12 @@ const Enquiries = () => {
                       className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-medium text-gray-600 transition-colors"
                     >
                       {activeEnquiry.read ? (
-                        <>
-                          <MailOpen size={12} /> Mark Unread
-                        </>
+                        <><MailOpen size={12} /> Mark Unread</>
                       ) : (
-                        <>
-                          <CheckCircle size={12} /> Mark Read
-                        </>
+                        <><CheckCircle size={12} /> Mark Read</>
                       )}
                     </button>
-                    <button
-                      onClick={(e) => handleDeleteEnquiry(activeEnquiry.id, e)}
-                      className="flex items-center gap-1 px-3 py-1.5 border border-red-200 hover:bg-red-50 rounded-lg text-xs font-semibold text-red-650 transition-colors"
-                    >
-                      <Trash2 size={12} /> Delete
-                    </button>
+                    <DeleteBtn size={12} onClick={(e) => handleDeleteEnquiry(activeEnquiry.id, e)} title="Delete Enquiry" />
                   </div>
                 </div>
 
