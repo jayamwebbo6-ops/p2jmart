@@ -7,13 +7,16 @@ import {
   ShieldAlert, 
   Lock, 
   Save, 
-  CheckCircle 
+  CheckCircle ,
+  Sparkles,
+  LayoutGrid
 } from 'lucide-react';
 
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
 import CategoryGridTab from './CategoryGridTab';
 import FeaturedProductsTab from './FeaturedProductsTab';
+import MultiShowCaseTab from './MultiColumnShowcaseTab'
 
 const HomeContentManager = () => {
   const [activeTab, setActiveTab] = useState('hero-slider');
@@ -81,6 +84,8 @@ const HomeContentManager = () => {
             { id: 'hero-slider', label: 'Hero Slider Layout', icon: Sliders },
             { id: 'category-grid', label: 'Category Grid', icon: Grid },
             { id: 'featured-products', label: 'Featured Products', icon: Star },
+            { id: 'multiColumnShowcase', label: 'multiColumnShowcase', icon: LayoutGrid },
+
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -122,6 +127,10 @@ const HomeContentManager = () => {
 
           {activeTab === 'featured-products' && (
             <FeaturedProductsTab />
+          )}
+
+          {activeTab === 'multiColumnShowcase' && (
+            <MultiShowCaseTab/>
           )}
 
           {/* Legal Pages Rich Editors */}
