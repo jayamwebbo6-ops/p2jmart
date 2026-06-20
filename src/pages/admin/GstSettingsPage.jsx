@@ -5,6 +5,8 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import { AddBtn, EditBtn, DeleteBtn, SaveBtn, CancelBtn, ViewBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
+import { X} from 'lucide-react';
+
 
 const INITIAL_GST_DATA = [
   { id: 1, gstStatus: 'Yes', gstPercentage: 2, categoryName: 'Furniture' },
@@ -183,11 +185,15 @@ const GSTSettingsPage = () => {
                     {isEditing ? 'Configuration Editor Form Block Active' : 'Read-Only Blueprint View Inspector'}
                   </p>
                 </div>
-                {isEditing ? (
-                  <SaveBtn type="submit">Save Changes</SaveBtn>
-                ) : (
-                  <EditBtn size={13} type="button" onClick={() => setIsEditing(true)} title="Unlock Field Edit" />
-                )}
+                
+
+                 <button
+                                type="button"
+                                onClick={() => { setSelectedRule(null); setIsEditing(false); }}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-slate-100 rounded-full cursor-pointer"
+                              >
+                                <X size={18} strokeWidth={2.5} />
+                              </button>
               </div>
 
               {/* ENABLE GST RADIO CONTROL BLOCKS ROW */}
@@ -262,11 +268,14 @@ const GSTSettingsPage = () => {
                 </div>
               </div>
 
-              {/* Operational Cancellation Footer Panel Row */}
+              {/* Operational save Footer Panel Row */}
               <div className="flex gap-2 pt-2">
-                <CancelBtn type="button" onClick={() => { setSelectedRule(null); setIsEditing(false); }} className="w-full justify-center uppercase tracking-wider">
-                  Cancel
-                </CancelBtn>
+
+              {isEditing ? (
+                  <SaveBtn type="submit">Save Changes</SaveBtn>
+                ) : (
+                  <EditBtn size={13} type="button" onClick={() => setIsEditing(true)} title="Unlock Field Edit" />
+                )}
               </div>
 
             </form>

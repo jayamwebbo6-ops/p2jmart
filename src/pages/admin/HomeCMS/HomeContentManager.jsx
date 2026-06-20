@@ -6,7 +6,9 @@ import {
   CheckCircle,
   LayoutGrid,
   Contact,
-  Shield
+  Shield,
+  RotateCcw,
+  Truck
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
@@ -18,6 +20,9 @@ import CategoryTab from './CategoryTab';
 import MultiShowCaseTab from './MultiColumnShowcaseTab';
 import ContactSetting from './Contact';
 import PrivacyPolicyManager from './PrivacyPolicyManager';
+import CancellationReturnPolicyManager from './CancellationReturnPolicyHandle';
+import DeliveryPolicyManager from './DeliveryPolicyManager';
+
 
 const HomeContentManager = () => {
   const [activeTab, setActiveTab] = useState('hero-slider');
@@ -127,6 +132,9 @@ const HomeContentManager = () => {
               { id: 'multiColumnShowcase', label: 'multiColumnShowcase', icon: LayoutGrid },
               { id: 'contactSetting', label: 'Contact Setting', icon: Contact },
               { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
+              { id: 'cancellationReturnPolicy', label: 'Cancellation & Returns', icon: RotateCcw },
+              { id: 'deliveryPolicy', label: 'Delivery Policy', icon: Truck },
+
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -183,6 +191,15 @@ const HomeContentManager = () => {
           {activeTab === 'privacyPolicy' && (
             <PrivacyPolicyManager />
           )}
+
+          {activeTab === 'cancellationReturnPolicy' && (
+            <CancellationReturnPolicyManager />
+          )}
+          
+          {activeTab === 'deliveryPolicy' && (
+            <DeliveryPolicyManager/>
+          )}
+ 
 
         </div>
       </div>

@@ -28,7 +28,6 @@ const Footer = () => {
               <li><Link to="/contact" onClick={handleLinkClick} className="text-[13px]">Contact Us</Link></li>
               <li><Link to="/cart" onClick={handleLinkClick} className="text-[13px]">Cart</Link></li>
               <li><Link to="/wishlist" onClick={handleLinkClick} className="text-[13px]">Wishlist</Link></li>
-              <li><Link to="/returns-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
             </ul>
           </div>
 
@@ -38,8 +37,8 @@ const Footer = () => {
             <ul className="space-y-2 text-white">
               <li><Link to="/terms" onClick={handleLinkClick} className="text-[13px]">Terms and Condition</Link></li>
               <li><Link to="/privacy-policy" onClick={handleLinkClick} className="text-[13px]">Privacy Policy</Link></li>
-              <li><Link to="/shipping" onClick={handleLinkClick} className="text-[13px]">Delivery and Shipping</Link></li>
-              <li><Link to="/returns-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
+              <li><Link to="/delivery-policy" onClick={handleLinkClick} className="text-[13px]">Delivery and Shipping</Link></li>
+              <li><Link to="/cancellation-return-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
             </ul>
           </div>
 
