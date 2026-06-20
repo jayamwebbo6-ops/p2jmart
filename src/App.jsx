@@ -8,6 +8,7 @@ import { toast, ToastContainer } from './components/toast';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
+import GSTSettingsPage from './pages/admin/GstSettingsPage';
 
 
 // Lazy loading user pages
@@ -201,6 +202,7 @@ function App() {
 
             <Route path="attributes" element={<AdminAttributes />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
+            <Route path="gst" element={<GSTSettingsPage/>} />
           </Route>
         </Routes>
       </Suspense>
