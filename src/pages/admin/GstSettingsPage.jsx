@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-// Change FaTrash2 to FaTrash
 import { FaPercent, FaPlus, FaTrash, FaEdit, FaEye, FaSave, FaUndo, FaCheckCircle, FaTimes } from 'react-icons/fa';
 import { toast } from '../../components/toast'; // Uses your local toast system setup
 import ConfirmationModal from "../../components/ConfirmationModal";
+import {Trash2} from 'lucide-react';
 
 const INITIAL_GST_DATA = [
   { id: 1, gstStatus: 'Yes', gstPercentage: 2, categoryName: 'Furniture' },
@@ -180,13 +180,16 @@ const GSTSettingsPage = () => {
                         >
                           <FaEdit size={11} /> Edit
                         </button>
-                       <button
+               
+
+
+ <button 
   onClick={() => triggerDeletePrompt(rule.id)}
-  title="Drop rule structure permanently"
-  className="flex items-center gap-1 bg-[#ff4d2d] text-white px-3 py-1.5 rounded-lg text-xs font-black shadow-xs hover:bg-[#e03a1e] transition-colors"
->
-  <FaTrash size={11} /> Delete
-</button>
+                      className="p-2 bg-red-50 hover:bg-red-100 border border-red-150 rounded-xl text-red-600 transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+
                       </div>
                     </td>
                   </tr>

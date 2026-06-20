@@ -117,6 +117,10 @@ const AdminLayout = () => {
             <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
             <span>Orders</span>
           </Link>
+          <Link to="/admin/shippingCost" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/orders')}`}>
+            <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
+            <span>Shipping Cost</span>
+          </Link>
           <Link to="/admin/enquiries" className={`flex items-center justify-between p-3 rounded font-medium transition-colors ${isActive('/admin/enquiries')}`}>
             <div className="flex items-center gap-3">
               <FaEnvelope className="w-5 h-5 flex-shrink-0" />
