@@ -3,20 +3,20 @@ import {
   Sliders, 
   Grid, 
   Star, 
-  FileText, 
-  ShieldAlert, 
-  Lock, 
   Save, 
-  CheckCircle ,
-  Sparkles,
-  LayoutGrid
+  CheckCircle,
+  LayoutGrid,
+  Contact,
+  Shield
 } from 'lucide-react';
 
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
 import CategoryGridTab from './CategoryGridTab';
 import CategoryTab from './CategoryTab';
-import MultiShowCaseTab from './MultiColumnShowcaseTab'
+import MultiShowCaseTab from './MultiColumnShowcaseTab';
+import ContactSetting from './Contact';
+import PrivacyPolicyManager from './PrivacyPolicyManager';
 
 const HomeContentManager = () => {
   const [activeTab, setActiveTab] = useState('hero-slider');
@@ -78,32 +78,36 @@ const HomeContentManager = () => {
       {/* Primary Tabs Shell */}
       <div className="w-full max-w-[1600px] mx-auto bg-white border border-gray-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col">
         
-        {/* Navigation Ribbon */}
-        <div className="w-full border-b border-gray-100 bg-gray-50/40 flex items-center gap-1 overflow-x-auto scrollbar-none px-4 pt-3">
-          {[
-            { id: 'hero-slider', label: 'Hero Slider Layout', icon: Sliders },
-            { id: 'category-grid', label: 'Category Grid', icon: Grid },
-            { id: 'featured-products', label: 'Category Sections', icon: Star },
-            { id: 'multiColumnShowcase', label: 'multiColumnShowcase', icon: LayoutGrid },
-
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-semibold transition-all border-t-2 border-x rounded-t-xl whitespace-nowrap -mb-[1px] ${
-                  isActive 
-                    ? 'bg-white border-gray-200 border-t-primary text-primary shadow-[0_-2px_10px_rgba(0,0,0,0.02)] z-10' 
-                    : 'bg-transparent border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50'
-                }`}
-              >
-                <Icon size={15} className={isActive ? 'text-secondary' : 'text-primary'} />
-                {tab.label}
-              </button>
-            );
-          })}
+        {/* Navigation Ribbon - Fixed to support seamless swiping/scrolling */}
+        <div className="w-full border-b border-gray-100 bg-gray-50/40 overflow-x-auto min-w-full">
+          <div className="flex items-center gap-1 px-4 pt-3 w-max min-w-full">
+            {[
+              { id: 'hero-slider', label: 'Hero Slider Layout', icon: Sliders },
+              { id: 'category-grid', label: 'Category Grid', icon: Grid },
+              { id: 'featured-products', label: 'Category Sections', icon: Star },
+              { id: 'multiColumnShowcase', label: 'multiColumnShowcase', icon: LayoutGrid },
+              { id: 'contactSetting', label: 'Contact Setting', icon: Contact },
+              { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  type="button"
+                  className={`flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-semibold transition-all border-t-2 border-x rounded-t-xl whitespace-nowrap -mb-[1px] cursor-pointer select-none ${
+                    isActive 
+                      ? 'bg-white border-gray-200 border-t-primary text-primary shadow-[0_-2px_10px_rgba(0,0,0,0.02)] z-10' 
+                      : 'bg-transparent border-transparent text-gray-500 hover:text-gray-800 hover:bg-gray-100/50'
+                  }`}
+                >
+                  <Icon size={15} className={isActive ? 'text-secondary' : 'text-primary'} />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Dynamic Route/Tab Content Switcher Area */}
@@ -133,21 +137,12 @@ const HomeContentManager = () => {
             <MultiShowCaseTab/>
           )}
 
-          {/* Legal Pages Rich Editors */}
-          {['return-policy', 'terms-conditions', 'privacy-policy'].includes(activeTab) && (
-            <div className="flex flex-col gap-4 animate-fadeIn">
-              <div className="flex flex-col gap-1">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
-                  {activeTab.replace('-', ' ')} Editor Console
-                </h3>
-                <p className="text-xs text-gray-400">Draft rich legal content disclosures to project on static legal pages.</p>
-              </div>
-              <textarea 
-                rows={12}
-                placeholder={`Provide exhaustive textual definitions layout instructions for global context fields: ${activeTab.replace('-', ' ')}...`}
-                className="w-full border border-gray-200 rounded-xl p-4 text-xs sm:text-sm text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-mono"
-              />
-            </div>
+          {activeTab === 'contactSetting' && (
+            <ContactSetting/>
+          )}
+
+          {activeTab === 'privacyPolicy' && (
+            <PrivacyPolicyManager />
           )}
 
         </div>

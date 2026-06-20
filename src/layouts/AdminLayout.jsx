@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaTachometerAlt, FaBox, FaShoppingCart, FaUsers, FaUser, FaSignOutAlt, FaTags, FaEnvelope } from 'react-icons/fa';
+import { 
+  FaTachometerAlt, 
+  FaBox, 
+  FaShoppingCart, 
+  FaUsers, 
+  FaUser, 
+  FaSignOutAlt, 
+  FaTags, 
+  FaEnvelope, 
+  FaPercent // Added for GST / Tax
+} from 'react-icons/fa';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -107,6 +117,10 @@ const AdminLayout = () => {
             <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
             <span>Orders</span>
           </Link>
+          <Link to="/admin/shippingCost" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/orders')}`}>
+            <FaShoppingCart className="w-5 h-5 flex-shrink-0" />
+            <span>Shipping Cost</span>
+          </Link>
           <Link to="/admin/enquiries" className={`flex items-center justify-between p-3 rounded font-medium transition-colors ${isActive('/admin/enquiries')}`}>
             <div className="flex items-center gap-3">
               <FaEnvelope className="w-5 h-5 flex-shrink-0" />
@@ -118,6 +132,14 @@ const AdminLayout = () => {
               </span>
             )}
           </Link>
+          
+          <Link to="/admin/gst" className={`flex items-center justify-between p-3 rounded font-medium transition-colors ${isActive('/admin/gst')}`}>
+  <div className="flex items-center gap-3">
+    <FaPercent className="w-4 h-4 flex-shrink-0" />
+    <span>GST</span>
+  </div>
+</Link>
+
           <Link to="/admin/users" className={`flex items-center gap-3 p-3 rounded font-medium transition-colors ${isActive('/admin/users')}`}>
             <FaUsers className="w-5 h-5 flex-shrink-0" />
             <span>Customers</span>

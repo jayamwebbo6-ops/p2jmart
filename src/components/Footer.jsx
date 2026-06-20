@@ -37,7 +37,7 @@ const Footer = () => {
             <h4 className="text-white font-bold mb-4 text-[14px]">CONSUMER POLICY</h4>
             <ul className="space-y-2 text-white">
               <li><Link to="/terms" onClick={handleLinkClick} className="text-[13px]">Terms and Condition</Link></li>
-              <li><Link to="/privacy" onClick={handleLinkClick} className="text-[13px]">Privacy Policy</Link></li>
+              <li><Link to="/privacy-policy" onClick={handleLinkClick} className="text-[13px]">Privacy Policy</Link></li>
               <li><Link to="/shipping" onClick={handleLinkClick} className="text-[13px]">Delivery and Shipping</Link></li>
               <li><Link to="/returns-policy" onClick={handleLinkClick} className="text-[13px]">Cancellation &amp; Returns</Link></li>
             </ul>

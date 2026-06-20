@@ -8,6 +8,7 @@ import { toast, ToastContainer } from './components/toast';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
+import GSTSettingsPage from './pages/admin/GstSettingsPage';
 
 
 // Lazy loading user pages
@@ -25,6 +26,7 @@ const ContactPage = lazy(() => import('./pages/user/ContactPage'));
 const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
 const CustomizedProductDetails = lazy(() => import('./pages/user/CustomizedProductDetails'));
 const ReturnPolicy = lazy(() => import('./pages/user/ReturnPolicy'));
+const PrivacyPolicy = lazy(() => import('./pages/user/PrivacyPolicy'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -36,6 +38,7 @@ const Users = lazy(() => import('./pages/admin/Users'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminAttributes = lazy(() => import('./pages/admin/Attributes'));
 const AdminEnquiries = lazy(() => import('./pages/admin/Enquiries'));
+const ShippingCostPage = lazy(() => import('./pages/admin/ShippingCostManager'));
 
 // Lazy loading subcategory page
 const Subcategory = lazy(() => import('./pages/user/Subcategory'));
@@ -127,6 +130,7 @@ function App() {
             <Route path="products" element={<UserProducts />} />
             <Route path="product/:id" element={<ProductDetail />} />
             
+            <Route path="privacy-policy" element={<PrivacyPolicy/>} />
             <Route 
               path="cart" 
               element={
@@ -199,8 +203,11 @@ function App() {
             <Route path="profile" element={<AdminProfile />} />
             <Route path="homeCMS" element={<HomeContentManager/>} />
 
+            <Route path="shippingCost" element={<ShippingCostPage/>} />
+
             <Route path="attributes" element={<AdminAttributes />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
+            <Route path="gst" element={<GSTSettingsPage/>} />
           </Route>
         </Routes>
       </Suspense>
