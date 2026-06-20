@@ -137,11 +137,22 @@ const Products = () => {
 
   // Modals state
   const [modalType, setModalType] = useState(null); // 'cat' | 'sub' | 'prod'
+  const [availableAttributes, setAvailableAttributes] = useState(() => {
+    const saved = localStorage.getItem('p2j_mart_attributes');
+    return saved ? JSON.parse(saved) : [
+      { id: 'attr-1', name: 'color', terms: ['Blue|#0000FF', 'Red|#FF0000', 'Green|#008000', 'Yellow|#FFFF00', 'White|#FFFFFF', 'Black|#000000'] },
+      { id: 'attr-2', name: 'material', terms: ['Wood', 'Acrylic', 'Glass', 'Metal', 'Leather'] },
+      { id: 'attr-3', name: 'design', terms: ['Minimalist', 'Floral', 'Modern', 'Classic', 'Vintage'] },
+      { id: 'attr-4', name: 'size', terms: ['3 inch', '5 inch', '7 inch', 'Small', 'Medium', 'Large'] },
+      { id: 'attr-5', name: 'ramsize', terms: ['4GB', '8GB', '16GB', '32GB'] }
+    ];
+  });
+
   const [editItem, setEditItem] = useState(null); // Item to edit (null if adding)
   const [parentId, setParentId] = useState(null); // Parent category/subcategory id
 
   // Form states
-  const [catForm, setCatForm] = useState({ name: '', image: '' });
+  const [catForm, setCatForm] = useState({ name: '', image: '', supportedAttributes: [] });
   const [subForm, setSubForm] = useState({ name: '', image: '' });
   const [prodForm, setProdForm] = useState({
     title: '',
@@ -191,10 +202,14 @@ const Products = () => {
   // Category Actions
   const handleOpenCatModal = (editCat = null) => {
     if (editCat) {
-      setCatForm({ name: editCat.name, image: editCat.image });
+      setCatForm({ 
+        name: editCat.name, 
+        image: editCat.image, 
+        supportedAttributes: editCat.supportedAttributes || [] 
+      });
       setEditItem(editCat);
     } else {
-      setCatForm({ name: '', image: '' });
+      setCatForm({ name: '', image: '', supportedAttributes: [] });
       setEditItem(null);
     }
     setModalType('cat');
@@ -209,7 +224,12 @@ const Products = () => {
 
     if (editItem) {
       setCatalog(prev => prev.map(c => 
-        c.id === editItem.id ? { ...c, name: catForm.name, image: finalImageUrl } : c
+        c.id === editItem.id ? { 
+          ...c, 
+          name: catForm.name, 
+          image: finalImageUrl, 
+          supportedAttributes: catForm.supportedAttributes || [] 
+        } : c
       ));
       toast.success('Category updated successfully');
     } else {
@@ -217,6 +237,7 @@ const Products = () => {
         id: `cat-${Date.now()}`,
         name: catForm.name,
         image: finalImageUrl,
+        supportedAttributes: catForm.supportedAttributes || [],
         subcategories: []
       };
       setCatalog(prev => [...prev, newCat]);
@@ -648,7 +669,7 @@ const Products = () => {
                               )}
                             </div>
                             <div>
-                              <h4 className="font-bold text-gray-900 leading-tight">{prod.title}</h4>
+                              <h4 className="text-xs font-bold text-gray-900 leading-tight">{prod.title}</h4>
                               <p className="text-[10px] text-gray-400 mt-0.5">{subcategoryName}</p>
                             </div>
                           </div>
@@ -663,15 +684,26 @@ const Products = () => {
 
                         {/* Variants */}
                         <td className="py-4 px-4">
-                          <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal">
-                            <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
-                              <span className="w-2 h-2 rounded-full bg-yellow-400 block"></span>
-                              <span>Yellow</span>
+                          {prod.selectedAttributes && Object.keys(prod.selectedAttributes).length > 0 ? (
+                            <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal gap-1">
+                              {Object.entries(prod.selectedAttributes).map(([attrName, values]) => (
+                                <div key={attrName} className="text-[9px] text-gray-500 font-medium">
+                                  <span className="capitalize font-bold text-gray-750">{attrName}:</span> {values.join(', ')}
+                                </div>
+                              ))}
+                              <div className="text-[9px] font-bold text-purple-600 border-t border-slate-100 pt-0.5 mt-0.5">Price: ₹{prod.price}</div>
                             </div>
-                            <div className="text-[9px] text-gray-400 font-medium mt-0.5">Size: 8 inch</div>
-                            <div className="text-[9px] font-bold text-purple-600 mt-1">Price: ₹{prod.price}</div>
-                            <div className="text-[9px] font-bold text-pink-600">Inv: 10 units</div>
-                          </div>
+                          ) : (
+                            <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal">
+                              <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
+                                <span className="w-2 h-2 rounded-full bg-yellow-400 block"></span>
+                                <span>Yellow</span>
+                              </div>
+                              <div className="text-[9px] text-gray-400 font-medium mt-0.5">Size: 8 inch</div>
+                              <div className="text-[9px] font-bold text-purple-600 mt-1">Price: ₹{prod.price}</div>
+                              <div className="text-[9px] font-bold text-pink-600">Inv: 10 units</div>
+                            </div>
+                          )}
                         </td>
 
                         {/* Total Qty */}
@@ -879,6 +911,36 @@ const Products = () => {
                         <img src={catForm.image} alt="Preview" className="w-full h-full object-cover" />
                       </div>
                     )}
+                  </div>
+
+                  <div className="flex flex-col gap-1.5 mt-1">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Supported Variants/Attributes
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 border border-gray-200 rounded-lg p-3 bg-gray-50/50">
+                      {availableAttributes.map(attr => {
+                        const isChecked = catForm.supportedAttributes.includes(attr.id);
+                        return (
+                          <label key={attr.id} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer select-none">
+                            <input 
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const updated = e.target.checked 
+                                  ? [...catForm.supportedAttributes, attr.id]
+                                  : catForm.supportedAttributes.filter(id => id !== attr.id);
+                                setCatForm({ ...catForm, supportedAttributes: updated });
+                              }}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="capitalize">{attr.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <span className="text-[10px] text-gray-400">
+                      Select which variations can be configured when adding products to this category.
+                    </span>
                   </div>
                 </>
               )}
