@@ -22,9 +22,12 @@ const Checkout = ({ cart = [], setCart }) => {
   // Step state: 1 = Address, 2 = Payment/Order Summary, 3 = Order Success
   const [step, setStep] = useState(1);
   
+  // Simulated dynamic multi-stage modal payment state: 'idle' | 'gateway_modal' | 'bank_redirect'
+  const [paymentStage, setPaymentStage] = useState('idle');
+  const [orderRef, setOrderRef] = useState('');
+
   // Addresses local state
   const [addresses, setAddresses] = useState(() => {
-    // Make sure we have the mock addresses and a customized one for Zubair
     const list = [...initialAddresses];
     const hasZubair = list.some(a => a.fullName.toLowerCase().includes('zubair'));
     if (!hasZubair) {
@@ -82,10 +85,10 @@ const Checkout = ({ cart = [], setCart }) => {
 
   // Redirect if cart is empty and we are not in success step
   useEffect(() => {
-    if (cart.length === 0 && step !== 3) {
+    if (cart.length === 0 && step !== 3 && paymentStage === 'idle') {
       navigate('/cart');
     }
-  }, [cart, step, navigate]);
+  }, [cart, step, navigate, paymentStage]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -111,7 +114,6 @@ const Checkout = ({ cart = [], setCart }) => {
 
     setSelectedAddressId(newId);
     setIsAddModalOpen(false);
-    // Reset form
     setNewAddress({
       fullName: '',
       phoneNumber: '',
@@ -125,7 +127,7 @@ const Checkout = ({ cart = [], setCart }) => {
   };
 
   const handleDeleteAddress = (id, e) => {
-    e.stopPropagation(); // Prevent selecting the card
+    e.stopPropagation();
     setAddressToDelete(id);
   };
 
@@ -152,19 +154,23 @@ const Checkout = ({ cart = [], setCart }) => {
     setStep(2);
   };
 
+  // 1. Kick off simulated payment popup overlay sequence
   const handlePlaceOrder = () => {
     if (!selectedAddress) {
       alert("Please select a shipping address.");
       setStep(1);
       return;
     }
+    // Generate a random mock order reference ID
+    const generatedRef = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+    setOrderRef(generatedRef);
+    setPaymentStage('gateway_modal');
+  };
 
-    // Generate random Order ID
-    const randomId = 'ORD-' + new Date().getFullYear() + '-' + Math.floor(10000 + Math.random() * 90000);
-    
-    // Save order details to render on Success screen
+  // 2. Finalizes state management and triggers application success steps
+  const finalizeSuccessfulPayment = () => {
     setPlacedOrder({
-      orderId: randomId,
+      orderId: orderRef,
       items: [...cart],
       subtotal,
       shippingFee,
@@ -173,15 +179,24 @@ const Checkout = ({ cart = [], setCart }) => {
       date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     });
 
-    // Clear cart and transition to Success step
     setCart([]);
+    setPaymentStage('idle');
     setStep(3);
   };
+
+  // Automatically finish payment if simulation reaches bank_redirect phase
+  useEffect(() => {
+    if (paymentStage === 'bank_redirect') {
+      const timer = setTimeout(() => {
+        finalizeSuccessfulPayment();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [paymentStage]);
 
   if (step === 3 && placedOrder) {
     return (
       <div className="max-w-4xl mx-auto py-10 px-4 font-sans flex flex-col items-center">
-        {/* Success Header Card */}
         <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center">
           <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mb-6 border-4 border-green-100 shadow-inner">
             <Check size={40} strokeWidth={3} className="animate-bounce" />
@@ -196,7 +211,6 @@ const Checkout = ({ cart = [], setCart }) => {
 
           <hr className="w-full border-gray-100 mb-6" />
 
-          {/* Details Grid */}
           <div className="w-full text-left bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
             <h3 className="font-bold text-primary text-lg mb-4 border-b border-gray-200 pb-2">Order Summary</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -227,7 +241,6 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           </div>
 
-          {/* Call to Actions */}
           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
             <Link 
               to="/" 
@@ -252,8 +265,6 @@ const Checkout = ({ cart = [], setCart }) => {
       
       {/* Steps Indicator Section */}
       <div className="flex items-center justify-center gap-4 my-8">
-        
-        {/* Step 1 Pill */}
         <div className="flex items-center">
           {step === 1 ? (
             <div className="flex items-center bg-primary text-white px-5 py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-2 font-bold text-xs sm:text-sm">
@@ -273,10 +284,8 @@ const Checkout = ({ cart = [], setCart }) => {
           )}
         </div>
 
-        {/* Connector Line */}
         <div className={`w-12 sm:w-16 h-[2px] ${step === 2 ? 'bg-primary' : 'bg-gray-300'} transition-all`}></div>
 
-        {/* Step 2 Pill */}
         <div className="flex items-center">
           {step === 2 ? (
             <div className="flex items-center bg-primary text-white px-5 py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-2 font-bold text-xs sm:text-sm">
@@ -295,8 +304,6 @@ const Checkout = ({ cart = [], setCart }) => {
       {/* STEP 1: ADDRESS SELECTION */}
       {step === 1 && (
         <div className="w-full bg-white border border-gray-100 shadow-xl rounded-3xl p-4 sm:p-8 flex flex-col gap-6">
-          
-          {/* Header Card Area */}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-blue-50/50 flex items-center justify-center text-primary border border-blue-100 flex-shrink-0">
               <MapPin size={22} strokeWidth={2} />
@@ -307,15 +314,12 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           </div>
 
-          {/* Stored Locations Header & Border */}
           <div className="flex items-center gap-4 mt-2">
             <span className="text-[11px] sm:text-xs font-black uppercase text-gray-400 tracking-widest whitespace-nowrap">Stored Locations</span>
             <div className="h-px bg-gray-100 w-full"></div>
           </div>
 
-          {/* Address Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            
             {addresses.map((address) => {
               const isSelected = selectedAddressId === address.id;
               return (
@@ -329,7 +333,6 @@ const Checkout = ({ cart = [], setCart }) => {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* Custom Radio Button */}
                     <div className="pt-0.5 flex-shrink-0">
                       <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
                         isSelected ? 'border-primary' : 'border-gray-300'
@@ -353,7 +356,6 @@ const Checkout = ({ cart = [], setCart }) => {
                     </div>
                   </div>
 
-                  {/* Actions (Delete if not default or if there's multiple) */}
                   {addresses.length > 1 && (
                     <div className="flex justify-end mt-4 pt-3 border-t border-gray-50">
                       <button
@@ -369,7 +371,6 @@ const Checkout = ({ cart = [], setCart }) => {
               );
             })}
 
-            {/* Add New Address Card */}
             <div 
               onClick={() => setIsAddModalOpen(true)}
               className="border-2 border-dashed border-gray-200 hover:border-primary rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-white cursor-pointer transition-all duration-300 min-h-[160px] group"
@@ -381,7 +382,6 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           </div>
 
-          {/* Action button below */}
           <div className="mt-4 flex justify-center">
             <button 
               onClick={handleUseSelectedAddress}
@@ -402,8 +402,6 @@ const Checkout = ({ cart = [], setCart }) => {
       {/* STEP 2: PAYMENT & ORDER SUMMARY */}
       {step === 2 && (
         <div className="w-full bg-white border border-gray-100 shadow-xl rounded-3xl p-4 sm:p-8 flex flex-col gap-6 animate-fadeIn">
-          
-          {/* Header Card Area */}
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-blue-50/50 flex items-center justify-center text-primary border border-blue-100 flex-shrink-0">
               <ShoppingBag size={20} strokeWidth={2} />
@@ -414,7 +412,6 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           </div>
 
-          {/* Selected Address Summary Block */}
           {selectedAddress && (
             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div className="font-sans">
@@ -431,7 +428,6 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           )}
 
-          {/* Product Items List */}
           <div className="flex flex-col gap-3">
             {cart.map((item) => (
               <div 
@@ -439,7 +435,6 @@ const Checkout = ({ cart = [], setCart }) => {
                 className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0"
               >
                 <div className="flex items-center gap-3">
-                  {/* Image with mini-badge */}
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 relative">
                     <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                     <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
@@ -465,7 +460,6 @@ const Checkout = ({ cart = [], setCart }) => {
             ))}
           </div>
 
-          {/* Calculations Box */}
           <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3">
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
               <span>Subtotal</span>
@@ -493,19 +487,18 @@ const Checkout = ({ cart = [], setCart }) => {
             </div>
           </div>
 
-          {/* Bottom Button Layout */}
           <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
-            {/* Back button */}
             <button 
+              type="button"
               onClick={() => setStep(1)}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:underline"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:underline bg-transparent border-0 cursor-pointer"
             >
               <ArrowLeft size={14} strokeWidth={2.5} />
               <span>Back to Address</span>
             </button>
 
-            {/* Pay Button */}
             <button 
+              type="button"
               onClick={handlePlaceOrder}
               className="bg-primary hover:bg-secondary text-white font-bold py-3 px-5 sm:px-6 rounded-2xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99] cursor-pointer text-xs sm:text-sm"
             >
@@ -670,6 +663,71 @@ const Checkout = ({ cart = [], setCart }) => {
         confirmText="Delete"
         isDanger={true}
       />
+
+      {/* ================= SIMULATED CHECKOUT GATEWAY WORKFLOW MODAL LAYER ================= */}
+      {paymentStage !== 'idle' && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[999] antialiased font-sans">
+          
+          {/* PHASE 1: Simulated Checkout Gateway Interface Modal */}
+          {paymentStage === 'gateway_modal' && (
+            <div className="bg-white rounded-[2rem] w-full max-w-[420px] p-8 shadow-2xl text-center relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex justify-center mb-5">
+                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-emerald-100/50">
+                  <svg className="w-7 h-7 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <line x1="2" y1="10" x2="22" y2="10" />
+                  </svg>
+                </div>
+              </div>
+
+              <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Simulated Checkout Gateway</h3>
+              <p className="text-gray-500 text-xs sm:text-[13px] leading-relaxed px-2 mb-6">
+                 You can mock test the payment flow below.
+              </p>
+
+              <div className="bg-[#f5f7f9] rounded-xl p-4 mb-6 text-left border border-gray-100 space-y-2.5 text-xs sm:text-sm">
+                <div className="flex justify-between items-center text-[#556370]">
+                  <span>Order Reference:</span>
+                  <span className="font-bold text-gray-800 tracking-wide">{orderRef}</span>
+                </div>
+                <div className="flex justify-between items-center text-[#556370]">
+                  <span>Amount Due:</span>
+                  <span className="font-bold text-gray-900 text-base">₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setPaymentStage('bank_redirect')}
+                  className="w-full bg-primary hover:bg-secondary text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm flex items-center justify-center gap-2 shadow-xs border-0"
+                >
+                  <span>Simulate Payment Success</span>
+                  <span className="bg-[#a4f1b5] text-[#34633d] w-4 h-4 rounded flex items-center justify-center text-[10px]">✓</span>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setPaymentStage('idle')}
+                  className="w-full bg-rose-50/50 hover:bg-rose-50 text-rose-700 font-semibold py-3 px-4 rounded-xl border border-rose-100 transition-all cursor-pointer text-sm flex items-center justify-center gap-2"
+                >
+                  <span>Simulate Payment Failure</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* PHASE 2: Bank Redirect Simulator Loader */}
+          {paymentStage === 'bank_redirect' && (
+            <div className="bg-white rounded-[2rem] w-full max-w-[360px] p-8 shadow-2xl text-center border border-gray-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-900 font-bold text-base mb-1">Verifying with Bank</p>
+              <p className="text-gray-400 text-xs">Please do not refresh or close this window...</p>
+            </div>
+          )}
+
+        </div>
+      )}
     </div>
   );
 };
