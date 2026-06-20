@@ -5,7 +5,7 @@ const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners }) => {
   return (
     <div className="flex flex-col gap-8 animate-fadeIn">
        {/* SECTION B: RIGHT SIDE PROMO/OFFERS FIXED PANELS SECTION */}
-      <div className="flex flex-col gap-4 mt-4 pt-4 border-t border-gray-100">
+      <div className="flex flex-col gap-4 border-t border-gray-100">
         <div className="border-b border-gray-100 pb-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
             Right Column Side Offer Banners Configuration

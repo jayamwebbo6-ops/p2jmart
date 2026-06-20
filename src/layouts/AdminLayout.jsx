@@ -164,7 +164,7 @@ const AdminLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="bg-white h-20 px-8 flex justify-between items-center z-0">
+        <header className="bg-white h-20 px-4 flex justify-between items-center z-0">
           <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
           <div className="flex items-center space-x-4">
           

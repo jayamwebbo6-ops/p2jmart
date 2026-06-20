@@ -150,7 +150,7 @@ const HomeContentManager = () => {
         </div>
 
         {/* Dynamic Route/Tab Content Switcher Area */}
-        <div className="p-5 sm:p-6 md:p-8 flex-1 w-full min-w-0">
+        <div className="p-4 sm:p-5 md:p-6 flex-1 w-full min-w-0">
           
           {activeTab === 'hero-slider' && (
             <HeroSliderTab 

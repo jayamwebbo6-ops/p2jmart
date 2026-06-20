@@ -296,7 +296,7 @@ const Attributes = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
+                  <div className="flex items-center gap-1">
                     <EditBtn size={12} onClick={(e) => { e.stopPropagation(); handleOpenAttrModal(attr); }} title="Edit Attribute" />
                     <DeleteBtn size={12} onClick={(e) => handleDeleteAttribute(attr.id, e)} title="Delete Attribute" />
                   </div>

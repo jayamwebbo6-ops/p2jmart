@@ -76,6 +76,7 @@ const AddProduct = () => {
   const [prodForm, setProdForm] = useState({
     title: '',
     description: '',
+    brand: '',
     collection: 'None',
     customizeProduct: 'No',
     customizationType: 'Text',
@@ -202,6 +203,7 @@ const AddProduct = () => {
         setProdForm({
           title: foundProd.title || '',
           description: foundProd.description || '',
+          brand: foundProd.brand || '',
           collection: foundProd.collection || 'None',
           customizeProduct: foundProd.customizeProduct || 'No',
           customizationType: foundProd.customizationType || 'Text',
@@ -300,6 +302,7 @@ const AddProduct = () => {
     const productPayload = {
       title: prodForm.title,
       description: prodForm.description,
+      brand: prodForm.brand,
       collection: prodForm.collection,
       customizeProduct: prodForm.customizeProduct,
       customizationType: prodForm.customizeProduct === 'Yes' ? prodForm.customizationType : null,
@@ -520,6 +523,20 @@ const AddProduct = () => {
                   onChange={(e) => setProdForm({ ...prodForm, title: e.target.value })}
                   className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
                   required
+                />
+              </div>
+
+              {/* Brand Name */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                  Brand Name
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Nike, Apple, generic, etc..."
+                  value={prodForm.brand}
+                  onChange={(e) => setProdForm({ ...prodForm, brand: e.target.value })}
+                  className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
                 />
               </div>
 
