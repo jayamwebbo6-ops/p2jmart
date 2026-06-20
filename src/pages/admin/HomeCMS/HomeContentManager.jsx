@@ -15,7 +15,7 @@ import {
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
 import CategoryGridTab from './CategoryGridTab';
-import FeaturedProductsTab from './FeaturedProductsTab';
+import CategoryTab from './CategoryTab';
 import MultiShowCaseTab from './MultiColumnShowcaseTab'
 
 const HomeContentManager = () => {
@@ -83,7 +83,7 @@ const HomeContentManager = () => {
           {[
             { id: 'hero-slider', label: 'Hero Slider Layout', icon: Sliders },
             { id: 'category-grid', label: 'Category Grid', icon: Grid },
-            { id: 'featured-products', label: 'Featured Products', icon: Star },
+            { id: 'featured-products', label: 'Category Sections', icon: Star },
             { id: 'multiColumnShowcase', label: 'multiColumnShowcase', icon: LayoutGrid },
 
           ].map((tab) => {
@@ -126,7 +126,7 @@ const HomeContentManager = () => {
           )}
 
           {activeTab === 'featured-products' && (
-            <FeaturedProductsTab />
+            <CategoryTab />
           )}
 
           {activeTab === 'multiColumnShowcase' && (
