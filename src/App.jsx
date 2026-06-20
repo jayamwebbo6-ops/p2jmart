@@ -10,7 +10,6 @@ import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
 import GSTSettingsPage from './pages/admin/GstSettingsPage';
 
-
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));
 const UserProducts = lazy(() => import('./pages/user/Products'));
@@ -27,8 +26,10 @@ const CustomizedProduct = lazy(() => import('./pages/user/CustomizedProduct'));
 const CustomizedProductDetails = lazy(() => import('./pages/user/CustomizedProductDetails'));
 const ReturnPolicy = lazy(() => import('./pages/user/ReturnPolicy'));
 const PrivacyPolicy = lazy(() => import('./pages/user/PrivacyPolicy'));
-const UserLogin = lazy(() => import('./pages/user/Login'));
+const DeliveryPolicy = lazy(() => import('./pages/user/DelivaryPolicy'));
+const CancellationReturnPolicy = lazy(() => import('./pages/user/CancellationReturnPolicy'));
 
+const UserLogin = lazy(() => import('./pages/user/Login'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -47,7 +48,6 @@ const ComboPack = lazy(() => import('./pages/admin/ComboPack'));
 // Lazy loading subcategory page
 const Subcategory = lazy(() => import('./pages/user/Subcategory'));
 const HomeContentManager = lazy(() => import('./pages/admin/HomeCMS/HomeContentManager'));
-
 
 function App() {
   const basename = import.meta.env.BASE_URL;
@@ -134,7 +134,9 @@ function App() {
             <Route path="products" element={<UserProducts />} />
             <Route path="product/:id" element={<ProductDetail />} />
             
-            <Route path="privacy-policy" element={<PrivacyPolicy/>} />
+            <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="cancellation-return-policy" element={<CancellationReturnPolicy />} />
+
             <Route 
               path="cart" 
               element={
@@ -158,9 +160,10 @@ function App() {
             <Route path="customized" element={<CustomizedProduct />} />
             <Route path="login" element={<UserLogin />} />
             
-            {/* 2. ADDED: New dynamic route capturing path for the product customizer layout */}
+            {/* New dynamic route capturing path for the product customizer layout */}
             <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
 
+            <Route path="delivery-policy" element={<DeliveryPolicy />} />
             <Route path="returns-policy" element={<ReturnPolicy />} />
             
             <Route 
@@ -173,7 +176,7 @@ function App() {
               } 
             />
 
-            <Route 
+           <Route 
               path="subCategory" 
               element={
                 <Subcategory 
@@ -206,15 +209,15 @@ function App() {
             <Route path="orders" element={<AdminOrders />} />
             <Route path="users" element={<Users />} />
             <Route path="profile" element={<AdminProfile />} />
-            <Route path="homecms" element={<HomeContentManager/>} />
+            <Route path="homecms" element={<HomeContentManager />} />
 
-            <Route path="shippingCost" element={<ShippingCostPage/>} />
+            <Route path="shippingCost" element={<ShippingCostPage />} />
             <Route path="combo-pack" element={<ComboPack />} />
             <Route path="cancel-requests" element={<CancelRequests />} />
 
             <Route path="attributes" element={<AdminAttributes />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
-            <Route path="gst" element={<GSTSettingsPage/>} />
+            <Route path="gst" element={<GSTSettingsPage />} />
           </Route>
         </Routes>
       </Suspense>
