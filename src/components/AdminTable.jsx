@@ -1,20 +1,9 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 
 /**
  * AdminTable — Standardized table component for all admin modules.
- *
- * Props:
- *   - headers: Array of objects { key, label, sortable, align } or simple strings.
- *   - data: Array of data items to render.
- *   - renderRow: Function (item, index) => JSX element (should return a <tr>).
- *   - onSort: Function (key) => void (optional).
- *   - sortConfig: Object { key, direction } (optional).
- *   - maxHeight: CSS max-height value (optional).
- *   - minWidth: Tailwind min-width class (default: "min-w-[600px]").
- *   - emptyMessage: React node or string (default: "No records found.").
- *   - className: Extra table classes.
- *   - containerClassName: Extra outer container classes.
+ * Now features grab-and-swipe horizontal mouse scrolling for seamless desktop navigation.
  */
 const AdminTable = ({
   headers = [],
@@ -28,10 +17,63 @@ const AdminTable = ({
   className = '',
   containerClassName = ''
 }) => {
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e) => {
+    // Prevent scrolling swipe if interacting with buttons, selects, or links
+    const tag = e.target.tagName.toLowerCase();
+    if (
+      tag === 'button' || 
+      tag === 'select' || 
+      tag === 'input' || 
+      tag === 'a' || 
+      e.target.closest('button') || 
+      e.target.closest('select') || 
+      e.target.closest('input') || 
+      e.target.closest('a')
+    ) {
+      return;
+    }
+    
+    // Only scroll with left click
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollRef.current.offsetLeft);
+    setScrollLeft(scrollRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const walk = (x - startX) * 1.5; // Drag sensitivity multiplier
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollLeft - walk;
+    }
+  };
+
   return (
     <div className={`bg-white border border-gray-200/80 rounded-xl shadow-sm overflow-hidden ${containerClassName}`}>
       <div 
-        className="overflow-x-auto custom-scrollbar"
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className={`overflow-x-auto custom-scrollbar select-none ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
         style={maxHeight ? { maxHeight } : undefined}
       >
         <table className={`w-full text-left border-collapse ${minWidth} ${className}`}>
@@ -52,7 +94,7 @@ const AdminTable = ({
                     <th 
                       key={idx}
                       onClick={() => onSort(key)}
-                      className={`py-3.5 px-4 select-none cursor-pointer hover:bg-gray-100/50 transition-colors ${alignClass}`}
+                      className={`py-3 px-2.5 select-none cursor-pointer hover:bg-gray-100/50 transition-colors ${alignClass}`}
                     >
                       <div className={`flex items-center gap-1.5 ${align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : ''}`}>
                         <span>{label}</span>
@@ -63,7 +105,7 @@ const AdminTable = ({
                 }
                 
                 return (
-                  <th key={idx} className={`py-3.5 px-4 ${alignClass}`}>
+                  <th key={idx} className={`py-3 px-2.5 ${alignClass}`}>
                     {label}
                   </th>
                 );

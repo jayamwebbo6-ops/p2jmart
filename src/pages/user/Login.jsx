@@ -1,5 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ShieldCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { googleLoginAPI, isUserAuthenticated } from '../../api/userApi';
+import { toast } from '../../components/toast';
 
 // Integrated Loader sub-component
 const Loader = () => {
@@ -15,19 +18,77 @@ const Loader = () => {
 };
 
 export default function AuthFlow() {
+  const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isUserAuthenticated()) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   // States: 'methods' | 'email-input' | 'otp-verify'
   const [step, setStep] = useState('methods');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const googleBtnRef = useRef(null);
   
   // Dummy OTP broken into 4 characters matching the box layout theme
   const [otpBoxes, setOtpBoxes] = useState(['5', '6', '9', '6']);
   const inputRefs = useRef([]);
 
-  const handleGoogleSignIn = () => {
-    // No action will happen as requested
-    console.log("Google Sign-In clicked: No action configured.");
-  };
+  useEffect(() => {
+    // 1. Define Callback function for Google response
+    const handleCredentialResponse = async (response) => {
+      setIsLoading(true);
+      try {
+        const result = await googleLoginAPI(response.credential);
+        if (result && result.success) {
+          // Fire event
+          window.dispatchEvent(new Event('userLoginStateChange'));
+          
+          toast.success('Logged in successfully!');
+
+          // If profile is not filled (no phone number), navigate to profile page to fill details
+          if (!result.data.phone) {
+            toast.info('Please complete your profile details.');
+            navigate('/my-account/profile');
+          } else {
+            navigate('/');
+          }
+        } else {
+          toast.error(result.message || 'Google Login failed');
+        }
+      } catch (err) {
+        console.error('Google login error:', err);
+        toast.error('An error occurred during Google Login.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // 2. Load Google client script programmatically
+    const script = document.createElement('script');
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: "717777690705-pdl02aomsi12r1vnuqalckp5v24de71s.apps.googleusercontent.com",
+          callback: handleCredentialResponse
+        });
+        
+        if (googleBtnRef.current) {
+          window.google.accounts.id.renderButton(
+            googleBtnRef.current,
+            { theme: "outline", size: "large", width: 340 }
+          );
+        }
+      }
+    };
+    document.body.appendChild(script);
+  }, []);
 
   const handleSendCode = (e) => {
     e.preventDefault();
@@ -126,20 +187,10 @@ export default function AuthFlow() {
           {/* STEP 1: Identification Route Core Options */}
           {step === 'methods' && (
             <div className="w-full flex flex-col gap-4 my-2">
-              {/* Google Integration Trigger Button (No Action Configuration) */}
-              <button 
-                type="button"
-                onClick={handleGoogleSignIn}
-                className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-xl h-12 hover:bg-gray-50 active:scale-[0.99] transition-all font-semibold text-gray-700 text-sm"
-              >
-                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                  <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.64 15.01 1 12 1 7.35 1 3.4 3.66 1.48 7.56l3.8 2.94C6.22 7.29 8.87 5.04 12 5.04z"/>
-                  <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.34H12v4.43h6.49c-.28 1.48-1.12 2.74-2.38 3.58l3.69 2.87c2.16-1.99 3.41-4.92 3.41-8.54z"/>
-                  <path fill="#FBBC05" d="M5.28 14.62c-.24-.72-.38-1.5-.38-2.31s.14-1.59.38-2.31L1.48 7.56C.54 9.45 0 11.62 0 12s.54 2.55 1.48 4.44l3.8-2.82z"/>
-                  <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.69-2.87c-1.11.75-2.52 1.19-4.27 1.19-3.13 0-5.78-2.25-6.72-5.46l-3.8 2.94C3.4 20.34 7.35 23 12 23z"/>
-                </svg>
-                <span>Sign In With Google Account</span>
-              </button>
+              {/* Google Integration Trigger Container */}
+              <div className="w-full flex justify-center py-1">
+                <div ref={googleBtnRef}></div>
+              </div>
 
               {/* Email Gateway Selection Trigger */}
               <button 

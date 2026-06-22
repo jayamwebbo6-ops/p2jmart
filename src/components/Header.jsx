@@ -13,6 +13,7 @@ import { FaFacebookF, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { Link, useLocation } from 'react-router-dom';
 import { categories } from '../utils/constants';
+import { isUserAuthenticated, userLogout } from '../api/userApi';
 
 // The wishlist prop is safely accepted here
 const Header = memo(({ wishlist = [], cart = [] }) => {
@@ -21,6 +22,28 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
   const [openCategoryIndex, setOpenCategoryIndex] = useState(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+
+  const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated());
+  const [userProfile, setUserProfile] = useState(null);
+
+  const checkAuth = useCallback(() => {
+    const authStatus = isUserAuthenticated();
+    setIsAuthenticated(authStatus);
+    if (authStatus) {
+      const stored = localStorage.getItem('p2j_user_profile');
+      if (stored) {
+        setUserProfile(JSON.parse(stored));
+      }
+    } else {
+      setUserProfile(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkAuth();
+    window.addEventListener('userLoginStateChange', checkAuth);
+    return () => window.removeEventListener('userLoginStateChange', checkAuth);
+  }, [checkAuth]);
 
   const isActive = (path) => {
     const normalize = (p) => {
@@ -153,29 +176,53 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
             <div className="relative" ref={userMenuRef}>
               <button 
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="hover:text-secondary transition-colors hover:scale-110 transform flex items-center"
+                className="hover:text-secondary transition-colors hover:scale-110 transform flex items-center focus:outline-none"
               >
-                <User size={24} strokeWidth={1.5} />
+                {isAuthenticated && userProfile?.photo ? (
+                  <img src={userProfile.photo} alt="User Profile" className="w-6 h-6 rounded-full object-cover border border-gray-200" />
+                ) : (
+                  <User size={24} strokeWidth={1.5} />
+                )}
               </button>
 
               {/* User Dropdown Popup */}
               {isUserMenuOpen && (
                 <div className="absolute right-0 mt-4 w-48 bg-white rounded-lg shadow-xl py-2 z-[200] border border-gray-100">
-                  <Link 
-                    to="/my-account" 
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary transition-colors"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  <button 
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50"
-                  >
-                    Logout
-                  </button>
+                  {isAuthenticated ? (
+                    <>
+                      <div className="px-4 py-2 border-b border-gray-50 mb-1">
+                        <p className="text-xs text-gray-400">Signed in as</p>
+                        <p className="text-sm font-bold text-gray-800 truncate">{userProfile?.name || 'My Account'}</p>
+                      </div>
+                      <Link 
+                        to="/my-account" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        My Account
+                      </Link>
+                      <button 
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          userLogout();
+                          setIsAuthenticated(false);
+                          setUserProfile(null);
+                          window.location.href = '/';
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50 cursor-pointer"
+                      >
+                        Logout
+                      </button>
+                    </>
+                  ) : (
+                    <Link 
+                      to="/login" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-semibold transition-colors animate-pulse"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      Login
+                    </Link>
+                  )}
                 </div>
               )}
             </div>

@@ -90,7 +90,7 @@ const CancellationReturnPolicyHandle = () => {
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen w-full p-6 md:p-10 font-sans text-slate-700 antialiased">
+    <div className="bg-[#f8fafc] min-h-screen w-full p-4 md:p-6 font-sans text-slate-700 antialiased">
       <div className="max-w-5xl mx-auto space-y-6">
         
         {/* TOP HEADER CONTROLS BAR BAR */}

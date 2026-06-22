@@ -1,16 +1,30 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User } from 'lucide-react';
+import { Lock, User, Eye, EyeOff } from 'lucide-react';
+import { adminLogin } from '../../api/adminApi';
+import { toast } from '../../components/toast';
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // Accept ANY username and password, simply navigate to admin dashboard
-    navigate('/admin');
+    try {
+      const response = await adminLogin(username, password);
+      if (response.success) {
+        toast.success('Signed in successfully!');
+        navigate('/admin');
+      } else {
+        toast.error(response.message || 'Login failed.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      const errMsg = error.response?.data?.message || 'Invalid username or password.';
+      toast.error(errMsg);
+    }
   };
 
   return (
@@ -43,7 +57,7 @@ export default function AdminLogin() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                  placeholder="Enter any username"
+                  placeholder="Enter username or email"
                 />
               </div>
             </div>
@@ -55,13 +69,20 @@ export default function AdminLogin() {
                   <Lock size={18} />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                  placeholder="Enter any password"
+                  className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="Enter password"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
             

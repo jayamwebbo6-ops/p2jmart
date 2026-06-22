@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Save, Edit2, X } from 'lucide-react';
+import { Camera, Save, Edit2, X, Eye, EyeOff } from 'lucide-react';
+import { getAdminProfile, updateAdminProfile } from '../../api/adminApi';
+import { toast } from '../../components/toast';
 import PageHeader from '../../components/PageHeader';
 
 const AdminProfile = () => {
@@ -23,15 +25,37 @@ const AdminProfile = () => {
     confirm: ''
   });
 
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await getAdminProfile();
+      if (response && response.success) {
+        const data = response.data;
+        const profileData = {
+          username: data.username || 'Admin User',
+          email: data.email || 'admin@p2jmart.com',
+          photo: data.photo || ''
+        };
+        setProfile(profileData);
+        setOriginalProfile(profileData);
+        localStorage.setItem('p2j_admin_profile', JSON.stringify(profileData));
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile from server, using local storage:', error);
+      const stored = localStorage.getItem('p2j_admin_profile');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setProfile(parsed);
+        setOriginalProfile(parsed);
+      }
+    }
+  };
 
   useEffect(() => {
-    const stored = localStorage.getItem('p2j_admin_profile');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setProfile(parsed);
-      setOriginalProfile(parsed);
-    }
+    fetchProfile();
   }, []);
 
   const handlePhotoUpload = (e) => {
@@ -50,42 +74,71 @@ const AdminProfile = () => {
     setProfile({ ...originalProfile });
     setPasswords({ current: '', new: '', confirm: '' });
     setIsEditing(false);
-    setMessage({ type: '', text: '' });
   };
 
-  const handleProfileSave = (e) => {
+  const handleProfileSave = async (e) => {
     e.preventDefault();
     
     // Check if password change was attempted
     if (passwords.new || passwords.current || passwords.confirm) {
       if (passwords.new !== passwords.confirm) {
-        setMessage({ type: 'error', text: 'New passwords do not match.' });
+        toast.error('New passwords do not match.');
         return;
       }
       if (!passwords.current) {
-        setMessage({ type: 'error', text: 'Current password is required to change password.' });
+        toast.error('Current password is required to change password.');
         return;
       }
-      // Password validation passed (simulated)
     }
 
-    localStorage.setItem('p2j_admin_profile', JSON.stringify(profile));
-    window.dispatchEvent(new Event('adminProfileUpdate'));
-    setOriginalProfile({ ...profile });
-    setPasswords({ current: '', new: '', confirm: '' });
-    setIsEditing(false);
-    
-    setMessage({ type: 'success', text: 'Profile updated successfully!' });
-    setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    try {
+      const payload = {
+        username: profile.username,
+        email: profile.email,
+        photo: profile.photo
+      };
+
+      if (passwords.current && passwords.new) {
+        payload.currentPassword = passwords.current;
+        payload.newPassword = passwords.new;
+      }
+
+      const response = await updateAdminProfile(payload);
+
+      if (response && response.success) {
+        const updated = {
+          username: response.data.username,
+          email: response.data.email,
+          photo: response.data.photo
+        };
+        setProfile(updated);
+        setOriginalProfile(updated);
+        localStorage.setItem('p2j_admin_profile', JSON.stringify(updated));
+        window.dispatchEvent(new Event('adminProfileUpdate'));
+        setPasswords({ current: '', new: '', confirm: '' });
+        setIsEditing(false);
+        
+        toast.success('Profile updated successfully!');
+      } else {
+        toast.error(response.message || 'Failed to update profile.');
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      const errMsg = error.response?.data?.message || 'Failed to connect to backend server.';
+      toast.error(errMsg);
+    }
   };
 
   return (
     <div className="max-w-3xl mx-auto">
-      <PageHeader title="Profile Settings">
+      <PageHeader 
+        title="Profile Settings" 
+        subtitle="Manage your personal information, contact email, and secure credentials"
+      >
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium shadow-sm"
+            className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
           >
             <Edit2 size={16} />
             <span>Edit Profile</span>
@@ -93,14 +146,8 @@ const AdminProfile = () => {
         )}
       </PageHeader>
 
-      {message.text && (
-        <div className={`p-4 mb-6 rounded-md text-sm font-medium ${message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {message.text}
-        </div>
-      )}
-
       {/* Single Card Layout */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-[32px] shadow-[0_15px_40px_rgba(0,0,0,0.03)] overflow-hidden">
         
         {/* Header Background */}
         <div className="h-32 bg-primary w-full relative"></div>
@@ -140,27 +187,27 @@ const AdminProfile = () => {
           <div className="space-y-8">
             {/* General Info Section */}
             <section>
-              <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">General Information</h3>
+              <h3 className="text-base font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Admin Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
                   <input 
                     type="text" 
                     value={profile.username}
                     onChange={e => setProfile({...profile, username: e.target.value})}
                     disabled={!isEditing}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-400 transition-all font-medium"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Email Address</label>
                   <input 
                     type="email" 
                     value={profile.email}
                     onChange={e => setProfile({...profile, email: e.target.value})}
                     disabled={!isEditing}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-500 transition-colors"
+                    className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-400 transition-all font-medium"
                     required
                   />
                 </div>
@@ -168,42 +215,79 @@ const AdminProfile = () => {
             </section>
 
             {/* Change Password Section (Only show if editing) */}
-         
-              <section className="animate-in fade-in slide-in-from-top-4 duration-300">
-              
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <section className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <h3 className="text-base font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Change Password</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Current Password</label>
+                  <div className="relative md:max-w-md">
                     <input 
-                      type="password" 
+                      type={showCurrent ? "text" : "password"} 
                       value={passwords.current}
                       onChange={e => setPasswords({...passwords, current: e.target.value})}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none md:max-w-md"
+                      disabled={!isEditing}
+                      placeholder="••••••••"
+                      className="w-full border border-gray-200 rounded-2xl pl-4 pr-12 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-450 transition-all font-medium"
                     />
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrent(!showCurrent)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                      >
+                        {showCurrent ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">New Password</label>
+                    <div className="relative">
                       <input 
-                        type="password" 
+                        type={showNew ? "text" : "password"} 
                         value={passwords.new}
                         onChange={e => setPasswords({...passwords, new: e.target.value})}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        disabled={!isEditing}
+                        placeholder="••••••••"
+                        className="w-full border border-gray-200 rounded-2xl pl-4 pr-12 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-450 transition-all font-medium"
                       />
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNew(!showNew)}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      )}
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Confirm New Password</label>
+                    <div className="relative">
                       <input 
-                        type="password" 
+                        type={showConfirm ? "text" : "password"} 
                         value={passwords.confirm}
                         onChange={e => setPasswords({...passwords, confirm: e.target.value})}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                        disabled={!isEditing}
+                        placeholder="••••••••"
+                        className="w-full border border-gray-200 rounded-2xl pl-4 pr-12 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:bg-gray-50 disabled:text-gray-455 transition-all font-medium"
                       />
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirm(!showConfirm)}
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
-              </section>
-       
+              </div>
+            </section>
 
             {/* Action Buttons */}
             {isEditing && (
@@ -211,14 +295,14 @@ const AdminProfile = () => {
                 <button 
                   type="button"
                   onClick={handleCancel}
-                  className="flex items-center space-x-2 text-gray-600 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors text-sm font-medium"
+                  className="flex items-center space-x-2 text-gray-650 px-4 py-2.5 rounded-2xl hover:bg-gray-50 transition-all text-xs sm:text-sm font-bold"
                 >
                   <X size={16} />
                   <span>Cancel</span>
                 </button>
                 <button 
                   type="submit" 
-                  className="flex items-center space-x-2 bg-primary text-white px-6 py-2.5 rounded-md hover:bg-primary/90 transition-colors text-sm font-medium shadow-sm"
+                  className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
                 >
                   <Save size={16} />
                   <span>Save Changes</span>

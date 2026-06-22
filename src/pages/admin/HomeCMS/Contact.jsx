@@ -18,7 +18,7 @@ const ContactSocialSettings = () => {
   };
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen p-6 md:p-10 font-sans antialiased text-slate-700">
+    <div className="bg-[#f8fafc] min-h-screen p-4 md:p-6 font-sans antialiased text-slate-700">
       <form onSubmit={handleSubmit} className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         
         {/* LEFT COLUMN PANEL: CONTACT & SHIPPING CONFIG */}

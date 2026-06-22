@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import AdminTable from '../../components/AdminTable'; 
 import PageHeader from '../../components/PageHeader';
+import { ViewBtn } from '../../components/AdminButtons';
 
 const INITIAL_ORDERS = [
   {
@@ -268,8 +269,8 @@ const OrderManagement = () => {
   // FIXED: Properly returning the row elements from this arrow function assignment variable
   const renderOrderRow = (order, index) => (
     <tr key={order.id} className="hover:bg-slate-50/40 transition-colors group text-xs font-semibold text-slate-700">
-      <td className="py-4 px-4 font-bold text-red-600 select-all">{order.id}</td>
-      <td className="py-4 px-4">
+      <td className="py-3 px-2.5 font-bold text-blue-600 select-all">{order.id}</td>
+      <td className="py-3 px-2.5">
         <div className="flex items-center gap-3">
           {order.image ? (
             <img src={order.image} alt={order.productName} className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
@@ -287,14 +288,14 @@ const OrderManagement = () => {
           </div>
         </div>
       </td>
-      <td className="py-4 px-4">
+      <td className="py-3 px-2.5">
         <div className="max-w-[180px]">
           <div className="font-bold text-slate-900 truncate">{order.customerName}</div>
           <div className="text-[11px] text-slate-400 font-normal truncate mt-0.5">{order.customerEmail}</div>
         </div>
       </td>
-      <td className="py-4 px-4 text-slate-500 font-normal whitespace-nowrap">{order.timestamp}</td>
-      <td className="py-4 px-4">
+      <td className="py-3 px-2.5 text-slate-500 font-normal whitespace-nowrap">{order.timestamp}</td>
+      <td className="py-3 px-2.5">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
           order.fulfillmentStatus === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
           order.fulfillmentStatus === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' :
@@ -305,25 +306,22 @@ const OrderManagement = () => {
           {order.fulfillmentStatus}
         </span>
       </td>
-      <td className="py-4 px-4">
+      <td className="py-3 px-2.5">
         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold border border-emerald-100">
           <CheckCircle2 size={11} className="text-emerald-600" />
           {order.paymentStatus}
         </span>
       </td>
-      <td className="py-4 px-4 text-right font-bold text-slate-900 text-sm whitespace-nowrap">
+      <td className="py-3 px-2.5 text-right font-bold text-slate-900 text-sm whitespace-nowrap">
         ₹{order.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
       </td>
-      <td className="py-4 px-4">
+      <td className="py-3 px-2.5">
         <div className="flex items-center justify-center gap-3">
-          <button
-            type="button"
+          <ViewBtn
             onClick={() => { setSelectedOrder(order); setIsModalOpen(true); }}
-            className="text-pink-500 hover:text-pink-700 transition-colors cursor-pointer p-1"
-            title="View Details Profile"
-          >
-            <Eye size={16} strokeWidth={2.5} />
-          </button>
+            title="View Details"
+            size={14}
+          />
           <div className="relative">
             <select
               value={order.fulfillmentStatus}
@@ -343,7 +341,7 @@ const OrderManagement = () => {
   );
 
   return (
-    <div className="bg-[#f8fafc] min-h-screen w-full font-sans text-slate-700 antialiased p-4">
+    <div className="bg-[#f8fafc] min-h-screen w-full font-sans text-slate-700 antialiased ">
       <PageHeader title="orders management" subtitle="Manage All Orders Placed by customers with detailed insights and real timee">
         <div className="relative w-44">
           <select
@@ -481,14 +479,13 @@ const OrderManagement = () => {
           </div>
         </div>
 
-        {/* CORE DATA RECORDS TABLE */}
         <AdminTable
           headers={tableHeaders}
           data={sortedOrders}
           renderRow={renderOrderRow}
           onSort={handleSort}
           sortConfig={sortConfig}
-          minWidth="min-w-[1160px]"
+          minWidth="min-w-[950px]"
           containerClassName="touch-pan-x overscroll-x-contain shadow-xs border-slate-200/60"
           className="text-slate-700 font-medium"
           emptyMessage="No matching customer orders found in current search timeline parameters."
