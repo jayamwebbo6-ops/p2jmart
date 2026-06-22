@@ -8,7 +8,8 @@ import {
   Contact,
   Shield,
   RotateCcw,
-  Truck
+  Truck,
+  SquareCode,
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
@@ -22,6 +23,7 @@ import ContactSetting from './Contact';
 import PrivacyPolicyManager from './PrivacyPolicyManager';
 import CancellationReturnPolicyManager from './CancellationReturnPolicyHandle';
 import DeliveryPolicyManager from './DeliveryPolicyManager';
+import TermsCondition from './TermsCondition';
 
 
 const HomeContentManager = () => {
@@ -134,7 +136,7 @@ const HomeContentManager = () => {
               { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
               { id: 'cancellationReturnPolicy', label: 'Cancellation & Returns', icon: RotateCcw },
               { id: 'deliveryPolicy', label: 'Delivery Policy', icon: Truck },
-
+              { id: 'termsCOnditions', label: 'Terms Conditions', icon:SquareCode,  }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -198,6 +200,10 @@ const HomeContentManager = () => {
           
           {activeTab === 'deliveryPolicy' && (
             <DeliveryPolicyManager/>
+          )}
+
+           {activeTab === 'termsConditions' && (
+            <TermsCondition/>
           )}
  
 
