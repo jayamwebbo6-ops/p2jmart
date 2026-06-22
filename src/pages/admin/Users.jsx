@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/toast';
 import ConfirmationModal from '../../components/ConfirmationModal';
-import { DeleteBtn } from '../../components/AdminButtons';
+import { DeleteBtn, ViewBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
 
@@ -267,7 +267,7 @@ const Users = () => {
       />
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3General Information">
         {/* Total Customers */}
         <div className="bg-white border border-gray-200/80 rounded-xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-lg shrink-0">
@@ -316,7 +316,7 @@ const Users = () => {
       </div>
 
       {/* Filter and Control Bar */}
-      <div className="bg-white border border-gray-200/80 rounded-xl p-4 shadow-sm mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-gray-200/80 rounded-xl p-4 shadow-sm mb-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Search */}
         <div className="relative flex-grow max-w-md">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
@@ -440,7 +440,12 @@ const Users = () => {
 
             {/* Action Buttons */}
             <td className="py-4 px-6" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-center gap-1.5">
+              <div className="flex items-center justify-center gap-2">
+                <ViewBtn
+                  onClick={() => handleOpenDetail(customer)}
+                  title="View Details"
+                  size={14}
+                />
                 <DeleteBtn
                   size={14}
                   onClick={(e) => handleDeleteCustomer(customer.id, customer.name, e)}
@@ -589,26 +594,7 @@ const Users = () => {
 
             </div>
 
-            {/* Footer Buttons */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-              <DeleteBtn
-                size={13}
-                onClick={(e) => {
-                  setDetailModalOpen(false);
-                  handleDeleteCustomer(selectedCustomer.id, selectedCustomer.name, e);
-                }}
-                title="Delete Account"
-                className="px-3 py-2 gap-1.5"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDetailModalOpen(false)}
-                  className="bg-[#001E3C] hover:bg-[#003147] px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors"
-                >
-                  Close File
-                </button>
-              </div>
-            </div>
+         
           </div>
         </div>
       )}

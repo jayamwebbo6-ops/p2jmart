@@ -166,7 +166,7 @@ const Dashboard = () => {
   const totalOrdersVal = ordersOverride !== null ? ordersOverride : orders.length;
 
   return (
-    <div className="w-full text-slate-800 antialiased min-h-screen bg-[#f4f5f8] p-6 -m-4">
+    <div className="w-full text-slate-800 antialiased min-h-screen bg-[#f4f5f8] p-4 -m-4">
       {/* Top Greeting & Reset */}
       <PageHeader
         title="Admin Dashboard"
@@ -300,7 +300,7 @@ const Dashboard = () => {
               </div>
               <button 
                 onClick={() => navigate('/admin/orders')}
-                className="text-[11px] font-extrabold text-red-700 hover:text-red-800 transition-colors flex items-center gap-1"
+                className="text-[11px] font-extrabold text-blue-700 hover:text-red-800 transition-colors flex items-center gap-1"
               >
                 <span>View All</span>
                 <span>➔</span>

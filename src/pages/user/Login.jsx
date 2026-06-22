@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { googleLoginAPI } from '../../api/userApi';
+import { googleLoginAPI, isUserAuthenticated } from '../../api/userApi';
 import { toast } from '../../components/toast';
 
 // Integrated Loader sub-component
@@ -19,6 +19,14 @@ const Loader = () => {
 
 export default function AuthFlow() {
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isUserAuthenticated()) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   // States: 'methods' | 'email-input' | 'otp-verify'
   const [step, setStep] = useState('methods');
   const [email, setEmail] = useState('');

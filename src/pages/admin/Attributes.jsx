@@ -12,6 +12,7 @@ import { GetColorName } from 'hex-color-to-color-name';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { AddBtn, EditBtn, DeleteBtn, SaveBtn, CancelBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
+import { getAttributesAPI, createAttributeAPI, updateAttributeAPI, deleteAttributeAPI } from '../../api/attributeApi';
 
 const SUGGESTED_COLORS = [
   { name: 'Red', hex: '#FF0000' },
@@ -42,39 +43,31 @@ const SUGGESTED_COLORS = [
 
 const INITIAL_ATTRIBUTES = [
   {
-    id: 'attr-1',
     name: 'color',
     terms: ['Blue|#0000FF', 'Red|#FF0000', 'Green|#008000', 'Yellow|#FFFF00', 'White|#FFFFFF', 'Black|#000000']
   },
   {
-    id: 'attr-2',
     name: 'material',
     terms: ['Wood', 'Acrylic', 'Glass', 'Metal', 'Leather']
   },
   {
-    id: 'attr-3',
     name: 'design',
     terms: ['Minimalist', 'Floral', 'Modern', 'Classic', 'Vintage']
   },
   {
-    id: 'attr-4',
     name: 'size',
     terms: ['3 inch', '5 inch', '7 inch', 'Small', 'Medium', 'Large']
   },
   {
-    id: 'attr-5',
     name: 'ramsize',
     terms: ['4GB', '8GB', '16GB', '32GB']
   }
 ];
 
 const Attributes = () => {
-  const [attributes, setAttributes] = useState(() => {
-    const saved = localStorage.getItem('p2j_mart_attributes');
-    return saved ? JSON.parse(saved) : INITIAL_ATTRIBUTES;
-  });
-
-  const [activeAttrId, setActiveAttrId] = useState(attributes[0]?.id || '');
+  const [attributes, setAttributes] = useState([]);
+  const [activeAttrId, setActiveAttrId] = useState('');
+  const [loading, setLoading] = useState(true);
   
   // Modals / forms state
   const [attrFormOpen, setAttrFormOpen] = useState(false);
@@ -113,12 +106,41 @@ const Attributes = () => {
     return { name: term, hex: found ? found.hex : '#808080' };
   };
 
-  // Persist state
-  useEffect(() => {
-    localStorage.setItem('p2j_mart_attributes', JSON.stringify(attributes));
-  }, [attributes]);
+  // Load attributes on mount
+  const fetchAttributes = async () => {
+    setLoading(true);
+    try {
+      const res = await getAttributesAPI();
+      if (res && res.success) {
+        let attrs = res.data;
+        // If empty, seed initial attributes to DB
+        if (attrs.length === 0) {
+          const seeded = [];
+          for (const item of INITIAL_ATTRIBUTES) {
+            const seedRes = await createAttributeAPI({ name: item.name, terms: item.terms });
+            if (seedRes && seedRes.success) {
+              seeded.push(seedRes.data);
+            }
+          }
+          attrs = seeded;
+        }
+        setAttributes(attrs);
+        if (attrs.length > 0) {
+          setActiveAttrId(attrs[0]._id);
+        }
+      }
+    } catch (err) {
+      toast.error('Failed to load attributes from server');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const activeAttribute = attributes.find(a => a.id === activeAttrId) || attributes[0] || null;
+  useEffect(() => {
+    fetchAttributes();
+  }, []);
+
+  const activeAttribute = attributes.find(a => a._id === activeAttrId) || attributes[0] || null;
 
   const handleOpenAttrModal = (attr = null) => {
     if (attr) {
@@ -131,30 +153,35 @@ const Attributes = () => {
     setAttrFormOpen(true);
   };
 
-  const handleSaveAttribute = (e) => {
+  const handleSaveAttribute = async (e) => {
     e.preventDefault();
     if (!attrName.trim()) return toast.error('Attribute Name is required');
 
     const formattedName = attrName.trim().toLowerCase();
 
     // Check duplicates
-    const duplicate = attributes.find(a => a.name === formattedName && (!editingAttr || a.id !== editingAttr.id));
+    const duplicate = attributes.find(a => a.name === formattedName && (!editingAttr || a._id !== editingAttr._id));
     if (duplicate) return toast.error(`Attribute "${formattedName}" already exists`);
 
-    if (editingAttr) {
-      setAttributes(prev => prev.map(a => 
-        a.id === editingAttr.id ? { ...a, name: formattedName } : a
-      ));
-      toast.success('Attribute renamed successfully');
-    } else {
-      const newAttr = {
-        id: `attr-${Date.now()}`,
-        name: formattedName,
-        terms: []
-      };
-      setAttributes(prev => [...prev, newAttr]);
-      setActiveAttrId(newAttr.id);
-      toast.success('Attribute created successfully');
+    try {
+      if (editingAttr) {
+        const res = await updateAttributeAPI(editingAttr._id, { name: formattedName });
+        if (res && res.success) {
+          setAttributes(prev => prev.map(a => 
+            a._id === editingAttr._id ? res.data : a
+          ));
+          toast.success('Attribute renamed successfully');
+        }
+      } else {
+        const res = await createAttributeAPI({ name: formattedName, terms: [] });
+        if (res && res.success) {
+          setAttributes(prev => [...prev, res.data]);
+          setActiveAttrId(res.data._id);
+          toast.success('Attribute created successfully');
+        }
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save attribute');
     }
     setAttrFormOpen(false);
   };
@@ -164,13 +191,20 @@ const Attributes = () => {
     triggerConfirm(
       'Delete Attribute',
       'Are you sure you want to delete this attribute and all its values?',
-      () => {
-        setAttributes(prev => prev.filter(a => a.id !== attrId));
-        if (activeAttrId === attrId) {
-          const remaining = attributes.filter(a => a.id !== attrId);
-          setActiveAttrId(remaining[0]?.id || '');
+      async () => {
+        try {
+          const res = await deleteAttributeAPI(attrId);
+          if (res && res.success) {
+            setAttributes(prev => prev.filter(a => a._id !== attrId));
+            if (activeAttrId === attrId) {
+              const remaining = attributes.filter(a => a._id !== attrId);
+              setActiveAttrId(remaining[0]?._id || '');
+            }
+            toast.success('Attribute deleted successfully');
+          }
+        } catch (err) {
+          toast.error('Failed to delete attribute');
         }
-        toast.success('Attribute deleted successfully');
       }
     );
   };
@@ -178,7 +212,7 @@ const Attributes = () => {
   // ==========================================
   // TERMS / VALUES ACTIONS
   // ==========================================
-  const handleAddTerm = (e) => {
+  const handleAddTerm = async (e) => {
     e.preventDefault();
     if (!newTermValue.trim()) return;
     if (!activeAttribute) return toast.error('Select an attribute first');
@@ -190,14 +224,22 @@ const Attributes = () => {
       return toast.error(`Value "${termVal}" already exists in ${activeAttribute.name}`);
     }
 
-    setAttributes(prev => prev.map(a => 
-      a.id === activeAttribute.id ? { ...a, terms: [...a.terms, termVal] } : a
-    ));
-    setNewTermValue('');
-    toast.success(`Value "${termVal}" added to ${activeAttribute.name}`);
+    try {
+      const updatedTerms = [...activeAttribute.terms, termVal];
+      const res = await updateAttributeAPI(activeAttribute._id, { terms: updatedTerms });
+      if (res && res.success) {
+        setAttributes(prev => prev.map(a => 
+          a._id === activeAttribute._id ? res.data : a
+        ));
+        setNewTermValue('');
+        toast.success(`Value "${termVal}" added to ${activeAttribute.name}`);
+      }
+    } catch (err) {
+      toast.error('Failed to add value');
+    }
   };
 
-  const handleAddColorTerm = (e) => {
+  const handleAddColorTerm = async (e) => {
     e.preventDefault();
     if (!newTermValue.trim()) return;
     if (!activeAttribute) return toast.error('Select an attribute first');
@@ -214,23 +256,39 @@ const Attributes = () => {
       return toast.error(`Color "${colorName}" already exists`);
     }
 
-    setAttributes(prev => prev.map(a => 
-      a.id === activeAttribute.id ? { ...a, terms: [...a.terms, termVal] } : a
-    ));
-    setNewTermValue('');
-    setSelectedHex('#FF0000');
-    toast.success(`Color "${colorName}" with hex ${finalHex} added`);
+    try {
+      const updatedTerms = [...activeAttribute.terms, termVal];
+      const res = await updateAttributeAPI(activeAttribute._id, { terms: updatedTerms });
+      if (res && res.success) {
+        setAttributes(prev => prev.map(a => 
+          a._id === activeAttribute._id ? res.data : a
+        ));
+        setNewTermValue('');
+        setSelectedHex('#FF0000');
+        toast.success(`Color "${colorName}" with hex ${finalHex} added`);
+      }
+    } catch (err) {
+      toast.error('Failed to add color value');
+    }
   };
 
   const handleDeleteTerm = (termToDelete) => {
     triggerConfirm(
       'Remove Value',
       `Are you sure you want to remove the value "${termToDelete.includes('|') ? termToDelete.split('|')[0] : termToDelete}" from ${activeAttribute.name}?`,
-      () => {
-        setAttributes(prev => prev.map(a => 
-          a.id === activeAttribute.id ? { ...a, terms: a.terms.filter(t => t !== termToDelete) } : a
-        ));
-        toast.success('Value deleted');
+      async () => {
+        try {
+          const updatedTerms = activeAttribute.terms.filter(t => t !== termToDelete);
+          const res = await updateAttributeAPI(activeAttribute._id, { terms: updatedTerms });
+          if (res && res.success) {
+            setAttributes(prev => prev.map(a => 
+              a._id === activeAttribute._id ? res.data : a
+            ));
+            toast.success('Value deleted');
+          }
+        } catch (err) {
+          toast.error('Failed to delete value');
+        }
       }
     );
   };
@@ -240,20 +298,23 @@ const Attributes = () => {
     setEditingTermValue(val);
   };
 
-  const handleSaveEditTerm = (idx) => {
+  const handleSaveEditTerm = async (idx) => {
     if (!editingTermValue.trim()) return;
 
-    setAttributes(prev => prev.map(a => {
-      if (a.id === activeAttribute.id) {
-        const updatedTerms = [...a.terms];
-        updatedTerms[idx] = editingTermValue.trim();
-        return { ...a, terms: updatedTerms };
+    try {
+      const updatedTerms = [...activeAttribute.terms];
+      updatedTerms[idx] = editingTermValue.trim();
+      const res = await updateAttributeAPI(activeAttribute._id, { terms: updatedTerms });
+      if (res && res.success) {
+        setAttributes(prev => prev.map(a => 
+          a._id === activeAttribute._id ? res.data : a
+        ));
+        setEditingTermIdx(null);
+        toast.success('Value updated successfully');
       }
-      return a;
-    }));
-
-    setEditingTermIdx(null);
-    toast.success('Value updated successfully');
+    } catch (err) {
+      toast.error('Failed to update value');
+    }
   };
 
   return (
@@ -278,34 +339,38 @@ const Attributes = () => {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {attributes.map(attr => (
-              <div 
-                key={attr.id}
-                onClick={() => setActiveAttrId(attr.id)}
-                className={`group flex items-center justify-between px-4 py-4 cursor-pointer transition-all ${
-                  activeAttrId === attr.id 
-                    ? 'bg-blue-50/50 text-blue-900 font-semibold' 
-                    : 'hover:bg-gray-50/75 text-gray-700'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div>
-                    <span className="text-xs capitalize font-medium">{attr.name}</span>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">{attr.terms.length} values defined</span>
+            {loading ? (
+              <div className="text-center py-12 text-xs text-gray-400 animate-pulse">Loading attributes...</div>
+            ) : (
+              attributes.map(attr => (
+                <div 
+                  key={attr._id}
+                  onClick={() => setActiveAttrId(attr._id)}
+                  className={`group flex items-center justify-between px-4 py-4 cursor-pointer transition-all ${
+                    activeAttrId === attr._id 
+                      ? 'bg-blue-50/50 text-blue-900 font-semibold' 
+                      : 'hover:bg-gray-50/75 text-gray-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <span className="text-xs capitalize font-medium">{attr.name}</span>
+                      <span className="text-[10px] text-gray-400 block mt-0.5">{attr.terms.length} values defined</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <EditBtn size={12} onClick={(e) => { e.stopPropagation(); handleOpenAttrModal(attr); }} title="Edit Attribute" />
+                      <DeleteBtn size={12} onClick={(e) => handleDeleteAttribute(attr._id, e)} title="Delete Attribute" />
+                    </div>
+                    <ChevronRight size={14} className={`text-gray-400 transition-transform ${activeAttrId === attr._id ? 'translate-x-1 text-blue-600' : ''}`} />
                   </div>
                 </div>
+              ))
+            )}
 
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <EditBtn size={12} onClick={(e) => { e.stopPropagation(); handleOpenAttrModal(attr); }} title="Edit Attribute" />
-                    <DeleteBtn size={12} onClick={(e) => handleDeleteAttribute(attr.id, e)} title="Delete Attribute" />
-                  </div>
-                  <ChevronRight size={14} className={`text-gray-400 transition-transform ${activeAttrId === attr.id ? 'translate-x-1 text-blue-600' : ''}`} />
-                </div>
-              </div>
-            ))}
-
-            {attributes.length === 0 && (
+            {!loading && attributes.length === 0 && (
               <div className="text-center py-12 text-xs text-gray-400">No attributes defined. Click "Add Attribute" to begin.</div>
             )}
           </div>
@@ -313,7 +378,7 @@ const Attributes = () => {
 
         {/* Right Column: Terms / Values */}
         <div className="lg:col-span-7 bg-white border border-gray-200/80 rounded-xl shadow-sm">
-          {activeAttribute ? (
+          {!loading && activeAttribute ? (
             <>
               {/* Header */}
               <div className="bg-gray-50/75 border-b border-gray-100 px-5 py-3 flex items-center justify-between">
@@ -392,20 +457,29 @@ const Attributes = () => {
                           placeholder="Type a color name (e.g. Red, Green, etc)..."
                           value={newTermValue}
                           onChange={(e) => {
-                            setNewTermValue(e.target.value);
-                            setFilteredColors(
-                              SUGGESTED_COLORS.filter(c => 
-                                c.name.toLowerCase().includes(e.target.value.toLowerCase())
-                              )
-                            );
+                            const val = e.target.value;
+                            setNewTermValue(val);
+                            
+                            // Rank prefix matches first, then partial/includes matches
+                            const query = val.toLowerCase().trim();
+                            if (!query) {
+                              setFilteredColors(SUGGESTED_COLORS);
+                            } else {
+                              const startsWithQ = SUGGESTED_COLORS.filter(c => c.name.toLowerCase().startsWith(query));
+                              const includesQ = SUGGESTED_COLORS.filter(c => c.name.toLowerCase().includes(query) && !c.name.toLowerCase().startsWith(query));
+                              setFilteredColors([...startsWithQ, ...includesQ]);
+                            }
                             setColorDropdownOpen(true);
                           }}
                           onFocus={() => {
-                            setFilteredColors(
-                              SUGGESTED_COLORS.filter(c => 
-                                c.name.toLowerCase().includes(newTermValue.toLowerCase())
-                              )
-                            );
+                            const query = newTermValue.toLowerCase().trim();
+                            if (!query) {
+                              setFilteredColors(SUGGESTED_COLORS);
+                            } else {
+                              const startsWithQ = SUGGESTED_COLORS.filter(c => c.name.toLowerCase().startsWith(query));
+                              const includesQ = SUGGESTED_COLORS.filter(c => c.name.toLowerCase().includes(query) && !c.name.toLowerCase().startsWith(query));
+                              setFilteredColors([...startsWithQ, ...includesQ]);
+                            }
                             setColorDropdownOpen(true);
                           }}
                           onBlur={() => {
@@ -416,7 +490,7 @@ const Attributes = () => {
                         />
                         
                         {/* Auto-suggest Dropdown */}
-                        {colorDropdownOpen && newTermValue.trim().length > 0 && filteredColors.length > 0 && (
+                        {colorDropdownOpen && filteredColors.length > 0 && (
                           <div 
                             style={{ top: '100%', marginTop: '4px', zIndex: 100 }}
                             className="absolute left-0 right-0 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg divide-y divide-gray-50 custom-scrollbar"
@@ -454,7 +528,7 @@ const Attributes = () => {
                           onChange={(e) => {
                             const newHex = e.target.value.toUpperCase();
                             setSelectedHex(newHex);
-                            // Get standard color name from hex using the installed package!
+                            // Get standard color name from hex using the installed package
                             try {
                               const namedColor = GetColorName(newHex);
                               setNewTermValue(namedColor);
@@ -485,7 +559,7 @@ const Attributes = () => {
             </>
           ) : (
             <div className="text-center py-20 text-xs text-gray-400">
-              Select an attribute from the list to manage its values.
+              {loading ? 'Loading...' : 'Select an attribute from the list to manage its values.'}
             </div>
           )}
         </div>

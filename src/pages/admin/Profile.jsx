@@ -187,7 +187,7 @@ const AdminProfile = () => {
           <div className="space-y-8">
             {/* General Info Section */}
             <section>
-              <h3 className="text-base font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">General Information</h3>
+              <h3 className="text-base font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Admin Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
