@@ -30,6 +30,7 @@ const DeliveryPolicy = lazy(() => import('./pages/user/DelivaryPolicy'));
 const CancellationReturnPolicy = lazy(() => import('./pages/user/CancellationReturnPolicy'));
 
 const UserLogin = lazy(() => import('./pages/user/Login'));
+const CompleteProfile = lazy(() => import('./pages/user/CompleteProfile'));
 
 // Lazy loading admin pages
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
@@ -197,6 +198,9 @@ function App() {
 
             <Route path="my-account/order/:id" element={<OrderDetails />} />
           </Route>
+
+          {/* User Complete Profile Route */}
+          <Route path="/complete-profile" element={<CompleteProfile />} />
 
           {/* Admin Login Route */}
           <Route path="/admin/login" element={<AdminLogin />} />

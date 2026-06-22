@@ -16,6 +16,8 @@ import {
   Layers
 } from 'lucide-react';
 
+import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
+
 const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -30,6 +32,12 @@ const AdminLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   
   useEffect(() => {
+    // Check if the user is authenticated (token exists in cookie)
+    if (!isAdminAuthenticated()) {
+      navigate('/admin/login');
+      return;
+    }
+
     const loadData = () => {
       const stored = localStorage.getItem('p2j_admin_profile');
       if (stored) {
@@ -40,7 +48,7 @@ const AdminLayout = () => {
 
     window.addEventListener('adminProfileUpdate', loadData);
     return () => window.removeEventListener('adminProfileUpdate', loadData);
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     const updateUnreadCount = () => {
@@ -88,6 +96,7 @@ const AdminLayout = () => {
 
   const handleLogout = () => {
     setIsDropdownOpen(false);
+    adminLogout();
     navigate('/admin/login');
   };
 
@@ -164,7 +173,7 @@ const AdminLayout = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="bg-white h-20 px-4 flex justify-between items-center z-0">
+        <header className="bg-white h-20 px-4 flex justify-between items-center z-30 relative shadow-sm">
           <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
           <div className="flex items-center space-x-4">
           

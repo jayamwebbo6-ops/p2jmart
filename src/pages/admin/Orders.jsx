@@ -289,7 +289,7 @@ const OrderManagement = () => {
     <tr key={order.id} className="hover:bg-slate-50/40 transition-colors group">
       
       {/* Identity Code */}
-      <td className="py-4 px-4 font-bold text-red-600 select-all">
+      <td className="py-4 px-4 font-bold text-blue-600 select-all">
         {order.id}
       </td>
       
@@ -395,7 +395,7 @@ const OrderManagement = () => {
       >
       </PageHeader>
 
-      <div className="max-w-[1600px] mx-auto space-y-6">
+      <div className="max-w-[1600px] mx-auto space-y-2">
         
         {/* COMMON HEADING TIMEFRAME DROPDOWN CONTAINER */}
         <div className="flex items-center justify-between bg-white border border-slate-100 p-4 rounded-2xl shadow-xs">
