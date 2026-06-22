@@ -534,7 +534,7 @@ const ProductDetail = () => {
                 <button 
                   onClick={handleAddBundleToCart}
                   disabled={selectedComboItemIds.length === 0}
-                  className="w-full mt-2 bg-blue-900 hover:bg-blue-950 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-2 bg-primary hover:bg-primary/90 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart size={15} /> Add Bundle Package to Cart
                 </button>
@@ -542,7 +542,7 @@ const ProductDetail = () => {
                 <button 
                   onClick={handleAddBundleToBuy}
                   disabled={selectedComboItemIds.length === 0}
-                  className="w-full mt-2 bg-blue-900 hover:bg-blue-950 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full mt-2 bg-primary hover:bg-primary/90 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingCart size={15} /> Buy Bundle Package
                 </button>

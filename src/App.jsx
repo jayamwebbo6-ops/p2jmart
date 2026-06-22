@@ -9,7 +9,7 @@ import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
 import GSTSettingsPage from './pages/admin/GstSettingsPage';
-import TermsContion from './pages/user/TermsContion';
+import TermsContion from './pages/user/TermsConditions';
 
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));

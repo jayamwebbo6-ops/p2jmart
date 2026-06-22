@@ -136,7 +136,8 @@ const HomeContentManager = () => {
               { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
               { id: 'cancellationReturnPolicy', label: 'Cancellation & Returns', icon: RotateCcw },
               { id: 'deliveryPolicy', label: 'Delivery Policy', icon: Truck },
-              { id: 'termsCOnditions', label: 'Terms Conditions', icon:SquareCode,  }
+              { id: 'termsConditions', label: 'Terms Conditions', icon:SquareCode,  }
+              
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
