@@ -7,10 +7,11 @@ import { getProductsAPI } from "../../api/productApi";
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
    ========================================================================== */
-const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
+const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFilterCommit }) => {
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
 
+  // Sync when parent values change
   useEffect(() => {
     setLocalMin(minPrice);
     setLocalMax(maxPrice);
@@ -19,6 +20,9 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
   const handleDragEnd = () => {
     onFilterCommit(localMin, localMax);
   };
+
+  // Prevent divide by zero errors if absolute values are equal
+  const rangeDiff = (absoluteMax - absoluteMin) || 1; 
 
   return (
     <div>
@@ -32,7 +36,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
             type="number"
             value={localMin}
             onChange={(e) => {
-              const val = Math.max(0, Math.min(Number(e.target.value), localMax));
+              const val = Math.max(absoluteMin, Math.min(Number(e.target.value), localMax));
               setLocalMin(val);
               onFilterCommit(val, localMax);
             }}
@@ -44,7 +48,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
             type="number"
             value={localMax}
             onChange={(e) => {
-              const val = Math.max(localMin, Number(e.target.value));
+              const val = Math.max(localMin, Math.min(Number(e.target.value), absoluteMax));
               setLocalMax(val);
               onFilterCommit(localMin, val);
             }}
@@ -58,28 +62,28 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
         <div
           className="absolute h-1 bg-gray-700 top-1/2 -translate-y-1/2"
           style={{ 
-            left: `${Math.min(100, Math.max(0, ((localMin - 0) / (10000 - 0)) * 100))}%`, 
-            right: `${Math.min(100, Math.max(0, 100 - ((localMax - 0) / (10000 - 0)) * 100))}%` 
+            left: `${Math.min(100, Math.max(0, ((localMin - absoluteMin) / rangeDiff) * 100))}%`, 
+            right: `${Math.min(100, Math.max(0, 100 - ((localMax - absoluteMin) / rangeDiff) * 100))}%` 
           }}
         ></div>
         <input
           type="range"
-          min="0"
-          max="10000"
+          min={absoluteMin}
+          max={absoluteMax}
           value={localMin}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 50))}
+          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
         />
         <input
           type="range"
-          min="0"
-          max="10000"
+          min={absoluteMin}
+          max={absoluteMax}
           value={localMax}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 50))}
+          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
         />
       </div>
@@ -94,56 +98,77 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Extract navigation payload elements passed down safely
   const { subcategoryId, subcategoryName } = location.state || {};
 
-  // Operational component states
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("default");
   
+  // Track operational range filters
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(10000);
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
 
+  // DYNAMIC ABSOLUTE LIMITS STATE
+  const [absolutePriceLimits, setAbsolutePriceLimits] = useState({ min: 0, max: 10000 });
+  const [absoluteDiscountLimits, setAbsoluteDiscountLimits] = useState({ min: 0, max: 100 });
+
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  
-
-
   // Sync to retrieve only target subcategory datasets dynamically from backend
-useEffect(() => {
-  if (!subcategoryId) {
-    navigate("/");
-    return;
-  }
-
-  const fetchSubcategoryCatalog = async () => {
-    try {
-      setLoading(true);
-      
-      // CHANGED HERE: Changed 'subcategory' key to 'subcategoryId' to match your backend req.query
-      const response = await getProductsAPI({ subcategoryId: subcategoryId });
-      
-      if (response && response.success && Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (response && Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (Array.isArray(response)) {
-        setProducts(response);
-      }
-    } catch (error) {
-      console.error("Error retrieving matching subcategory goods catalog:", error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!subcategoryId) {
+      navigate("/");
+      return;
     }
-  };
 
-  fetchSubcategoryCatalog();
-}, [subcategoryId, navigate]);
+    const fetchSubcategoryCatalog = async () => {
+      try {
+        setLoading(true);
+        const response = await getProductsAPI({ subcategoryId: subcategoryId });
+        
+        let fetchedProducts = [];
+        if (response && response.success && Array.isArray(response.data)) {
+          fetchedProducts = response.data;
+        } else if (response && Array.isArray(response.data)) {
+          fetchedProducts = response.data;
+        } else if (Array.isArray(response)) {
+          fetchedProducts = response;
+        }
+
+        setProducts(fetchedProducts);
+
+        // CALCULATE AND UPDATE DYNAMIC BOUNDARIES DIRECTLY FROM RETRIEVED PRODUCTS
+        if (fetchedProducts.length > 0) {
+          const prices = fetchedProducts.map(p => p.price).filter(p => p !== null && p !== undefined);
+          const discounts = fetchedProducts.map(p => p.discount || 0);
+
+          const calculatedMinPrice = prices.length > 0 ? Math.min(...prices) : 0;
+          const calculatedMaxPrice = prices.length > 0 ? Math.max(...prices) : 10000;
+          const calculatedMinDiscount = discounts.length > 0 ? Math.min(...discounts) : 0;
+          const calculatedMaxDiscount = discounts.length > 0 ? Math.max(...discounts) : 100;
+
+          // Set both absolute boundaries and default local state values
+          setAbsolutePriceLimits({ min: calculatedMinPrice, max: calculatedMaxPrice });
+          setMinPrice(calculatedMinPrice);
+          setMaxPrice(calculatedMaxPrice);
+
+          setAbsoluteDiscountLimits({ min: calculatedMinDiscount, max: calculatedMaxDiscount });
+          setMinDiscount(calculatedMinDiscount);
+          setMaxDiscount(calculatedMaxDiscount);
+        }
+      } catch (error) {
+        console.error("Error retrieving matching subcategory goods catalog:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubcategoryCatalog();
+  }, [subcategoryId, navigate]);
 
   // Derive brands list dynamically
   const brandsList = useMemo(() => {
@@ -198,10 +223,12 @@ useEffect(() => {
     <div className="flex flex-col gap-6 font-sans">
       <div className="border border-gray-100 rounded-lg bg-white p-4 shadow-xs flex flex-col gap-6">
         
-        {/* PRICE RANGE SLIDER */}
+        {/* PRICE RANGE SLIDER WITH DYNAMIC ABSOLUTE LIMITS */}
         <PriceSliderSection 
           minPrice={minPrice} 
           maxPrice={maxPrice} 
+          absoluteMin={absolutePriceLimits.min}
+          absoluteMax={absolutePriceLimits.max}
           onFilterCommit={(min, max) => {
             setMinPrice(min);
             setMaxPrice(max);
@@ -212,6 +239,9 @@ useEffect(() => {
         <OfferSlider 
           minDiscount={minDiscount}
           maxDiscount={maxDiscount}
+          // If OfferSlider component supports absolute boundary min/max configurations, inject them here similarly:
+          absoluteMin={absoluteDiscountLimits.min}
+          absoluteMax={absoluteDiscountLimits.max}
           onFilterCommit={(min, max) => {
             setMinDiscount(min);
             setMaxDiscount(max);
@@ -259,15 +289,15 @@ useEffect(() => {
         )}
 
         {/* CLEAR ALL FILTERS BUTTON */}
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > 0 || maxPrice < 10000 || minDiscount > 0 || maxDiscount < 100) && (
+        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > absolutePriceLimits.min || maxPrice < absolutePriceLimits.max || minDiscount > absoluteDiscountLimits.min || maxDiscount < absoluteDiscountLimits.max) && (
           <button
             onClick={() => {
               setSelectedBrands([]);
               setSelectedSize(null);
-              setMinPrice(0);
-              setMaxPrice(10000);
-              setMinDiscount(0);
-              setMaxDiscount(100);
+              setMinPrice(absolutePriceLimits.min);
+              setMaxPrice(absolutePriceLimits.max);
+              setMinDiscount(absoluteDiscountLimits.min);
+              setMaxDiscount(absoluteDiscountLimits.max);
             }}
             className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded transition-colors uppercase tracking-wider cursor-pointer"
           >
@@ -336,16 +366,19 @@ useEffect(() => {
             </div>
           ) : (
             <div className="grid grid-cols-2 min-[850px]:grid-cols-3 lg:grid-cols-4 gap-4">
-              {filteredAndSortedProducts.map((product) => (
-                <ProductCard 
-                  key={product.id || product._id} 
-                  product={product} 
-                  isWishlisted={wishlist.some(item => item.id === (product.id || product._id))}
-                  onWishlist={addToWishlist}
-                  onRemoveWishlist={removeFromWishlist}
-                  onClick={onProductClick} 
-                />
-              ))}
+              {filteredAndSortedProducts.map((product) => {
+                const productId = product.id || product._id;
+                return (
+                  <ProductCard 
+                    key={productId} 
+                    product={product} 
+                    isWishlisted={wishlist.some(item => item.id === productId)}
+                    onWishlist={addToWishlist}
+                    onRemoveWishlist={removeFromWishlist}
+                    onClick={() => navigate(`/product/${productId}`, { state: { product } })} 
+                  />
+                );
+              })}
             </div>
           )}
         </div>
