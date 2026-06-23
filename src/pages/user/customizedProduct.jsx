@@ -20,16 +20,13 @@ const CustomizedProduct = () => {
   };
   
   return (
-    <div className="pt-10">
-      <SubCategoryPage 
-        wishlist={customWishlist}
-        addToWishlist={handleAddToWishlist}
-        removeFromWishlist={handleRemoveFromWishlist}
-        onProductClick={handleProductSelectionRedirect} // <-- FIXED: Added this missing prop line!
-        // If you ever want to pass custom products here instead of dummy data:
-        // products={YOUR_CUSTOM_STATE_OR_API_DATA} 
-      />
-    </div>
+    <SubCategoryPage 
+      wishlist={customWishlist}
+      addToWishlist={handleAddToWishlist}
+      removeFromWishlist={handleRemoveFromWishlist}
+      onProductClick={handleProductSelectionRedirect} // <-- FIXED: Added this missing prop line!
+      isCustomizedPage={true}
+    />
   );
 };
 

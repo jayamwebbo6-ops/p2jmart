@@ -90,7 +90,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, onFilterCommit }) => {
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick }) => {
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -103,7 +103,8 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [sortOption, setSortOption] = useState("default");
   
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(10000);
+  const [maxPrice, setMaxPrice] = useState(100000);
+  const [maxPriceLimit, setMaxPriceLimit] = useState(100000);
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
 
@@ -115,35 +116,51 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
 
 
   // Sync to retrieve only target subcategory datasets dynamically from backend
-useEffect(() => {
-  if (!subcategoryId) {
-    navigate("/");
-    return;
-  }
-
-  const fetchSubcategoryCatalog = async () => {
-    try {
-      setLoading(true);
-      
-      // CHANGED HERE: Changed 'subcategory' key to 'subcategoryId' to match your backend req.query
-      const response = await getProductsAPI({ subcategoryId: subcategoryId });
-      
-      if (response && response.success && Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (response && Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else if (Array.isArray(response)) {
-        setProducts(response);
-      }
-    } catch (error) {
-      console.error("Error retrieving matching subcategory goods catalog:", error);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    if (!isCustomizedPage && !subcategoryId) {
+      navigate("/");
+      return;
     }
-  };
 
-  fetchSubcategoryCatalog();
-}, [subcategoryId, navigate]);
+    const fetchSubcategoryCatalog = async () => {
+      try {
+        setLoading(true);
+        
+        let response;
+        if (isCustomizedPage) {
+          response = await getProductsAPI({ customizeProduct: 'Yes' });
+        } else {
+          response = await getProductsAPI({ subcategoryId: subcategoryId });
+        }
+        
+        let fetchedProducts = [];
+        if (response && response.success && Array.isArray(response.data)) {
+          fetchedProducts = response.data;
+        } else if (response && Array.isArray(response.data)) {
+          fetchedProducts = response.data;
+        } else if (Array.isArray(response)) {
+          fetchedProducts = response;
+        }
+        setProducts(fetchedProducts);
+
+        if (fetchedProducts.length > 0) {
+          const prices = fetchedProducts.map(p => p.price).filter(p => typeof p === 'number');
+          if (prices.length > 0) {
+            const maxVal = Math.max(...prices);
+            const upperLimit = Math.max(10000, Math.ceil(maxVal / 1000) * 1000); // round up to nearest 1000
+            setMaxPriceLimit(upperLimit);
+            setMaxPrice(upperLimit);
+          }
+        }
+      } catch (error) {
+        console.error("Error retrieving matching subcategory goods catalog:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubcategoryCatalog();
+  }, [subcategoryId, navigate, isCustomizedPage]);
 
   // Derive brands list dynamically
   const brandsList = useMemo(() => {
@@ -201,7 +218,8 @@ useEffect(() => {
         {/* PRICE RANGE SLIDER */}
         <PriceSliderSection 
           minPrice={minPrice} 
-          maxPrice={maxPrice} 
+          maxPrice={maxPrice}
+          maxLimit={maxPriceLimit}
           onFilterCommit={(min, max) => {
             setMinPrice(min);
             setMaxPrice(max);
@@ -259,13 +277,13 @@ useEffect(() => {
         )}
 
         {/* CLEAR ALL FILTERS BUTTON */}
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > 0 || maxPrice < 10000 || minDiscount > 0 || maxDiscount < 100) && (
+        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > 0 || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
           <button
             onClick={() => {
               setSelectedBrands([]);
               setSelectedSize(null);
               setMinPrice(0);
-              setMaxPrice(10000);
+              setMaxPrice(maxPriceLimit);
               setMinDiscount(0);
               setMaxDiscount(100);
             }}
@@ -283,11 +301,15 @@ useEffect(() => {
       
       {/* Page Breadcrumbs Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 mb-4 border-b border-gray-100">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{subcategoryName || "Subcategory Products"}</h1>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+          {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
+        </h1>
         <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
           <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate("/")}>Home</span>
           <span className="mx-1.5 font-bold">&gt;</span>
-          <span className="text-gray-600 font-medium">{subcategoryName || "Catalog"}</span>
+          <span className="text-gray-600 font-medium">
+            {isCustomizedPage ? "Customized Products" : (subcategoryName || "Catalog")}
+          </span>
         </div>
       </div>
 
