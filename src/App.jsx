@@ -10,6 +10,7 @@ import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
 import GSTSettingsPage from './pages/admin/GstSettingsPage';
 import TermsContion from './pages/user/TermsConditions';
+import ProductReviews from './pages/admin/ProductReviews';
 
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));
@@ -162,6 +163,7 @@ function App() {
             />
             
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/products/:id/reviews" element={<ProductReviews />} />
             <Route path="terms" element={<TermsContion/>} />
             <Route path="cancellation-return-policy" element={<CancellationReturnPolicy />} />
 
