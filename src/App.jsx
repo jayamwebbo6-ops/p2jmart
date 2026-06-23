@@ -9,6 +9,8 @@ import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
 import GSTSettingsPage from './pages/admin/GstSettingsPage';
+import TermsContion from './pages/user/TermsConditions';
+import ProductReviews from './pages/admin/ProductReviews';
 
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));
@@ -52,7 +54,19 @@ const HomeContentManager = lazy(() => import('./pages/admin/HomeCMS/HomeContentM
 
 function App() {
   const basename = import.meta.env.BASE_URL;
-  const [cart, setCart] = useState([]);
+  
+  /* ==========================================================================
+      GLOBAL CART STATE MANAGEMENT WITH PERSISTENCE
+     ========================================================================== */
+  const [cart, setCart] = useState(() => {
+    const savedCart = localStorage.getItem("user_cart");
+    return savedCart ? JSON.parse(savedCart) : [];
+  });
+
+  // Automatically save cart arrays to prevent dropping state during link updates
+  useEffect(() => {
+    localStorage.setItem("user_cart", JSON.stringify(cart));
+  }, [cart]);
 
   /* ==========================================================================
       GLOBAL WISHLIST STATE MANAGEMENT
@@ -62,7 +76,6 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Automatically update localStorage whenever the wishlist array changes
   useEffect(() => {
     localStorage.setItem("user_wishlist", JSON.stringify(wishlist));
   }, [wishlist]);
@@ -85,7 +98,7 @@ function App() {
   };
 
   /* ==========================================================================
-      GLOBAL CART STATE MANAGEMENT
+      CORE CART OPERATIONAL HANDLERS
      ========================================================================== */
   const addToCart = (product) => {
     const exists = cart.find(item => item.id === product.id);
@@ -93,7 +106,9 @@ function App() {
       toast.info(`"${product.title || 'Product'}" is already in your Cart.`);
       return;
     }
-    setCart([...cart, { ...product, quantity: 1 }]);
+    // Set explicit default value if runtime payload item object layout missing quantity definitions
+    const targetQty = product.quantity || 1;
+    setCart([...cart, { ...product, quantity: targetQty }]);
     toast.success(`"${product.title || 'Product'}" added to Cart!`);
   };
 
@@ -133,11 +148,26 @@ function App() {
             />
             
             <Route path="products" element={<UserProducts />} />
-            <Route path="product/:id" element={<ProductDetail />} />
+            
+            {/* FIXED: Passed core wishlist and add-to-cart state hooks inside detail paths */}
+            <Route 
+              path="product/:id" 
+              element={
+                <ProductDetail 
+                  onAddToCart={addToCart} 
+                  addToWishlist={addToWishlist}
+                  wishlist={wishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
             
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/products/:id/reviews" element={<ProductReviews />} />
+            <Route path="terms" element={<TermsContion/>} />
             <Route path="cancellation-return-policy" element={<CancellationReturnPolicy />} />
 
+            {/* FIXED: Modified component properties targeting to accept global items and safe setter references */}
             <Route 
               path="cart" 
               element={
@@ -145,6 +175,7 @@ function App() {
                   cart={cart} 
                   updateQuantity={updateQuantity} 
                   removeFromCart={removeFromCart} 
+                  setCart={setCart}
                 />
               } 
             />
@@ -161,7 +192,6 @@ function App() {
             <Route path="customized" element={<CustomizedProduct />} />
             <Route path="login" element={<UserLogin />} />
             
-            {/* New dynamic route capturing path for the product customizer layout */}
             <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
 
             <Route path="delivery-policy" element={<DeliveryPolicy />} />

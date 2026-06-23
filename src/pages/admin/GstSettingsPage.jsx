@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPercent } from 'react-icons/fa';
 import { toast } from '../../components/toast';
 import ConfirmationModal from "../../components/ConfirmationModal";
@@ -7,26 +7,18 @@ import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
 import { X} from 'lucide-react';
 
+import { createGstAPI, getAllGstAPI, updateGstAPI, deleteGstAPI } from '../../api/gstApi';
 
-const INITIAL_GST_DATA = [
-  { id: 1, gstStatus: 'Yes', gstPercentage: 2, categoryName: 'Furniture' },
-  { id: 2, gstStatus: 'Yes', gstPercentage: 12, categoryName: 'Toys and Games' },
-  { id: 3, gstStatus: 'Yes', gstPercentage: 2, categoryName: 'Pet Supplies' },
-  { id: 4, gstStatus: 'Yes', gstPercentage: 5, categoryName: 'sports and Fitness' },
-  { id: 7, gstStatus: 'Yes', gstPercentage: 5, categoryName: 'Furniture' }
-];
-
-const AVAILABLE_CATEGORIES = [
-  'Furniture', 'Toys and Games', 'Pet Supplies', 'sports and Fitness', 
-  'Electronics', 'Apparel', 'Beauty Kits', 'Stationary'
-];
+import { getCategoriesAPI } from '../../api/categoryApi'; 
 
 const GSTSettingsPage = () => {
-  const [gstRules, setGstRules] = useState(INITIAL_GST_DATA);
+  const [gstRules, setGstRules] = useState([]);
+  const [categories, setCategories] = useState([]); 
+  const [loading, setLoading] = useState(false);
   const [selectedRule, setSelectedRule] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   
-  // Configuration Form State Matrix (Matches image_be2292.png)
+  
   const [formData, setFormData] = useState({
     id: null,
     gstStatus: 'Yes',
@@ -37,6 +29,48 @@ const GSTSettingsPage = () => {
   // Modal State Controllers
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [targetDeleteId, setTargetDeleteId] = useState(null);
+
+  // Sync with MongoDB backend array stream
+  const fetchGstRules = async () => {
+    setLoading(true);
+    try {
+      const response = await getAllGstAPI();
+      if (response.success) {
+        const mappedData = response.data.map(item => ({
+          id: item._id,
+          gstStatus: item.gstStatus === 'active' ? 'Yes' : 'No',
+          gstPercentage: item.percentage,
+          categoryName: item.productCategoryName
+        }));
+        setGstRules(mappedData);
+      }
+    } catch (error) {
+      console.error("Database connection array pull failure:", error);
+      toast.error ? toast.error("Failed to load GST configurations from database.") : alert("Fetch failure");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch real-time operational categories
+  const fetchRealTimeCategories = async () => {
+    try {
+      const response = await getCategoriesAPI();
+      // Adjust standard response checking based on your category backend format
+      if (response.success && Array.isArray(response.data)) {
+        setCategories(response.data);
+      } else if (Array.isArray(response)) {
+        setCategories(response); // Backup if backend sends straight array
+      }
+    } catch (error) {
+      console.error("Failed fetching active category maps:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchGstRules();
+    fetchRealTimeCategories(); // Loads system categories dynamically on mount
+  }, []);
 
   // Initialize a fresh new rule block
   const handleCreateNewRule = () => {
@@ -63,7 +97,7 @@ const GSTSettingsPage = () => {
   };
 
   // Submit and save action engine
-  const handleSaveChanges = (e) => {
+  const handleSaveChanges = async (e) => {
     e.preventDefault();
     if (!formData.categoryName) {
       toast.error ? toast.error("Please select a target Category Name") : alert("Please select a Category Name");
@@ -74,31 +108,33 @@ const GSTSettingsPage = () => {
       return;
     }
 
-    if (selectedRule === 'new') {
-      // Add operational sequence block
-      const newId = gstRules.length > 0 ? Math.max(...gstRules.map(r => r.id)) + 1 : 1;
-      const newRule = {
-        id: newId,
-        gstStatus: formData.gstStatus,
-        gstPercentage: Number(formData.gstPercentage),
-        categoryName: formData.categoryName
+    try {
+      const backendPayload = {
+        productCategoryName: formData.categoryName,
+        percentage: Number(formData.gstPercentage),
+        gstStatus: formData.gstStatus === 'Yes' ? 'active' : 'inactive'
       };
-      setGstRules([...gstRules, newRule]);
-      toast.success ? toast.success("GST Rule generated successfully") : console.log("Saved");
-    } else {
-      // Edit update sequence block
-      setGstRules(gstRules.map(rule => rule.id === formData.id ? {
-        ...rule,
-        gstStatus: formData.gstStatus,
-        gstPercentage: Number(formData.gstPercentage),
-        categoryName: formData.categoryName
-      } : rule));
-      toast.success ? toast.success("GST Settings updated successfully") : console.log("Updated");
-    }
 
-    // Reset clean fields view state setup
-    setIsEditing(false);
-    setSelectedRule(null);
+      if (selectedRule === 'new') {
+        const response = await createGstAPI(backendPayload);
+        if (response.success) {
+          toast.success ? toast.success("GST Rule generated successfully") : console.log("Saved");
+          fetchGstRules();
+        }
+      } else {
+        const response = await updateGstAPI(formData.id, backendPayload);
+        if (response.success) {
+          toast.success ? toast.success("GST Settings updated successfully") : console.log("Updated");
+          fetchGstRules();
+        }
+      }
+
+      setIsEditing(false);
+      setSelectedRule(null);
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "An operational database runtime failure occurred.";
+      toast.error ? toast.error(errorMsg) : alert(errorMsg);
+    }
   };
 
   // Trigger modal setup view layer
@@ -107,14 +143,23 @@ const GSTSettingsPage = () => {
     setDeleteModalOpen(true);
   };
 
-  const confirmDeleteAction = () => {
-    setGstRules(gstRules.filter(item => item.id !== targetDeleteId));
-    setDeleteModalOpen(false);
-    if (selectedRule && selectedRule.id === targetDeleteId) {
-      setSelectedRule(null);
-      setIsEditing(false);
+  const confirmDeleteAction = async () => {
+    try {
+      const response = await deleteGstAPI(targetDeleteId);
+      if (response.success) {
+        toast.success ? toast.success("GST Configuration Rule dropped successfully") : console.log("Deleted");
+        if (selectedRule && selectedRule.id === targetDeleteId) {
+          setSelectedRule(null);
+          setIsEditing(false);
+        }
+        fetchGstRules();
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "Failed to drop target row data.";
+      toast.error ? toast.error(errorMsg) : alert(errorMsg);
+    } finally {
+      setDeleteModalOpen(false);
     }
-    toast.success ? toast.success("GST Configuration Rule dropped successfully") : console.log("Deleted");
   };
 
   return (
@@ -143,13 +188,13 @@ const GSTSettingsPage = () => {
           data={gstRules}
           minWidth="min-w-[600px]"
           containerClassName="border-0 shadow-none rounded-none"
-          emptyMessage="No configuration rules recorded in the system."
-          renderRow={(rule) => (
+          emptyMessage={loading ? "Connecting to backend database registry parameters..." : "No configuration rules recorded in the system."}
+          renderRow={(rule, index) => (
             <tr 
               key={rule.id} 
               className={`hover:bg-slate-50/80 transition-colors ${selectedRule?.id === rule.id ? 'bg-blue-50/30' : ''}`}
             >
-              <td className="py-4 px-6 font-bold text-slate-400 text-center">{rule.id}</td>
+              <td className="py-4 px-6 font-bold text-slate-400 text-center">{index + 1}</td>
               <td className="py-4 px-6">
                 <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${rule.gstStatus === 'Yes' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                   {rule.gstStatus}
@@ -179,21 +224,20 @@ const GSTSettingsPage = () => {
               <div className="flex justify-between items-center pb-4 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-black text-[#002B49]">
-                    {selectedRule === 'new' ? 'GST Row #New Record' : `GST Row #${formData.id}`}
+                    {selectedRule === 'new' ? 'GST Row #New Record' : `GST Row #${formData.id.substring(18)}`}
                   </h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
                     {isEditing ? 'Configuration Editor Form Block Active' : 'Read-Only Blueprint View Inspector'}
                   </p>
                 </div>
                 
-
-                 <button
-                                type="button"
-                                onClick={() => { setSelectedRule(null); setIsEditing(false); }}
-                                className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-slate-100 rounded-full cursor-pointer"
-                              >
-                                <X size={18} strokeWidth={2.5} />
-                              </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedRule(null); setIsEditing(false); }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-slate-100 rounded-full cursor-pointer"
+                >
+                  <X size={18} strokeWidth={2.5} />
+                </button>
               </div>
 
               {/* ENABLE GST RADIO CONTROL BLOCKS ROW */}
@@ -238,9 +282,16 @@ const GSTSettingsPage = () => {
                     className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-400 appearance-none disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
                   >
                     <option value="" disabled hidden>Select Category</option>
-                    {AVAILABLE_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
+                    {/* Maps over the real database categories instead of static mock data array */}
+                    {categories.map((cat) => {
+                      // Supports both plain string arrays and structured object schemas (cat.name) safely
+                      const categoryNameString = cat.name || cat;
+                      return (
+                        <option key={categoryNameString} value={categoryNameString}>
+                          {categoryNameString}
+                        </option>
+                      );
+                    })}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -270,8 +321,7 @@ const GSTSettingsPage = () => {
 
               {/* Operational save Footer Panel Row */}
               <div className="flex gap-2 pt-2">
-
-              {isEditing ? (
+                {isEditing ? (
                   <SaveBtn type="submit">Save Changes</SaveBtn>
                 ) : (
                   <EditBtn size={13} type="button" onClick={() => setIsEditing(true)} title="Unlock Field Edit" />
