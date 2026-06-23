@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from 'react';
 import { 
   Search, 
   User, 
@@ -12,47 +12,9 @@ import {
 import { FaFacebookF, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { categories } from '../utils/constants';
 import { isUserAuthenticated, userLogout } from '../api/userApi';
-
-// Dummy Product Dataset for Search Engine Filtering
-const DUMMY_PRODUCTS = [
-  { 
-    id: 'p1', 
-    title: 'Premium Handcrafted Brass Ganesha Idol (Premium Gold Finish, 8-inch)', 
-    brand: 'VedicArts Craft', 
-    category: 'Devotional Idols', 
-    image: 'https://images.unsplash.com/photo-1609137144813-7d722e1a3bc0?w=300&auto=format&fit=crop&q=80' 
-  },
-  { 
-    id: 'p2', 
-    title: 'Antique Brass Om Puja Thali Set with Murugan Vel & Oil Lamp', 
-    brand: 'Divine Home', 
-    category: 'Pooja Essentials', 
-    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&auto=format&fit=crop&q=80' 
-  },
-  { 
-    id: 'p3', 
-    title: 'Pure Sterling Silver Lord Murugan Statue for Home Mandir', 
-    brand: 'SilverLine Creations', 
-    category: 'Premium Silverware', 
-    image: 'https://images.unsplash.com/photo-1590073844006-33379778ae09?w=300&auto=format&fit=crop&q=80' 
-  },
-  { 
-    id: 'p4', 
-    title: 'Luxury 24k Gold-Plated Lakshmi & Ganesha Teakwood Photo Frame', 
-    brand: 'Joy Gift House', 
-    category: 'Wall Decor Frames', 
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&auto=format&fit=crop&q=80' 
-  },
-  { 
-    id: 'p5', 
-    title: 'Hand-Painted Traditional Clay Terracotta Diya Box (Pack of 12)', 
-    brand: 'Utsav Krafts', 
-    category: 'Festival Decorations', 
-    image: 'https://images.unsplash.com/photo-1606293926075-69a00dbfde81?w=300&auto=format&fit=crop&q=80' 
-  }
-];
+import { getProductsAPI } from '../api/productApi';
+import { getCategoriesAPI } from '../api/categoryApi';
 
 const Header = memo(({ wishlist = [], cart = [] }) => {
   const location = useLocation();
@@ -64,8 +26,12 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
+  // Dynamic Categories from Backend
+  const [backendCategories, setBackendCategories] = useState([]);
+
   // Advanced Search Functionality States
   const [searchQuery, setSearchQuery] = useState('');
+  const [realProducts, setRealProducts] = useState([]); 
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
@@ -74,13 +40,77 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated());
   const [userProfile, setUserProfile] = useState(null);
 
-  // Load Recently Viewed from LocalStorage on mount
+  // --- HOOKS MOVED TO TOP LEVEL OF HEADER COMPONENT ---
+  const uniqueBrands = useMemo(() => {
+    const brands = realProducts.map(p => p.brand).filter(Boolean);
+    return [...new Set(brands)];
+  }, [realProducts]);
+
+  const uniqueCategories = useMemo(() => {
+    const cats = realProducts.map(p => p.category?.name || p.category || p.subcategoryName).filter(Boolean);
+    return [...new Set(cats)];
+  }, [realProducts]);
+
+  // Load Recently Viewed from LocalStorage on mount & Fetch Categories
   useEffect(() => {
     const cached = localStorage.getItem('p2j_recently_viewed');
     if (cached) {
       setRecentlyViewed(JSON.parse(cached));
     }
+
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategoriesAPI();
+        if (response && response.success && Array.isArray(response.data)) {
+          setBackendCategories(response.data);
+        } else if (Array.isArray(response)) {
+          setBackendCategories(response);
+        }
+      } catch (err) {
+        console.error("Error loading header menu categories:", err);
+      }
+    };
+    fetchCategories();
   }, []);
+
+  // FIXED: Debounced API searching with an explicit frontend query filter safety-net
+  useEffect(() => {
+    const trimmed = searchQuery.trim().toLowerCase();
+    if (!trimmed) {
+      setRealProducts([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const response = await getProductsAPI({ search: trimmed });
+        let fetchedData = [];
+        
+        if (response && response.success && Array.isArray(response.data)) {
+          fetchedData = response.data;
+        } else if (Array.isArray(response)) {
+          fetchedData = response;
+        } else if (response && Array.isArray(response.products)) {
+          fetchedData = response.products;
+        }
+
+        // Frontend filter safety fallback: Ensures returned array matches text matches
+        const filteredResults = fetchedData.filter(product => {
+          const title = (product.title || product.name || '').toLowerCase();
+          const brand = (product.brand || '').toLowerCase();
+          const catName = (product.category?.name || product.category || product.subcategoryName || '').toLowerCase();
+          
+          return title.includes(trimmed) || brand.includes(trimmed) || catName.includes(trimmed);
+        });
+
+        setRealProducts(filteredResults);
+      } catch (err) {
+        console.error("Error running database live search query:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const checkAuth = useCallback(() => {
     const authStatus = isUserAuthenticated();
@@ -101,19 +131,17 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
     return () => window.removeEventListener('userLoginStateChange', checkAuth);
   }, [checkAuth]);
 
-  // Handle Search Input Change to Trim Starting Whitespace
   const handleSearchChange = (e) => {
     const value = e.target.value;
-    // Regex trims leading spaces/whitespaces immediately but keeps spaces between words
     setSearchQuery(value.replace(/^\s+/, ''));
   };
 
-  // Handle Search Result item tracking updates
   const handleItemClick = (product) => {
+    const targetId = product.id || product._id;
     let currentRecent = [...recentlyViewed];
-    currentRecent = currentRecent.filter(item => item.id !== product.id);
+    currentRecent = currentRecent.filter(item => (item.id || item._id) !== targetId);
     currentRecent.unshift(product);
-    const updatedRecent = currentRecent.slice(0, 5); // Max 5 items cached
+    const updatedRecent = currentRecent.slice(0, 5);
     
     setRecentlyViewed(updatedRecent);
     localStorage.setItem('p2j_recently_viewed', JSON.stringify(updatedRecent));
@@ -121,7 +149,7 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
     setIsSearchFocused(false);
     setIsMobileSearchOpen(false);
     setSearchQuery('');
-    navigate(`/products/${product.id}`);
+    navigate(`/product/${targetId}`);
   };
 
   const clearRecentlyViewed = (e) => {
@@ -129,19 +157,6 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
     setRecentlyViewed([]);
     localStorage.removeItem('p2j_recently_viewed');
   };
-
-  // Filter Data Dynamically based on input matches
- // Clean the query once before filtering for better performance
-const cleanedQuery = searchQuery.trim().toLowerCase();
-
-const filteredProducts = DUMMY_PRODUCTS.filter(p => 
-  p.title.toLowerCase().includes(cleanedQuery) ||
-  p.brand.toLowerCase().includes(cleanedQuery) ||
-  p.category.toLowerCase().includes(cleanedQuery)
-);
-
-  const uniqueBrands = [...new Set(filteredProducts.map(p => p.brand))];
-  const uniqueCategories = [...new Set(filteredProducts.map(p => p.category))];
 
   const isActive = (path) => {
     const normalize = (p) => {
@@ -171,7 +186,6 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
       : 'text-gray-800 font-medium hover:text-secondary';
   };
 
-  // Click outside to close menus wrapper logic
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
@@ -188,6 +202,88 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
   const toggleCategory = useCallback((index) => {
     setOpenCategoryIndex(prevIndex => prevIndex === index ? null : index);
   }, []);
+
+  // --- RENDER FUNCTION (NOT A COMPONENT FUNCTION) ---
+  const renderSearchDropdownContent = () => {
+    if (searchQuery.trim() === '') {
+      return (
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-xs font-extrabold text-primary uppercase tracking-wider">Recently Viewed</span>
+            {recentlyViewed.length > 0 && (
+              <button onClick={clearRecentlyViewed} className="text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">Clear All</button>
+            )}
+          </div>
+          {recentlyViewed.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2">No recent items viewed.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentlyViewed.map(product => {
+                const pId = product.id || product._id;
+                const imgUrl = product.image || (product.images && product.images[0]) || 'placeholder.jpg';
+                return (
+                  <div key={pId} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                    <img src={imgUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">{product.title || product.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-2">Products</h4>
+          {realProducts.length === 0 ? (
+            <p className="text-xs text-gray-400 pl-1">No products found matching filters.</p>
+          ) : (
+            <div className="space-y-2">
+              {realProducts.slice(0, 5).map(product => {
+                const pId = product.id || product._id;
+                const imgUrl = product.image || (product.images && product.images[0]) || 'placeholder.jpg';
+                return (
+                  <div key={pId} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                    <img src={imgUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
+                    <span className="text-xs font-semibold text-gray-800 line-clamp-1">{product.title || product.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {uniqueBrands.length > 0 && (
+          <div className="border-t border-gray-50 pt-3">
+            <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-2">Brands</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {uniqueBrands.map((brand, i) => (
+                <span key={i} onClick={() => setSearchQuery(brand)} className="bg-primary/90 text-white border border-red-100 text-[10px] font-bold px-2.5 py-1 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-all">
+                  {brand}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {uniqueCategories.length > 0 && (
+          <div className="border-t border-gray-50 pt-3">
+            <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-1.5">Categories</h4>
+            <div className="flex flex-col gap-1 pl-1">
+              {uniqueCategories.map((cat, i) => (
+                <span key={i} onClick={() => setSearchQuery(cat)} className="text-xs font-bold text-gray-600 hover:text-primary cursor-pointer py-1 transition-colors block">
+                  {cat}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -221,7 +317,6 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
           </Link>
         </div>
 
-        {/* Navigation Links */}
         <nav className="hidden lg:flex items-center space-x-8">
           <Link to="/" className={`${isActive('/')} transition-colors`}>Home</Link>
           <Link to="/products" className={`${isActive('/products')} transition-colors`}>Products</Link>
@@ -229,10 +324,7 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
           <Link to="/contact" className={`${isActive('/contact')} transition-colors`}>Contact Us</Link>
         </nav>
 
-        {/* Search Engine Workspace Area */}
         <div className="flex items-center space-x-4 md:space-x-6">
-          
-          {/* Desktop Search Dropdown Shell Configuration */}
           <div className="relative hidden lg:block" ref={searchContainerRef}>
             <div className={`flex items-center border rounded-full w-80 transition-all px-1 py-0.5 ${isSearchFocused ? 'border-primary ring-2 ring-primary/10' : 'border-gray-300'}`}>
               <input 
@@ -248,88 +340,17 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
               </button>
             </div>
 
-            {/* Float Floating Results Dropdown Box */}
             {isSearchFocused && (
               <div className="absolute left-0 mt-2 w-full bg-white border border-gray-100 rounded-2xl shadow-2xl py-4 px-4 max-h-[420px] overflow-y-auto z-[250] font-sans">
-                {searchQuery.trim() === '' ? (
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-extrabold text-primary uppercase tracking-wider">Recently Viewed</span>
-                      {recentlyViewed.length > 0 && (
-                        <button onClick={clearRecentlyViewed} className="text-xs font-bold text-gray-500 hover:text-red-500 transition-colors">Clear All</button>
-                      )}
-                    </div>
-                    {recentlyViewed.length === 0 ? (
-                      <p className="text-xs text-gray-400 py-2">No recent items viewed.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {recentlyViewed.map(product => (
-                          <div key={product.id} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                            <img src={product.image} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
-                            <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">{product.title}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Segment 1: Products */}
-                    <div>
-                      <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-2">Products</h4>
-                      {filteredProducts.length === 0 ? (
-                        <p className="text-xs text-gray-400 pl-1">No products found matching filters.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {filteredProducts.slice(0, 5).map(product => (
-                            <div key={product.id} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                              <img src={product.image} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
-                              <span className="text-xs font-semibold text-gray-800 line-clamp-1">{product.title}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Segment 2: Brands Dynamic Badges */}
-                    {uniqueBrands.length > 0 && (
-                      <div className="border-t border-gray-50 pt-3">
-                        <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-2">Brands</h4>
-                        <div className="flex flex-wrap gap-1.5">
-                          {uniqueBrands.map((brand, i) => (
-                            <span key={i} onClick={() => setSearchQuery(brand)} className="bg-primary/90 text-white border border-red-100 text-[10px] font-bold px-2.5 py-1 rounded-full cursor-pointer hover:bg-primary hover:text-white transition-all">
-                              {brand}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Segment 3: Categories Dynamic Framework */}
-                    {uniqueCategories.length > 0 && (
-                      <div className="border-t border-gray-50 pt-3">
-                        <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-1.5">Categories</h4>
-                        <div className="flex flex-col gap-1 pl-1">
-                          {uniqueCategories.map((cat, i) => (
-                            <span key={i} onClick={() => setSearchQuery(cat)} className="text-xs font-bold text-gray-600 hover:text-primary cursor-pointer py-1 transition-colors block">
-                              {cat}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {renderSearchDropdownContent()}
               </div>
             )}
           </div>
 
-          {/* Search Glass Trigger Button (Mobile View Routing) */}
           <button onClick={() => setIsMobileSearchOpen(true)} className="lg:hidden text-gray-700 hover:text-primary transition-colors">
             <Search size={22} strokeWidth={2} />
           </button>
 
-          {/* Layout Configuration Badges */}
           <div className="flex items-center space-x-4 md:space-x-5 text-primary">
             <Link to="/wishlist" className="hover:text-secondary transition-colors hover:scale-110 transform relative block">
               <Heart size={24} strokeWidth={1.5} />
@@ -345,7 +366,6 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
               </span>
             </Link>
             
-            {/* User Profile Dropdown Setup */}
             <div className="relative" ref={userMenuRef}>
               <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="hover:text-secondary transition-colors hover:scale-110 transform flex items-center focus:outline-none">
                 {isAuthenticated && userProfile?.photo ? (
@@ -380,7 +400,7 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
         </div>
       </header>
 
-      {/* Full Mobile Search Modal Overlay Layer */}
+      {/* Full Mobile Search Modal Overlay */}
       {isMobileSearchOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[300] flex justify-center items-start pt-16 px-4">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 relative transform transition-all duration-300 scale-100">
@@ -401,63 +421,13 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
             </div>
 
             <div className="max-h-[300px] overflow-y-auto pr-1">
-              {searchQuery.trim() === '' ? (
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[11px] font-extrabold text-primary uppercase tracking-wider">Recently Viewed</span>
-                    {recentlyViewed.length > 0 && (
-                      <button onClick={clearRecentlyViewed} className="text-xs font-bold text-gray-400 hover:text-red-500">Clear All</button>
-                    )}
-                  </div>
-                  {recentlyViewed.length === 0 ? (
-                    <p className="text-xs text-gray-400 py-1">No items recently viewed.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {recentlyViewed.map(p => (
-                        <div key={p.id} onClick={() => handleItemClick(p)} className="flex items-center gap-2.5 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer">
-                          <img src={p.image} alt="" className="w-8 h-8 object-cover rounded-md border" />
-                          <span className="text-xs font-medium text-gray-700 truncate">{p.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-2">Products</h4>
-                    {filteredProducts.length === 0 ? (
-                      <p className="text-xs text-gray-400">No products match search criteria.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {filteredProducts.map(p => (
-                          <div key={p.id} onClick={() => handleItemClick(p)} className="flex items-center gap-2.5 p-1.5 hover:bg-gray-50 rounded-lg cursor-pointer">
-                            <img src={p.image} alt="" className="w-8 h-8 object-cover rounded-md border" />
-                            <span className="text-xs font-semibold text-gray-800 line-clamp-1">{p.title}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {uniqueBrands.length > 0 && (
-                    <div className="border-t border-gray-100 pt-2">
-                      <h4 className="text-[11px] font-extrabold text-primary uppercase tracking-wider mb-1.5">Brands</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {uniqueBrands.map((b, i) => (
-                          <span key={i} onClick={() => setSearchQuery(b)} className="bg-red-50 text-primary text-[9px] font-bold px-2 py-0.5 rounded-full">{b}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {renderSearchDropdownContent()}
             </div>
           </div>
         </div>
       )}
 
-      {/* Mobile Drawer Menu Layout Menu */}
+      {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[200] lg:hidden flex justify-end">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileMenuOpen(false)}></div>
@@ -479,19 +449,30 @@ const filteredProducts = DUMMY_PRODUCTS.filter(p =>
             <div className="p-4">
               <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-4">Categories</h3>
               <ul className="flex flex-col space-y-1">
-                {categories.map((cat, idx) => (
-                  <li key={idx} className="border-b border-gray-50 last:border-0 pb-1">
+                {backendCategories.map((cat, idx) => (
+                  <li key={cat._id || cat.id || idx} className="border-b border-gray-50 last:border-0 pb-1">
                     <button onClick={() => toggleCategory(idx)} className="w-full flex justify-between items-center py-2 text-gray-700 hover:text-primary transition-colors font-medium">
                       <span>{cat.name}</span>
                       {openCategoryIndex === idx ? <ChevronUp size={18} className="text-primary" /> : <ChevronDown size={18} className="text-gray-400" />}
                     </button>
-                    {openCategoryIndex === idx && (
+                    {openCategoryIndex === idx && cat.subcategories && (
                       <ul className="pl-4 py-2 space-y-3 bg-gray-50/80 rounded-md mt-1 mb-2 border-l-2 border-primary/30">
-                        {cat.subcategories.map((sub, i) => (
-                          <li key={i}>
-                            <Link to="#" onClick={() => setIsMobileMenuOpen(false)} className="text-gray-600 text-sm hover:text-primary transition-colors block">{sub}</Link>
-                          </li>
-                        ))}
+                        {cat.subcategories.map((sub, i) => {
+                          const subName = typeof sub === 'object' ? sub.name : sub;
+                          const subId = typeof sub === 'object' ? (sub._id || sub.id) : null;
+                          return (
+                            <li key={subId || i}>
+                              <Link 
+                                to="/products" 
+                                state={{ subcategoryId: subId, subcategoryName: subName }}
+                                onClick={() => setIsMobileMenuOpen(false)} 
+                                className="text-gray-600 text-sm hover:text-primary transition-colors block"
+                              >
+                                {subName}
+                              </Link>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </li>
