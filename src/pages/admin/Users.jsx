@@ -267,7 +267,7 @@ const Users = () => {
       />
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3General Information">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
         {/* Total Customers */}
         <div className="bg-white border border-gray-200/80 rounded-xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-lg shrink-0">
@@ -594,7 +594,6 @@ const Users = () => {
 
             </div>
 
-         
           </div>
         </div>
       )}
