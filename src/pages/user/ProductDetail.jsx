@@ -459,14 +459,14 @@ const ProductDetail = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col md:flex-row gap-2 mt-auto w-full max-w-sm">
-              <button className="flex-1 border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm">
-                <ShoppingCart size={15} /> Add to Cart
-              </button>
-              <button className="flex-1 bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm">
-                <ShoppingBag size={15} /> Buy Now
-              </button>
-            </div>
+           <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
+  <button className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm">
+    <ShoppingCart size={15} /> Add to Cart
+  </button>
+  <button className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm">
+    <ShoppingBag size={15} /> Buy Now
+  </button>
+</div>
           </div>
         </div>
 
@@ -596,21 +596,24 @@ const ProductDetail = () => {
                   </p>
                 )}
 
-                <button 
-                  onClick={handleAddBundleToCart}
-                  disabled={selectedComboItemIds.length === 0}
-                  className="w-full mt-2 bg-primary hover:bg-primary/90 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ShoppingCart size={15} /> Add Bundle Package to Cart
-                </button>
+                <div className="grid grid-cols-2 max-[508px]:grid-cols-1 xl:grid-cols-1 gap-2 mt-4 w-full">
+  <button 
+    onClick={handleAddBundleToCart}
+    disabled={selectedComboItemIds.length === 0}
+    className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    <ShoppingCart size={15} /> Add Bundle Package to Cart
+  </button>
 
-                <button 
-                  onClick={handleAddBundleToBuy}
-                  disabled={selectedComboItemIds.length === 0}
-                  className="w-full mt-2 bg-primary hover:bg-primary/90 text-white py-2.5 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ShoppingBag size={15} /> Buy Bundle Package
-                </button>
+  <button 
+    onClick={handleAddBundleToBuy}
+    disabled={selectedComboItemIds.length === 0}
+    className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    <ShoppingBag size={15} /> Buy Bundle Package
+  </button>
+</div>
+
               </div>
             </div>
           </div>
