@@ -136,21 +136,25 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
     setSearchQuery(value.replace(/^\s+/, ''));
   };
 
-  const handleItemClick = (product) => {
-    const targetId = product.id || product._id;
-    let currentRecent = [...recentlyViewed];
-    currentRecent = currentRecent.filter(item => (item.id || item._id) !== targetId);
-    currentRecent.unshift(product);
-    const updatedRecent = currentRecent.slice(0, 5);
-    
-    setRecentlyViewed(updatedRecent);
-    localStorage.setItem('p2j_recently_viewed', JSON.stringify(updatedRecent));
-    
-    setIsSearchFocused(false);
-    setIsMobileSearchOpen(false);
-    setSearchQuery('');
-    navigate(`/product/${targetId}`);
-  };
+
+  // --- UPDATE THIS FUNCTION IN YOUR HEADER.JSX ---
+const handleItemClick = (product) => {
+  const targetId = product.id || product._id;
+  let currentRecent = [...recentlyViewed];
+  currentRecent = currentRecent.filter(item => (item.id || item._id) !== targetId);
+  currentRecent.unshift(product);
+  const updatedRecent = currentRecent.slice(0, 5);
+  
+  setRecentlyViewed(updatedRecent);
+  localStorage.setItem('p2j_recently_viewed', JSON.stringify(updatedRecent));
+  
+  setIsSearchFocused(false);
+  setIsMobileSearchOpen(false);
+  setSearchQuery('');
+  
+  // FIXED: Added state passing configuration mapping to 'product' context key
+  navigate(`/product/${targetId}`, { state: { product: product } });
+};
 
   const clearRecentlyViewed = (e) => {
     e.stopPropagation();
