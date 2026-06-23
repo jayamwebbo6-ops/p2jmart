@@ -3,6 +3,7 @@ import { X, ShieldCheck, MapPin } from 'lucide-react';
 import { AddBtn, EditBtn, DeleteBtn, SaveBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const INITIAL_SHIPPING_DATA = [
   { id: 1, stateName: 'Tamil Nadu', baseWeight: 250, baseCost: '55.00', additionalWeight: 300, additionalCost: '20.00' },
@@ -15,6 +16,8 @@ const ShippingCostManager = () => {
   const [shippingRecords, setShippingRecords] = useState(INITIAL_SHIPPING_DATA);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('add'); // 'add' | 'edit'
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   
   // Modal Form State Management
   const [currentId, setCurrentId] = useState(null);
@@ -50,9 +53,14 @@ const ShippingCostManager = () => {
 
   // 3. Remove a calculation row rule from the register matrix
   const handleDeleteRow = (id) => {
-    if (window.confirm("Are you sure you want to delete this shipping configuration rate?")) {
-      setShippingRecords(shippingRecords.filter(item => item.id !== id));
-    }
+    setDeleteTargetId(id);
+    setIsConfirmOpen(true);
+  };
+
+  const confirmDeleteRow = () => {
+    setShippingRecords(shippingRecords.filter(item => item.id !== deleteTargetId));
+    setIsConfirmOpen(false);
+    setDeleteTargetId(null);
   };
 
   // 4. Handle Save button logic (Covers both create and update validation paths)
@@ -246,6 +254,19 @@ const ShippingCostManager = () => {
         </div>
       )}
 
+      <ConfirmationModal 
+        isOpen={isConfirmOpen}
+        onClose={() => {
+          setIsConfirmOpen(false);
+          setDeleteTargetId(null);
+        }}
+        onConfirm={confirmDeleteRow}
+        title="Delete Shipping Rate"
+        message="Are you sure you want to delete this shipping configuration rate?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDanger={true}
+      />
     </div>
   );
 };

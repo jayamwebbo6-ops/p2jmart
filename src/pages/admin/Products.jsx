@@ -25,6 +25,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, ViewBtn, PrimaryBtn } from '../../components/AdminButtons';
 import AdminTable from '../../components/AdminTable';
 import PageHeader from '../../components/PageHeader';
+import { compressAndConvertToWebP } from '../../utils/helpers';
 import { 
   getCategoriesAPI, 
   createCategoryAPI, 
@@ -321,7 +322,7 @@ const Products = () => {
     if (editCat) {
       setCatForm({ 
         name: editCat.name, 
-        image: editCat.rawImage || editCat.image, 
+        image: editCat.image, 
         supportedAttributes: (editCat.supportedAttributes || []).map(attr => attr._id || attr.id || attr) 
       });
       setEditItem(editCat);
@@ -397,7 +398,7 @@ const Products = () => {
   const handleOpenSubModal = (editSub = null, catId = null) => {
     setParentId(catId || selectedCatId);
     if (editSub) {
-      setSubForm({ name: editSub.name, image: editSub.rawImage || editSub.image || '' });
+      setSubForm({ name: editSub.name, image: editSub.image || '' });
       setEditItem(editSub);
     } else {
       setSubForm({ name: '', image: '' });
@@ -1041,14 +1042,16 @@ const Products = () => {
                     <input 
                       type="file" 
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setCatForm({ ...catForm, image: reader.result });
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressed = await compressAndConvertToWebP(file);
+                            setCatForm({ ...catForm, image: compressed });
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to process image');
+                            e.target.value = '';
+                          }
                         }
                       }}
                       className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"
@@ -1115,14 +1118,16 @@ const Products = () => {
                     <input 
                       type="file" 
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setSubForm({ ...subForm, image: reader.result });
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressed = await compressAndConvertToWebP(file);
+                            setSubForm({ ...subForm, image: compressed });
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to process image');
+                            e.target.value = '';
+                          }
                         }
                       }}
                       className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"
@@ -1230,14 +1235,16 @@ const Products = () => {
                     <input 
                       type="file" 
                       accept="image/*"
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const file = e.target.files[0];
                         if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setProdForm({ ...prodForm, image: reader.result });
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            const compressed = await compressAndConvertToWebP(file);
+                            setProdForm({ ...prodForm, image: compressed });
+                          } catch (err) {
+                            toast.error(err.message || 'Failed to process image');
+                            e.target.value = '';
+                          }
                         }
                       }}
                       className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white cursor-pointer"

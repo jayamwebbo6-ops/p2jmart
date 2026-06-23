@@ -24,6 +24,7 @@ import { getCategoriesAPI } from '../../api/categoryApi';
 import { getAttributesAPI } from '../../api/attributeApi';
 import { getProductsAPI, createProductAPI, updateProductAPI } from '../../api/productApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { compressAndConvertToWebP } from '../../utils/helpers';
 
 const AttributeDropdown = ({ attr, attrName, value, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -1188,30 +1189,26 @@ const AddProduct = () => {
                                 type="file"
                                 multiple
                                 accept="image/*"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   const files = Array.from(e.target.files);
                                   if (files.length > 0) {
-                                    const loadedImages = [];
-                                    let processed = 0;
-                                    files.forEach(file => {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        loadedImages.push(reader.result);
-                                        processed++;
-                                        if (processed === files.length) {
-                                          setProdForm(prev => ({
-                                            ...prev,
-                                            variants: prev.variants.map(item => 
-                                              item.id === v.id 
-                                                ? { ...item, images: [...(item.images || []), ...loadedImages] }
-                                                : item
-                                            )
-                                          }));
-                                          toast.success(`Added ${files.length} image(s) to variant`);
-                                        }
-                                      };
-                                      reader.readAsDataURL(file);
-                                    });
+                                    try {
+                                      const promises = files.map(file => compressAndConvertToWebP(file));
+                                      const compressedImages = await Promise.all(promises);
+                                      
+                                      setProdForm(prev => ({
+                                        ...prev,
+                                        variants: prev.variants.map(item => 
+                                          item.id === v.id 
+                                            ? { ...item, images: [...(item.images || []), ...compressedImages] }
+                                            : item
+                                        )
+                                      }));
+                                      toast.success(`Added ${files.length} image(s) to variant`);
+                                    } catch (err) {
+                                      toast.error(err.message || 'Failed to process variant images');
+                                      e.target.value = '';
+                                    }
                                   }
                                 }}
                                 className="hidden"

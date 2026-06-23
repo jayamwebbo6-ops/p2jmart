@@ -3,6 +3,7 @@ import { Camera, Save, Edit2, X, Eye, EyeOff } from 'lucide-react';
 import { getAdminProfile, updateAdminProfile } from '../../api/adminApi';
 import { toast } from '../../components/toast';
 import PageHeader from '../../components/PageHeader';
+import { compressAndConvertToWebP } from '../../utils/helpers';
 
 const AdminProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -58,15 +59,17 @@ const AdminProfile = () => {
     fetchProfile();
   }, []);
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     if (!isEditing) return;
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfile(prev => ({ ...prev, photo: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      try {
+        const compressed = await compressAndConvertToWebP(file);
+        setProfile(prev => ({ ...prev, photo: compressed }));
+      } catch (err) {
+        toast.error(err.message || 'Failed to process photo');
+        e.target.value = '';
+      }
     }
   };
 

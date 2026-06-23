@@ -5,6 +5,7 @@ import PromoBanners from '../../components/PromoBanners';
 import ProductSection from '../../components/ProductSection';
 import CategoryPage from '../../components/CategoryPage';
 import Collections from '../../components/Collections';
+import { useLazySection } from '../../utils/helpers';
 
 const dummyProducts = [
   {
@@ -50,12 +51,32 @@ const dummyProducts = [
   
 ];
 
+/**
+ * Lightweight skeleton placeholder shown while a section is not yet in viewport.
+ * Provides a visual hint of upcoming content without loading any heavy components.
+ */
+const SectionSkeleton = ({ height = '300px' }) => (
+  <div 
+    className="w-full animate-pulse rounded-lg overflow-hidden"
+    style={{ minHeight: height }}
+  >
+    <div className="w-full h-full bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-lg" 
+      style={{ minHeight: height, backgroundSize: '200% 100%', animation: 'shimmer 1.5s ease-in-out infinite' }} 
+    />
+  </div>
+);
+
 // 1. Accept the global wishlist state and handlers via props here
 // 1. Accept the global cart addition handler prop here
 const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart }) => {
+  // Lazy-load below-the-fold sections using Intersection Observer
+  const [productRef, isProductVisible] = useLazySection('300px');
+  const [categoryRef, isCategoryVisible] = useLazySection('250px');
+  const [collectionsRef, isCollectionsVisible] = useLazySection('250px');
+
   return (
     <div className="w-full flex flex-col gap-10">
-      {/* Top Row: Sidebar, Hero, Promos */}
+      {/* Top Row: Sidebar, Hero, Promos — Always rendered immediately (above the fold) */}
       <div className="w-full flex flex-col lg:flex-row gap-5 mt-6">
         <div className="hidden lg:block lg:w-1/4 xl:w-[22%] flex-shrink-0 lg:h-[460px]">
           <Sidebar />
@@ -68,18 +89,39 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
         </div>
       </div>
 
-      {/* Electrical Product Section */}
-      <ProductSection 
-        title="Electronic " 
-        products={dummyProducts}
-        wishlist={wishlist}
-        onWishlist={addToWishlist}
-        onRemoveWishlist={removeFromWishlist} 
-        onAddToCart={onAddToCart} // 2. Forward your prop connection down cleanly
-      />
-      
-      <CategoryPage/>
-      <Collections/>
+      {/* Product Section — Deferred until user scrolls near it */}
+      <div ref={productRef}>
+        {isProductVisible ? (
+          <ProductSection 
+            title="Electronic " 
+            products={dummyProducts}
+            wishlist={wishlist}
+            onWishlist={addToWishlist}
+            onRemoveWishlist={removeFromWishlist} 
+            onAddToCart={onAddToCart}
+          />
+        ) : (
+          <SectionSkeleton height="420px" />
+        )}
+      </div>
+
+      {/* Category Page — Deferred */}
+      <div ref={categoryRef}>
+        {isCategoryVisible ? (
+          <CategoryPage />
+        ) : (
+          <SectionSkeleton height="320px" />
+        )}
+      </div>
+
+      {/* Collections — Deferred (heaviest section with 12 product cards) */}
+      <div ref={collectionsRef}>
+        {isCollectionsVisible ? (
+          <Collections />
+        ) : (
+          <SectionSkeleton height="500px" />
+        )}
+      </div>
     </div>
   );
 };
