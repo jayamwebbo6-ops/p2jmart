@@ -25,6 +25,17 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, ViewBtn, PrimaryBtn } from '../../components/AdminButtons';
 import AdminTable from '../../components/AdminTable';
 import PageHeader from '../../components/PageHeader';
+import { 
+  getCategoriesAPI, 
+  createCategoryAPI, 
+  updateCategoryAPI, 
+  deleteCategoryAPI,
+  createSubcategoryAPI,
+  updateSubcategoryAPI,
+  deleteSubcategoryAPI 
+} from '../../api/categoryApi';
+import { getAttributesAPI } from '../../api/attributeApi';
+import { getProductsAPI, deleteProductAPI } from '../../api/productApi';
 
 // Initial pre-populated catalog tree data matching user theme
 const INITIAL_CATALOG = [
@@ -114,16 +125,26 @@ const INITIAL_CATALOG = [
 
 const Products = () => {
   const navigate = useNavigate();
-  const [catalog, setCatalog] = useState(() => {
-    const saved = localStorage.getItem('p2j_mart_catalog');
-    return saved ? JSON.parse(saved) : INITIAL_CATALOG;
-  });
+  
+  const getProductDisplayImage = (prod) => {
+    if (prod.variants && prod.variants.length > 0) {
+      const firstVar = prod.variants[0];
+      if (firstVar.image) return firstVar.image;
+      if (firstVar.images && firstVar.images.length > 0) return firstVar.images[0];
+    }
+    if (prod.image) return prod.image;
+    return 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
+  };
 
+  const [catalog, setCatalog] = useState([]);
+  const [availableAttributes, setAvailableAttributes] = useState([]);
+  
   // Active selections
-  const [selectedCatId, setSelectedCatId] = useState(catalog[0]?.id || '');
+  const [selectedCatId, setSelectedCatId] = useState('');
   const [selectedSubId, setSelectedSubId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Preview Modal States
   const [previewProduct, setPreviewProduct] = useState(null);
@@ -151,17 +172,6 @@ const Products = () => {
 
   // Modals state
   const [modalType, setModalType] = useState(null); // 'cat' | 'sub' | 'prod'
-  const [availableAttributes, setAvailableAttributes] = useState(() => {
-    const saved = localStorage.getItem('p2j_mart_attributes');
-    return saved ? JSON.parse(saved) : [
-      { id: 'attr-1', name: 'color', terms: ['Blue|#0000FF', 'Red|#FF0000', 'Green|#008000', 'Yellow|#FFFF00', 'White|#FFFFFF', 'Black|#000000'] },
-      { id: 'attr-2', name: 'material', terms: ['Wood', 'Acrylic', 'Glass', 'Metal', 'Leather'] },
-      { id: 'attr-3', name: 'design', terms: ['Minimalist', 'Floral', 'Modern', 'Classic', 'Vintage'] },
-      { id: 'attr-4', name: 'size', terms: ['3 inch', '5 inch', '7 inch', 'Small', 'Medium', 'Large'] },
-      { id: 'attr-5', name: 'ramsize', terms: ['4GB', '8GB', '16GB', '32GB'] }
-    ];
-  });
-
   const [editItem, setEditItem] = useState(null); // Item to edit (null if adding)
   const [parentId, setParentId] = useState(null); // Parent category/subcategory id
 
@@ -178,9 +188,99 @@ const Products = () => {
     reviews: '0'
   });
 
-  // Sync to localStorage
+  // Helper to initialize products map if not present
+  const initializeProductsMap = () => {
+    const savedCatalog = localStorage.getItem('p2j_mart_catalog');
+    const catalogSource = savedCatalog ? JSON.parse(savedCatalog) : INITIAL_CATALOG;
+    
+    const map = {};
+    catalogSource.forEach(cat => {
+      cat.subcategories.forEach(sub => {
+        map[sub.id] = sub.products || [];
+      });
+    });
+    return map;
+  };
+
+  // Load Categories & Attributes on mount
+  const loadCatalogData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch available attributes from server
+      const attrRes = await getAttributesAPI();
+      if (attrRes && attrRes.success) {
+        setAvailableAttributes(attrRes.data.map(attr => ({
+          id: attr._id,
+          _id: attr._id,
+          name: attr.name,
+          terms: attr.terms
+        })));
+      }
+
+      // 2. Fetch categories from server
+      const catRes = await getCategoriesAPI();
+      if (catRes && catRes.success) {
+        const backendCats = catRes.data;
+
+        // 3. Fetch products dynamically from server
+        let fetchedProducts = [];
+        try {
+          const prodRes = await getProductsAPI();
+          if (prodRes && prodRes.success) {
+            fetchedProducts = prodRes.data;
+          }
+        } catch (e) {
+          console.error("Failed to load products from server", e);
+        }
+
+        const productsMap = {};
+        fetchedProducts.forEach(prod => {
+          const subId = prod.subcategory?._id || prod.subcategory?.id || prod.subcategory;
+          if (subId) {
+            if (!productsMap[subId]) productsMap[subId] = [];
+            productsMap[subId].push(prod);
+          }
+        });
+
+        // Merge products into subcategories
+        const mergedCatalog = backendCats.map(cat => ({
+          ...cat,
+          id: cat._id,
+          supportedAttributes: (cat.supportedAttributes || []).map(attr => attr._id || attr.id),
+          subcategories: (cat.subcategories || []).map(sub => ({
+            ...sub,
+            id: sub._id,
+            products: productsMap[sub._id] || productsMap[sub.id] || []
+          }))
+        }));
+
+        setCatalog(mergedCatalog);
+
+        // Auto select first category
+        if (mergedCatalog.length > 0) {
+          setSelectedCatId(prev => {
+            if (prev && mergedCatalog.some(c => c.id === prev)) return prev;
+            return mergedCatalog[0].id;
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load category data from server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('p2j_mart_catalog', JSON.stringify(catalog));
+    loadCatalogData();
+  }, []);
+
+  // Sync to localStorage 'p2j_mart_catalog' for frontend compatibility
+  useEffect(() => {
+    if (catalog.length > 0) {
+      localStorage.setItem('p2j_mart_catalog', JSON.stringify(catalog));
+    }
   }, [catalog]);
 
   // Derive subcategories & products based on selection
@@ -188,7 +288,10 @@ const Products = () => {
   
   useEffect(() => {
     if (activeCategory && activeCategory.subcategories.length > 0) {
-      setSelectedSubId(activeCategory.subcategories[0].id);
+      setSelectedSubId(prev => {
+        if (prev && activeCategory.subcategories.some(s => s.id === prev)) return prev;
+        return activeCategory.subcategories[0].id;
+      });
     } else {
       setSelectedSubId('');
     }
@@ -204,9 +307,9 @@ const Products = () => {
 
   // Total stats calculators
   const totalCategoriesCount = catalog.length;
-  const totalSubcategoriesCount = catalog.reduce((acc, cat) => acc + cat.subcategories.length, 0);
+  const totalSubcategoriesCount = catalog.reduce((acc, cat) => acc + (cat.subcategories || []).length, 0);
   const totalProductsCount = catalog.reduce((acc, cat) => 
-    acc + cat.subcategories.reduce((sAcc, sub) => sAcc + sub.products.length, 0), 0
+    acc + (cat.subcategories || []).reduce((sAcc, sub) => sAcc + (sub.products || []).length, 0), 0
   );
 
   // ==========================================
@@ -218,8 +321,8 @@ const Products = () => {
     if (editCat) {
       setCatForm({ 
         name: editCat.name, 
-        image: editCat.image, 
-        supportedAttributes: editCat.supportedAttributes || [] 
+        image: editCat.rawImage || editCat.image, 
+        supportedAttributes: (editCat.supportedAttributes || []).map(attr => attr._id || attr.id || attr) 
       });
       setEditItem(editCat);
     } else {
@@ -229,36 +332,41 @@ const Products = () => {
     setModalType('cat');
   };
 
-  const handleSaveCategory = (e) => {
+  const handleSaveCategory = async (e) => {
     e.preventDefault();
     if (!catForm.name.trim()) return toast.error('Category Name is required');
 
     const defaultImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
-    const finalImageUrl = catForm.image.trim() || defaultImage;
+    const finalImageUrl = catForm.image ? catForm.image.trim() : defaultImage;
 
-    if (editItem) {
-      setCatalog(prev => prev.map(c => 
-        c.id === editItem.id ? { 
-          ...c, 
-          name: catForm.name, 
-          image: finalImageUrl, 
-          supportedAttributes: catForm.supportedAttributes || [] 
-        } : c
-      ));
-      toast.success('Category updated successfully');
-    } else {
-      const newCat = {
-        id: `cat-${Date.now()}`,
-        name: catForm.name,
-        image: finalImageUrl,
-        supportedAttributes: catForm.supportedAttributes || [],
-        subcategories: []
-      };
-      setCatalog(prev => [...prev, newCat]);
-      setSelectedCatId(newCat.id);
-      toast.success('Category created successfully');
+    const payload = {
+      name: catForm.name.trim(),
+      image: finalImageUrl,
+      supportedAttributes: catForm.supportedAttributes || []
+    };
+
+    try {
+      if (editItem) {
+        const res = await updateCategoryAPI(editItem.id, payload);
+        if (res.success) {
+          toast.success('Category updated successfully');
+          await loadCatalogData();
+        } else {
+          toast.error(res.message || 'Failed to update category');
+        }
+      } else {
+        const res = await createCategoryAPI(payload);
+        if (res.success) {
+          toast.success('Category created successfully');
+          await loadCatalogData();
+        } else {
+          toast.error(res.message || 'Failed to create category');
+        }
+      }
+      setModalType(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving category');
     }
-    setModalType(null);
   };
 
   const handleDeleteCategory = (catId, e) => {
@@ -266,13 +374,21 @@ const Products = () => {
     triggerConfirm(
       'Delete Category',
       'Are you sure you want to delete this Category? All its subcategories and products will be permanently removed.',
-      () => {
-        setCatalog(prev => prev.filter(c => c.id !== catId));
-        if (selectedCatId === catId) {
-          const remaining = catalog.filter(c => c.id !== catId);
-          setSelectedCatId(remaining[0]?.id || '');
+      async () => {
+        try {
+          const res = await deleteCategoryAPI(catId);
+          if (res.success) {
+            toast.success('Category deleted successfully');
+            await loadCatalogData();
+            if (selectedCatId === catId) {
+              setSelectedCatId('');
+            }
+          } else {
+            toast.error(res.message || 'Failed to delete category');
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error deleting category');
         }
-        toast.success('Category deleted successfully');
       }
     );
   };
@@ -281,7 +397,7 @@ const Products = () => {
   const handleOpenSubModal = (editSub = null, catId = null) => {
     setParentId(catId || selectedCatId);
     if (editSub) {
-      setSubForm({ name: editSub.name, image: editSub.image || '' });
+      setSubForm({ name: editSub.name, image: editSub.rawImage || editSub.image || '' });
       setEditItem(editSub);
     } else {
       setSubForm({ name: '', image: '' });
@@ -290,32 +406,42 @@ const Products = () => {
     setModalType('sub');
   };
 
-  const handleSaveSubcategory = (e) => {
+  const handleSaveSubcategory = async (e) => {
     e.preventDefault();
     if (!subForm.name.trim()) return toast.error('Subcategory Name is required');
 
-    if (editItem) {
-      setCatalog(prev => prev.map(c => ({
-        ...c,
-        subcategories: c.subcategories.map(s => 
-          s.id === editItem.id ? { ...s, name: subForm.name, image: subForm.image || '' } : s
-        )
-      })));
-      toast.success('Subcategory updated successfully');
-    } else {
-      const newSub = {
-        id: `sub-${Date.now()}`,
-        name: subForm.name,
-        image: subForm.image || '',
-        products: []
-      };
-      setCatalog(prev => prev.map(c => 
-        c.id === parentId ? { ...c, subcategories: [...c.subcategories, newSub] } : c
-      ));
-      setSelectedSubId(newSub.id);
-      toast.success('Subcategory created successfully');
+    try {
+      if (editItem) {
+        const payload = {
+          name: subForm.name.trim(),
+          image: subForm.image
+        };
+        const res = await updateSubcategoryAPI(editItem.id, payload);
+        if (res.success) {
+          toast.success('Subcategory updated successfully');
+          await loadCatalogData();
+        } else {
+          toast.error(res.message || 'Failed to update subcategory');
+        }
+      } else {
+        const payload = {
+          name: subForm.name.trim(),
+          image: subForm.image,
+          categoryId: parentId
+        };
+        const res = await createSubcategoryAPI(payload);
+        if (res.success) {
+          toast.success('Subcategory created successfully');
+          await loadCatalogData();
+          setSelectedSubId(res.data._id);
+        } else {
+          toast.error(res.message || 'Failed to create subcategory');
+        }
+      }
+      setModalType(null);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving subcategory');
     }
-    setModalType(null);
   };
 
   const handleDeleteSubcategory = (subId, e) => {
@@ -323,15 +449,21 @@ const Products = () => {
     triggerConfirm(
       'Delete Subcategory',
       'Are you sure you want to delete this Subcategory and all its products?',
-      () => {
-        setCatalog(prev => prev.map(c => ({
-          ...c,
-          subcategories: c.subcategories.filter(s => s.id !== subId)
-        })));
-        if (selectedSubId === subId) {
-          setSelectedSubId('');
+      async () => {
+        try {
+          const res = await deleteSubcategoryAPI(subId);
+          if (res.success) {
+            toast.success('Subcategory deleted successfully');
+            await loadCatalogData();
+            if (selectedSubId === subId) {
+              setSelectedSubId('');
+            }
+          } else {
+            toast.error(res.message || 'Failed to delete subcategory');
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error deleting subcategory');
         }
-        toast.success('Subcategory deleted successfully');
       }
     );
   };
@@ -365,57 +497,70 @@ const Products = () => {
     setModalType('prod');
   };
 
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!prodForm.title.trim()) return toast.error('Product Title is required');
     if (!prodForm.price) return toast.error('Price is required');
 
     const defaultProdImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=500&h=500&q=80';
     const finalImageUrl = prodForm.image.trim() || defaultProdImage;
-
     const discountValue = parseInt(prodForm.discount) || 0;
 
     if (editItem) {
-      setCatalog(prev => prev.map(c => ({
-        ...c,
-        subcategories: c.subcategories.map(s => ({
-          ...s,
-          products: s.products.map(p => 
-            p.id === editItem.id ? {
-              ...p,
-              title: prodForm.title,
-              price: parseFloat(prodForm.price),
-              originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
-              discount: discountValue,
-              image: finalImageUrl,
-              rating: parseFloat(prodForm.rating),
-              reviews: parseInt(prodForm.reviews)
-            } : p
-          )
-        }))
-      })));
-      toast.success('Product updated successfully');
-    } else {
-      const newProd = {
-        id: `prod-${Date.now()}`,
+      const existingProduct = activeProducts.find(p => p.id === editItem.id || p._id === editItem.id) || {};
+      const apiPayload = {
+        ...existingProduct,
         title: prodForm.title,
         price: parseFloat(prodForm.price),
         originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
         discount: discountValue,
         image: finalImageUrl,
         rating: parseFloat(prodForm.rating),
-        reviews: parseInt(prodForm.reviews)
+        reviews: parseInt(prodForm.reviews),
+        categoryId: selectedCatId,
+        subcategoryId: parentId || selectedSubId
       };
 
-      setCatalog(prev => prev.map(c => ({
-        ...c,
-        subcategories: c.subcategories.map(s => 
-          s.id === parentId ? { ...s, products: [...s.products, newProd] } : s
-        )
-      })));
-      toast.success('Product added successfully');
+      try {
+        const res = await updateProductAPI(editItem.id || editItem._id, apiPayload);
+        if (res && res.success) {
+          toast.success('Product updated successfully');
+          loadCatalogData();
+          setModalType(null);
+        } else {
+          toast.error(res.message || 'Failed to update product');
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Error updating product');
+      }
+    } else {
+      const apiPayload = {
+        title: prodForm.title,
+        price: parseFloat(prodForm.price),
+        originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
+        discount: discountValue,
+        image: finalImageUrl,
+        rating: parseFloat(prodForm.rating),
+        reviews: parseInt(prodForm.reviews),
+        categoryId: selectedCatId,
+        subcategoryId: parentId || selectedSubId,
+        variants: [],
+        selectedAttributes: {}
+      };
+
+      try {
+        const res = await createProductAPI(apiPayload);
+        if (res && res.success) {
+          toast.success('Product added successfully');
+          loadCatalogData();
+          setModalType(null);
+        } else {
+          toast.error(res.message || 'Failed to add product');
+        }
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'Error adding product');
+      }
     }
-    setModalType(null);
   };
 
   const handleDeleteProduct = (prodId, e) => {
@@ -423,15 +568,18 @@ const Products = () => {
     triggerConfirm(
       'Delete Product',
       'Are you sure you want to delete this Product?',
-      () => {
-        setCatalog(prev => prev.map(c => ({
-          ...c,
-          subcategories: c.subcategories.map(s => ({
-            ...s,
-            products: s.products.filter(p => p.id !== prodId)
-          }))
-        })));
-        toast.success('Product deleted successfully');
+      async () => {
+        try {
+          const res = await deleteProductAPI(prodId);
+          if (res && res.success) {
+            toast.success('Product deleted successfully');
+            loadCatalogData();
+          } else {
+            toast.error(res.message || 'Failed to delete product');
+          }
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error deleting product');
+        }
       }
     );
   };
@@ -498,32 +646,36 @@ const Products = () => {
             </div>
 
             <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {catalog.map(cat => (
-                <div 
-                  key={cat.id}
-                  onClick={() => setSelectedCatId(cat.id)}
-                  className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
-                    selectedCatId === cat.id 
-                      ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
-                      : 'hover:bg-gray-50 border border-transparent text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <img 
-                      src={cat.image} 
-                      alt={cat.name} 
-                      className="w-7 h-7 rounded object-cover border border-gray-200 shrink-0" 
-                    />
-                    <span className="text-xs truncate">{cat.name}</span>
+              {loading ? (
+                <div className="text-center py-12 text-xs text-gray-400 animate-pulse">Loading categories...</div>
+              ) : (
+                catalog.map(cat => (
+                  <div 
+                    key={cat.id}
+                    onClick={() => setSelectedCatId(cat.id)}
+                    className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                      selectedCatId === cat.id 
+                        ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
+                        : 'hover:bg-gray-50 border border-transparent text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        className="w-7 h-7 rounded object-cover border border-gray-200 shrink-0" 
+                      />
+                      <span className="text-xs truncate">{cat.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenCatModal(cat); }} title="Edit Category" />
+                      <DeleteBtn size={11} onClick={(e) => handleDeleteCategory(cat.id, e)} title="Delete Category" />
+                      <ChevronRight size={12} className={selectedCatId === cat.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenCatModal(cat); }} title="Edit Category" />
-                    <DeleteBtn size={11} onClick={(e) => handleDeleteCategory(cat.id, e)} title="Delete Category" />
-                    <ChevronRight size={12} className={selectedCatId === cat.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
-                  </div>
-                </div>
-              ))}
-              {catalog.length === 0 && (
+                ))
+              )}
+              {!loading && catalog.length === 0 && (
                 <div className="text-center py-8 text-xs text-gray-400">No categories found. Click Add Category to begin.</div>
               )}
             </div>
@@ -539,7 +691,7 @@ const Products = () => {
               </span>
               <button 
                 onClick={() => handleOpenSubModal()}
-                disabled={!selectedCatId}
+                disabled={!selectedCatId || loading}
                 className="p-1 hover:bg-gray-200 rounded text-gray-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Add Subcategory to Selected Category"
               >
@@ -548,38 +700,42 @@ const Products = () => {
             </div>
 
             <div className="p-2 flex flex-col gap-1 max-h-[500px] overflow-y-auto custom-scrollbar">
-              {activeCategory?.subcategories.map(sub => (
-                <div 
-                  key={sub.id}
-                  onClick={() => setSelectedSubId(sub.id)}
-                  className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
-                    selectedSubId === sub.id 
-                      ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
-                      : 'hover:bg-gray-50 border border-transparent text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded overflow-hidden border shrink-0 bg-white flex items-center justify-center">
-                      {sub.image ? (
-                        <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${
-                          selectedSubId === sub.id ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
-                        }`}>
-                          <Folder size={13} />
-                        </div>
-                      )}
+              {loading ? (
+                <div className="text-center py-12 text-xs text-gray-400 animate-pulse">Loading subcategories...</div>
+              ) : (
+                activeCategory?.subcategories.map(sub => (
+                  <div 
+                    key={sub.id}
+                    onClick={() => setSelectedSubId(sub.id)}
+                    className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                      selectedSubId === sub.id 
+                        ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
+                        : 'hover:bg-gray-50 border border-transparent text-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded overflow-hidden border shrink-0 bg-white flex items-center justify-center">
+                        {sub.image ? (
+                          <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center ${
+                            selectedSubId === sub.id ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-600'
+                          }`}>
+                            <Folder size={13} />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-xs truncate">{sub.name}</span>
                     </div>
-                    <span className="text-xs truncate">{sub.name}</span>
+                    <div className="flex items-center gap-1">
+                      <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenSubModal(sub); }} title="Edit Subcategory" />
+                      <DeleteBtn size={11} onClick={(e) => handleDeleteSubcategory(sub.id, e)} title="Delete Subcategory" />
+                      <ChevronRight size={12} className={selectedSubId === sub.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenSubModal(sub); }} title="Edit Subcategory" />
-                    <DeleteBtn size={11} onClick={(e) => handleDeleteSubcategory(sub.id, e)} title="Delete Subcategory" />
-                    <ChevronRight size={12} className={selectedSubId === sub.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
-                  </div>
-                </div>
-              ))}
-              {(!activeCategory || activeCategory.subcategories.length === 0) && (
+                ))
+              )}
+              {!loading && (!activeCategory || activeCategory.subcategories.length === 0) && (
                 <div className="text-center py-8 text-xs text-gray-400">
                   {!selectedCatId ? "Select a Category first" : "No subcategories found. Click '+' to add."}
                 </div>
@@ -654,8 +810,8 @@ const Products = () => {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
-                          {prod.image ? (
-                            <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+                          {getProductDisplayImage(prod) ? (
+                            <img src={getProductDisplayImage(prod)} alt={prod.title} className="w-full h-full object-cover" />
                           ) : (
                             <span>No Image</span>
                           )}
@@ -788,7 +944,7 @@ const Products = () => {
                   className="border border-gray-100 hover:border-gray-200 rounded-lg p-3 bg-gray-50/30 flex gap-3 relative group transition-all hover:shadow-sm"
                 >
                   <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 shrink-0 bg-white aspect-square">
-                    <img src={prod.image} alt={prod.title} className="w-full h-full object-cover" />
+                    <img src={getProductDisplayImage(prod)} alt={prod.title} className="w-full h-full object-cover" />
                   </div>
                   
                   <div className="flex-grow min-w-0 pr-6">
@@ -1127,12 +1283,20 @@ const Products = () => {
               <div className="flex flex-col gap-5">
                 {/* Big Image Card */}
                 {(() => {
-                  const imagesList = Array.from(new Set([
-                    previewProduct.image, 
-                    ...(previewProduct.variants?.map(v => v.image) || [])
-                  ].filter(Boolean)));
+                  const selectedVar = previewProduct.variants?.[selectedVariantIndex];
+                  let imagesList = [];
+                  if (selectedVar) {
+                    imagesList = Array.from(new Set([
+                      selectedVar.image,
+                      ...(selectedVar.images || [])
+                    ].filter(Boolean)));
+                  }
                   
-                  const activeImg = imagesList[activeImageIndex] || previewProduct.image || 'https://via.placeholder.com/500';
+                  if (imagesList.length === 0 && previewProduct.image) {
+                    imagesList = [previewProduct.image];
+                  }
+                  
+                  const activeImg = imagesList[activeImageIndex] || 'https://via.placeholder.com/500';
 
                   return (
                     <>
@@ -1257,17 +1421,7 @@ const Products = () => {
                             type="button"
                             onClick={() => {
                               setSelectedVariantIndex(idx);
-                              // Sync big image if variant has image
-                              if (v.image) {
-                                const imagesList = Array.from(new Set([
-                                  previewProduct.image, 
-                                  ...(previewProduct.variants?.map(varObj => varObj.image) || [])
-                                ].filter(Boolean)));
-                                const imgIdx = imagesList.indexOf(v.image);
-                                if (imgIdx !== -1) {
-                                  setActiveImageIndex(imgIdx);
-                                }
-                              }
+                              setActiveImageIndex(0);
                             }}
                             className={`flex flex-col text-left p-3.5 rounded-2xl border transition-all relative ${
                               isSelected 
