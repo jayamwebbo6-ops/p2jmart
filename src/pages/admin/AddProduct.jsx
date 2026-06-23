@@ -519,40 +519,24 @@ const AddProduct = () => {
     return '0';
   };
 
-  const handleSimplePriceChange = (val) => {
-    setProdForm(prev => {
-      const updatedVariants = [...(prev.variants || [])];
-      if (updatedVariants.length === 0) {
-        updatedVariants.push({ id: 'default', attributes: {}, price: val, originalPrice: '', stock: 0 });
-      } else {
-        updatedVariants[0] = { ...updatedVariants[0], price: val };
-      }
-      return { ...prev, price: val, variants: updatedVariants };
-    });
+  const handleBasePriceChange = (val) => {
+    const op = prodForm.originalPrice;
+    const disc = calculateDiscount(val, op);
+    setProdForm(prev => ({
+      ...prev,
+      price: val,
+      discount: disc
+    }));
   };
 
-  const handleSimpleOriginalPriceChange = (val) => {
-    setProdForm(prev => {
-      const updatedVariants = [...(prev.variants || [])];
-      if (updatedVariants.length === 0) {
-        updatedVariants.push({ id: 'default', attributes: {}, price: '', originalPrice: val, stock: 0 });
-      } else {
-        updatedVariants[0] = { ...updatedVariants[0], originalPrice: val };
-      }
-      return { ...prev, originalPrice: val, variants: updatedVariants };
-    });
-  };
-
-  const handleSimpleStockChange = (val) => {
-    setProdForm(prev => {
-      const updatedVariants = [...(prev.variants || [])];
-      if (updatedVariants.length === 0) {
-        updatedVariants.push({ id: 'default', attributes: {}, price: '', originalPrice: '', stock: val });
-      } else {
-        updatedVariants[0] = { ...updatedVariants[0], stock: val };
-      }
-      return { ...prev, variants: updatedVariants };
-    });
+  const handleBaseOriginalPriceChange = (val) => {
+    const p = prodForm.price;
+    const disc = calculateDiscount(p, val);
+    setProdForm(prev => ({
+      ...prev,
+      originalPrice: val,
+      discount: disc
+    }));
   };
 
   // Get active subcategories list
@@ -920,240 +904,232 @@ const AddProduct = () => {
           )}
 
           {/* TAB 2: UNIT LIST */}
-          {activeTab === 'unit' && (() => {
-            const currentCat = catalog.find(c => c.id === selectedCatId);
-            const supportedAttrIds = currentCat?.supportedAttributes || [];
-            const supportedAttrs = attributesList.filter(a => supportedAttrIds.includes(a.id));
+          {activeTab === 'unit' && (
+            <div className="space-y-6 animate-fadeIn">
 
-            return (
-              <div className="space-y-6 animate-fadeIn">
-                {supportedAttrs.length === 0 ? (
-                  <div className="bg-slate-50/50 p-5 border border-gray-200 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                        Price (₹) *
-                      </label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 499"
-                        value={prodForm.variants[0]?.price || ''}
-                        onChange={(e) => handleSimplePriceChange(e.target.value)}
-                        className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold"
-                        required
-                      />
+              {/* Product Variants Header Block */}
+              {(() => {
+                const currentCat = catalog.find(c => c.id === selectedCatId);
+                const supportedAttrIds = currentCat?.supportedAttributes || [];
+                const supportedAttrs = attributesList.filter(a => supportedAttrIds.includes(a.id));
+
+                return (
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-bold text-[#0f172a]">
+                      Product Variants
+                    </h3>
+                    <AddBtn
+                      type="button"
+                      onClick={() => {
+                        setShowVariantForm(!showVariantForm);
+                        if (!showVariantForm) {
+                          setTimeout(() => {
+                            document.getElementById('variant-builder-form')?.scrollIntoView({ behavior: 'smooth' });
+                          }, 100);
+                        }
+                      }}
+                    >
+                      Add Variant
+                    </AddBtn>
+                  </div>
+                );
+              })()}
+
+              {/* Step B: Add Product Variant Form (Toggleable Card) */}
+              {showVariantForm && (() => {
+                const currentCat = catalog.find(c => c.id === selectedCatId);
+                const supportedAttrIds = currentCat?.supportedAttributes || [];
+                const supportedAttrs = attributesList.filter(a => supportedAttrIds.includes(a.id));
+
+                if (supportedAttrs.length === 0) {
+                  return (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <p className="text-xs text-slate-400 italic">
+                        This category has no configured variant attributes. Go to "Product Management" and edit Category "{currentCat?.name || ''}" to enable them.
+                      </p>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                        Original Price (₹)
-                      </label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 599"
-                        value={prodForm.variants[0]?.originalPrice || ''}
-                        onChange={(e) => handleSimpleOriginalPriceChange(e.target.value)}
-                        className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                      />
+                  );
+                }
+
+                return (
+                  <div id="variant-builder-form" className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm animate-fadeIn">
+                    <div className="flex items-center gap-1.5 mb-4">
+                      <Plus size={14} className="text-emerald-600" />
+                      <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        {editingVariantId ? 'Edit Selected Product Variant' : '+ 2. ADD MULTIPLE VARIANTS FOR EACH PRODUCT'}
+                      </h4>
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                        Quantity (Stock)
-                      </label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 10"
-                        value={prodForm.variants[0]?.stock || ''}
-                        onChange={(e) => handleSimpleStockChange(e.target.value)}
-                        className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                      />
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                      {/* Dynamic custom dropdown selectors for category supported attributes */}
+                      {supportedAttrs.map(attr => {
+                        const attrName = attr.name.toLowerCase();
+
+                        return (
+                          <AttributeDropdown 
+                            key={attr.id}
+                            attr={attr}
+                            attrName={attrName}
+                            value={variantInput.attributes[attrName] || ''}
+                            onChange={(val) => setVariantInput(prev => ({
+                              ...prev,
+                              attributes: {
+                                ...prev.attributes,
+                                [attrName]: val
+                              }
+                            }))}
+                          />
+                        );
+                      })}
+
+                      {/* Variant Price */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                          Price (₹) *
+                        </label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 500"
+                          value={variantInput.price}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, price: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold"
+                        />
+                      </div>
+
+                      {/* Variant Original Price */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                          Original Price (₹)
+                        </label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 600"
+                          value={variantInput.originalPrice}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                        />
+                      </div>
+
+                      {/* Variant Stock */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                          Quantity
+                        </label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 10"
+                          value={variantInput.stock}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, stock: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                        />
+                      </div>
+
+                      {/* Actions Buttons */}
+                      <div className="md:col-span-3 flex gap-2">
+                        {editingVariantId ? (
+                          <>
+                            <UpdateBtn onClick={handleUpdateVariant}>Update</UpdateBtn>
+                            <CancelBtn onClick={handleCancelEdit} className="py-2 px-3" />
+                          </>
+                        ) : (
+                          <SaveBtn type="button" onClick={handleAddVariant} className="w-full justify-center py-2">Save</SaveBtn>
+                        )}
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-base font-bold text-[#0f172a]">
-                        Product Variants
-                      </h3>
-                      <AddBtn
-                        type="button"
-                        onClick={() => {
-                          setShowVariantForm(!showVariantForm);
-                          if (!showVariantForm) {
-                            setTimeout(() => {
-                              document.getElementById('variant-builder-form')?.scrollIntoView({ behavior: 'smooth' });
-                            }, 100);
-                          }
-                        }}
-                      >
-                        Add Variant
-                      </AddBtn>
-                    </div>
+                );
+              })()}
 
-                    {showVariantForm && (
-                      <div id="variant-builder-form" className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm animate-fadeIn">
-                        <div className="flex items-center gap-1.5 mb-4">
-                          <Plus size={14} className="text-emerald-600" />
-                          <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                            {editingVariantId ? 'Edit Selected Product Variant' : '+ 2. ADD MULTIPLE VARIANTS FOR EACH PRODUCT'}
-                          </h4>
-                        </div>
+              {/* Step C: Added Variants Table List */}
+              {(() => {
+                const currentCat = catalog.find(c => c.id === selectedCatId);
+                const supportedAttrIds = currentCat?.supportedAttributes || [];
+                const supportedAttrs = attributesList.filter(a => supportedAttrIds.includes(a.id));
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                          {supportedAttrs.map(attr => {
-                            const attrName = attr.name.toLowerCase();
-                            return (
-                              <AttributeDropdown 
-                                key={attr.id}
-                                attr={attr}
-                                attrName={attrName}
-                                value={variantInput.attributes[attrName] || ''}
-                                onChange={(val) => setVariantInput(prev => ({
-                                  ...prev,
-                                  attributes: {
-                                    ...prev.attributes,
-                                    [attrName]: val
+                if (!prodForm.variants || prodForm.variants.length === 0) return null;
+
+                return (
+                  <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs bg-white">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                            {supportedAttrs.map(attr => (
+                              <th key={attr.id} className="py-3 px-4 capitalize font-semibold">{attr.name}</th>
+                            ))}
+                            <th className="py-3 px-4 font-semibold">Price (₹)</th>
+                            <th className="py-3 px-4 font-semibold">Original Price (₹)</th>
+                            <th className="py-3 px-4 font-semibold">Quantity</th>
+                            <th className="py-3 px-4 text-right pr-6 font-semibold">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                          {prodForm.variants.map((v, vIdx) => (
+                            <tr key={v.id || vIdx} className="hover:bg-slate-50/30 transition-colors">
+                              {supportedAttrs.map(attr => {
+                                const attrName = attr.name.toLowerCase();
+                                const val = v.attributes[attrName];
+                                if (attrName === 'color' && val) {
+                                  const term = attr.terms.find(t => t.startsWith(val + '|') || t === val);
+                                  let colorHex = '#CCCCCC';
+                                  if (term && term.includes('|')) {
+                                    colorHex = term.split('|')[1];
+                                  } else {
+                                    const lower = val.toLowerCase();
+                                    if (lower === 'red') colorHex = '#EF4444';
+                                    else if (lower === 'blue') colorHex = '#3B82F6';
+                                    else if (lower === 'green') colorHex = '#10B981';
+                                    else if (lower === 'purple') colorHex = '#8B5CF6';
+                                    else if (lower === 'orange') colorHex = '#F97316';
+                                    else if (lower === 'brown') colorHex = '#78350F';
+                                    else if (lower === 'yellow') colorHex = '#FBBF24';
+                                    else if (lower === 'white') colorHex = '#FFFFFF';
+                                    else if (lower === 'black') colorHex = '#000000';
                                   }
-                                }))}
-                              />
-                            );
-                          })}
-
-                          <div className="md:col-span-3 flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 tracking-wider">
-                              Price (₹) *
-                            </label>
-                            <input 
-                              type="number"
-                              placeholder="e.g. 500"
-                              value={variantInput.price}
-                              onChange={(e) => setVariantInput(prev => ({ ...prev, price: e.target.value }))}
-                              className="w-full border border-gray-200 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold"
-                            />
-                          </div>
-
-                          <div className="md:col-span-3 flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 tracking-wider">
-                              Original Price (₹)
-                            </label>
-                            <input 
-                              type="number"
-                              placeholder="e.g. 600"
-                              value={variantInput.originalPrice}
-                              onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
-                              className="w-full border border-gray-200 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                            />
-                          </div>
-
-                          <div className="md:col-span-3 flex flex-col gap-1.5">
-                            <label className="text-[10px] font-black text-slate-400 tracking-wider">
-                              Quantity
-                            </label>
-                            <input 
-                              type="number"
-                              placeholder="e.g. 10"
-                              value={variantInput.stock}
-                              onChange={(e) => setVariantInput(prev => ({ ...prev, stock: e.target.value }))}
-                              className="w-full border border-gray-200 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                            />
-                          </div>
-
-                          <div className="md:col-span-3 flex gap-2">
-                            {editingVariantId ? (
-                              <>
-                                <UpdateBtn onClick={handleUpdateVariant}>Update</UpdateBtn>
-                                <CancelBtn onClick={handleCancelEdit} className="py-2 px-3" />
-                              </>
-                            ) : (
-                              <SaveBtn type="button" onClick={handleAddVariant} className="w-full justify-center py-2">Save</SaveBtn>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {prodForm.variants && prodForm.variants.length > 0 && (
-                      <div className="border border-slate-100 rounded-xl overflow-hidden shadow-xs bg-white">
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-left border-collapse text-xs">
-                            <thead>
-                              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                {supportedAttrs.map(attr => (
-                                  <th key={attr.id} className="py-3 px-4 capitalize font-semibold">{attr.name}</th>
-                                ))}
-                                <th className="py-3 px-4 font-semibold">Price (₹)</th>
-                                <th className="py-3 px-4 font-semibold">Original Price (₹)</th>
-                                <th className="py-3 px-4 font-semibold">Quantity</th>
-                                <th className="py-3 px-4 text-right pr-6 font-semibold">Actions</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                              {prodForm.variants.map((v, vIdx) => (
-                                <tr key={v.id || vIdx} className="hover:bg-slate-50/30 transition-colors">
-                                  {supportedAttrs.map(attr => {
-                                    const attrName = attr.name.toLowerCase();
-                                    const val = v.attributes[attrName];
-                                    if (attrName === 'color' && val) {
-                                      const term = attr.terms.find(t => t.startsWith(val + '|') || t === val);
-                                      let colorHex = '#CCCCCC';
-                                      if (term && term.includes('|')) {
-                                        colorHex = term.split('|')[1];
-                                      } else {
-                                        const lower = val.toLowerCase();
-                                        if (lower === 'red') colorHex = '#EF4444';
-                                        else if (lower === 'blue') colorHex = '#3B82F6';
-                                        else if (lower === 'green') colorHex = '#10B981';
-                                        else if (lower === 'purple') colorHex = '#8B5CF6';
-                                        else if (lower === 'orange') colorHex = '#F97316';
-                                        else if (lower === 'brown') colorHex = '#78350F';
-                                        else if (lower === 'yellow') colorHex = '#FBBF24';
-                                        else if (lower === 'white') colorHex = '#FFFFFF';
-                                        else if (lower === 'black') colorHex = '#000000';
-                                      }
-                                      return (
-                                        <td key={attr.id} className="py-4 px-4 capitalize">
-                                          <div className="flex items-center gap-2">
-                                            <span 
-                                              className="w-3.5 h-3.5 rounded-full border border-gray-200 inline-block shrink-0" 
-                                              style={{ backgroundColor: colorHex }}
-                                              title={val}
-                                            />
-                                            <span>{val}</span>
-                                          </div>
-                                        </td>
-                                      );
-                                    }
-                                    return (
-                                      <td key={attr.id} className="py-4 px-4 capitalize">
-                                        {val || '-'}
-                                      </td>
-                                    );
-                                  })}
-                                  <td className="py-4 px-4 text-slate-900 font-semibold">
-                                    ₹{v.price}
+                                  return (
+                                    <td key={attr.id} className="py-4 px-4 capitalize">
+                                      <div className="flex items-center gap-2">
+                                        <span 
+                                          className="w-3.5 h-3.5 rounded-full border border-gray-250 inline-block shrink-0" 
+                                          style={{ backgroundColor: colorHex }}
+                                          title={val}
+                                        />
+                                        <span>{val}</span>
+                                      </div>
+                                    </td>
+                                  );
+                                }
+                                return (
+                                  <td key={attr.id} className="py-4 px-4 capitalize">
+                                    {val || '-'}
                                   </td>
-                                  <td className="py-4 px-4 text-slate-500">
-                                    {v.originalPrice ? `₹${v.originalPrice}` : '-'}
-                                  </td>
-                                  <td className="py-4 px-4 text-slate-600">
-                                    {v.stock}
-                                  </td>
-                                  <td className="py-4 px-4 text-right pr-6">
-                                    <div className="flex items-center justify-end gap-2">
-                                      <EditBtn size={14} onClick={() => handleEditVariant(v)} title="Edit Variant" />
-                                      <DeleteBtn size={14} onClick={() => handleRemoveVariant(v.id)} title="Remove Variant" />
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })()}
+                                );
+                              })}
+                              <td className="py-4 px-4 text-slate-900 font-semibold">
+                                ₹{v.price}
+                              </td>
+                              <td className="py-4 px-4 text-slate-500">
+                                {v.originalPrice ? `₹${v.originalPrice}` : '-'}
+                              </td>
+                              <td className="py-4 px-4 text-slate-600">
+                                {v.stock}
+                              </td>
+                              <td className="py-4 px-4 text-right pr-6">
+                                <div className="flex items-center justify-end gap-2">
+                                  <EditBtn size={14} onClick={() => handleEditVariant(v)} title="Edit Variant" />
+                                  <DeleteBtn size={14} onClick={() => handleRemoveVariant(v.id)} title="Remove Variant" />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           {/* TAB 3: IMAGES DETAILS */}
           {activeTab === 'images' && (
