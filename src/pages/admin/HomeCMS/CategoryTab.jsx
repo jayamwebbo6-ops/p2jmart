@@ -18,6 +18,8 @@ import {
   Eye
 } from 'lucide-react';
 import { getCategoriesAPI } from '../../../api/categoryApi';
+import { toast } from '../../../components/toast';
+import { compressAndConvertToWebP } from '../../../utils/helpers';
 
 // Unified Design System Tokens
 const THEME = {
@@ -225,20 +227,22 @@ const CategoryTab = () => {
   };
 
   // Upload local banner image
-  const handleBannerUpload = (e, sectionId) => {
+  const handleBannerUpload = async (e, sectionId) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        const compressed = await compressAndConvertToWebP(file);
         const updated = sections.map(sec => {
           if (sec.id === sectionId) {
-            return { ...sec, bannerImage: reader.result };
+            return { ...sec, bannerImage: compressed };
           }
           return sec;
         });
         saveSections(updated);
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        toast.error(err.message || 'Failed to process banner image');
+        e.target.value = '';
+      }
     }
   };
 

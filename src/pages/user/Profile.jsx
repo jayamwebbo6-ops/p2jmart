@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Mail, User, Phone, Edit2, Check, X } from 'lucide-react';
 import { getUserProfile, updateUserProfile } from '../../api/userApi';
 import { toast } from '../../components/toast';
+import { compressAndConvertToWebP } from '../../utils/helpers';
 
 const Profile = () => {
   const [name, setName] = useState('');
@@ -52,7 +53,7 @@ const Profile = () => {
     }
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
       // Validate file size and type
@@ -60,15 +61,13 @@ const Profile = () => {
         toast.error('Please upload an image file.');
         return;
       }
-      if (file.size > 2 * 1024 * 1024) {
-        toast.error('Image size must be less than 2MB.');
-        return;
+      try {
+        const compressed = await compressAndConvertToWebP(file);
+        handleUpdateProfile({ photo: compressed });
+      } catch (err) {
+        toast.error(err.message || 'Failed to process photo');
+        e.target.value = '';
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        handleUpdateProfile({ photo: reader.result });
-      };
-      reader.readAsDataURL(file);
     }
   };
 
