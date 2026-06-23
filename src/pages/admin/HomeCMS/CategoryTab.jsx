@@ -17,6 +17,7 @@ import {
   PlusCircle,
   Eye
 } from 'lucide-react';
+import { getCategoriesAPI } from '../../../api/categoryApi';
 
 // Unified Design System Tokens
 const THEME = {
@@ -45,66 +46,106 @@ const CategoryTab = () => {
   const [catalog, setCatalog] = useState([]);
   const [sections, setSections] = useState([]);
   const [searchQueries, setSearchQueries] = useState({});
+  const [loading, setLoading] = useState(true);
 
   // 1. Load catalog and sections
   useEffect(() => {
-    const savedCatalog = localStorage.getItem('p2j_mart_catalog');
-    let parsedCatalog = [];
-    if (savedCatalog) {
+    const fetchCatalogAndSections = async () => {
+      setLoading(true);
+      let parsedCatalog = [];
       try {
-        parsedCatalog = JSON.parse(savedCatalog);
-      } catch (e) {
-        console.error("Failed to parse catalog", e);
-      }
-    }
+        const res = await getCategoriesAPI();
+        if (res && res.success) {
+          const backendCats = res.data;
 
-    // Seed mock catalog if empty so user has something to select
-    if (parsedCatalog.length === 0) {
-      parsedCatalog = [
-        {
-          id: 'cat-electronics',
-          name: 'Electronics',
-          subcategories: [
-            { id: 'sub-audio', name: 'Audio', products: MOCK_PRODUCTS.slice(0, 3) },
-            { id: 'sub-decor', name: 'Decor', products: [MOCK_PRODUCTS[3]] }
-          ]
-        },
-        {
-          id: 'cat-gifts',
-          name: 'Gift Items',
-          subcategories: [
-            { id: 'sub-personalized', name: 'Personalized Gifts', products: [MOCK_PRODUCTS[4]] },
-            { id: 'sub-keychains', name: 'Keychains', products: [MOCK_PRODUCTS[5]] }
-          ]
-        }
-      ];
-    }
-    setCatalog(parsedCatalog);
+          // Merge products from productsMap
+          let productsMap = {};
+          const savedProductsMap = localStorage.getItem('p2j_mart_products_map');
+          if (savedProductsMap) {
+            productsMap = JSON.parse(savedProductsMap);
+          } else {
+            const savedCatalog = localStorage.getItem('p2j_mart_catalog');
+            const catalogSource = savedCatalog ? JSON.parse(savedCatalog) : [];
+            catalogSource.forEach(cat => {
+              (cat.subcategories || []).forEach(sub => {
+                productsMap[sub.id] = sub.products || [];
+              });
+            });
+            localStorage.setItem('p2j_mart_products_map', JSON.stringify(productsMap));
+          }
 
-    // Load saved homepage sections
-    const savedSections = localStorage.getItem('p2j_mart_category_sections');
-    if (savedSections) {
-      try {
-        setSections(JSON.parse(savedSections));
-      } catch (e) {
-        console.error("Failed to parse sections", e);
-      }
-    } else {
-      // Default dynamic sections
-      const defaultSections = [
-        {
-          id: `sec-${Date.now()}-1`,
-          categoryId: parsedCatalog[0]?.id || '',
-          subCategoryId: parsedCatalog[0]?.subcategories[0]?.id || '',
-          title: parsedCatalog[0]?.name || 'Electronics Showcase',
-          bannerImage: '',
-          bannerLink: parsedCatalog[0] ? `/subCategory?catId=${parsedCatalog[0].id}` : '',
-          productIds: []
+          parsedCatalog = backendCats.map(cat => ({
+            ...cat,
+            id: cat._id,
+            subcategories: (cat.subcategories || []).map(sub => ({
+              ...sub,
+              id: sub._id,
+              products: productsMap[sub._id] || productsMap[sub.id] || []
+            }))
+          }));
         }
-      ];
-      setSections(defaultSections);
-      localStorage.setItem('p2j_mart_category_sections', JSON.stringify(defaultSections));
-    }
+      } catch (err) {
+        console.error("Failed to fetch catalog from server", err);
+        const savedCatalog = localStorage.getItem('p2j_mart_catalog');
+        if (savedCatalog) {
+          try {
+            parsedCatalog = JSON.parse(savedCatalog);
+          } catch (e) {}
+        }
+      }
+
+      if (parsedCatalog.length === 0) {
+        parsedCatalog = [
+          {
+            id: 'cat-electronics',
+            name: 'Electronics',
+            subcategories: [
+              { id: 'sub-audio', name: 'Audio', products: MOCK_PRODUCTS.slice(0, 3) },
+              { id: 'sub-decor', name: 'Decor', products: [MOCK_PRODUCTS[3]] }
+            ]
+          },
+          {
+            id: 'cat-gifts',
+            name: 'Gift Items',
+            subcategories: [
+              { id: 'sub-personalized', name: 'Personalized Gifts', products: [MOCK_PRODUCTS[4]] },
+              { id: 'sub-keychains', name: 'Keychains', products: [MOCK_PRODUCTS[5]] }
+            ]
+          }
+        ];
+      }
+
+      setCatalog(parsedCatalog);
+      localStorage.setItem('p2j_mart_catalog', JSON.stringify(parsedCatalog));
+
+      // Load saved homepage sections
+      const savedSections = localStorage.getItem('p2j_mart_category_sections');
+      if (savedSections) {
+        try {
+          setSections(JSON.parse(savedSections));
+        } catch (e) {
+          console.error("Failed to parse sections", e);
+        }
+      } else {
+        // Default dynamic sections
+        const defaultSections = [
+          {
+            id: `sec-${Date.now()}-1`,
+            categoryId: parsedCatalog[0]?.id || '',
+            subCategoryId: parsedCatalog[0]?.subcategories[0]?.id || '',
+            title: parsedCatalog[0]?.name || 'Electronics Showcase',
+            bannerImage: '',
+            bannerLink: parsedCatalog[0] ? `/subCategory?catId=${parsedCatalog[0].id}` : '',
+            productIds: []
+          }
+        ];
+        setSections(defaultSections);
+        localStorage.setItem('p2j_mart_category_sections', JSON.stringify(defaultSections));
+      }
+      setLoading(false);
+    };
+
+    fetchCatalogAndSections();
   }, []);
 
   // Helper to save sections
