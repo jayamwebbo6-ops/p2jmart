@@ -44,15 +44,14 @@ const MOCK_PRODUCTS = [
   { id: 'SKU-206', name: 'Personalized Photo Keychain', price: 120.00, originalPrice: 150.00, discount: '20% Off', rating: 4.7, reviews: 18, category: 'Gift Items', subcategory: 'Keychains', imgUrl: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&auto=format&fit=crop&q=60' }
 ];
 
-const CategoryTab = () => {
+const CategoryTab = ({ sections = [], setSections }) => {
   const [catalog, setCatalog] = useState([]);
-  const [sections, setSections] = useState([]);
   const [searchQueries, setSearchQueries] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // 1. Load catalog and sections
+  // 1. Load catalog
   useEffect(() => {
-    const fetchCatalogAndSections = async () => {
+    const fetchCatalog = async () => {
       setLoading(true);
       let parsedCatalog = [];
       try {
@@ -119,42 +118,15 @@ const CategoryTab = () => {
 
       setCatalog(parsedCatalog);
       localStorage.setItem('p2j_mart_catalog', JSON.stringify(parsedCatalog));
-
-      // Load saved homepage sections
-      const savedSections = localStorage.getItem('p2j_mart_category_sections');
-      if (savedSections) {
-        try {
-          setSections(JSON.parse(savedSections));
-        } catch (e) {
-          console.error("Failed to parse sections", e);
-        }
-      } else {
-        // Default dynamic sections
-        const defaultSections = [
-          {
-            id: `sec-${Date.now()}-1`,
-            categoryId: parsedCatalog[0]?.id || '',
-            subCategoryId: parsedCatalog[0]?.subcategories[0]?.id || '',
-            title: parsedCatalog[0]?.name || 'Electronics Showcase',
-            bannerImage: '',
-            bannerLink: parsedCatalog[0] ? `/subCategory?catId=${parsedCatalog[0].id}` : '',
-            productIds: []
-          }
-        ];
-        setSections(defaultSections);
-        localStorage.setItem('p2j_mart_category_sections', JSON.stringify(defaultSections));
-      }
       setLoading(false);
     };
 
-    fetchCatalogAndSections();
+    fetchCatalog();
   }, []);
 
   // Helper to save sections
   const saveSections = (updatedSections) => {
     setSections(updatedSections);
-    localStorage.setItem('p2j_mart_category_sections', JSON.stringify(updatedSections));
-    window.dispatchEvent(new Event('home_cms_updated'));
   };
 
   // Add new section
@@ -227,22 +199,20 @@ const CategoryTab = () => {
   };
 
   // Upload local banner image
-  const handleBannerUpload = async (e, sectionId) => {
+  const handleBannerUpload = (e, sectionId) => {
     const file = e.target.files[0];
     if (file) {
-      try {
-        const compressed = await compressAndConvertToWebP(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
         const updated = sections.map(sec => {
           if (sec.id === sectionId) {
-            return { ...sec, bannerImage: compressed };
+            return { ...sec, bannerImage: reader.result };
           }
           return sec;
         });
         saveSections(updated);
-      } catch (err) {
-        toast.error(err.message || 'Failed to process banner image');
-        e.target.value = '';
-      }
+      };
+      reader.readAsDataURL(file);
     }
   };
 

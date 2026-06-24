@@ -96,7 +96,7 @@ const HomeContentManager = () => {
       try {
         setIsLoading(true);
         const data = await getHomeCMS();
-        if (data && data.success) {
+        if (data && data.success) {fetchCMS
           const cmsData = data.data;
           setSlides(
             (cmsData.heroSlider || []).map((slide, idx) => ({
