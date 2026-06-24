@@ -179,26 +179,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         setProducts(fetchedProducts);
 
         if (fetchedProducts.length > 0) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-          const prices = fetchedProducts.map(p => p.price).filter(p => p !== null && p !== undefined);
-          const discounts = fetchedProducts.map(p => p.discount || 0);
-
-          const calculatedMinPrice = prices.length > 0 ? Math.min(...prices) : 0;
-          const calculatedMaxPrice = prices.length > 0 ? Math.max(...prices) : 10000;
-          const calculatedMinDiscount = discounts.length > 0 ? Math.min(...discounts) : 0;
-          const calculatedMaxDiscount = discounts.length > 0 ? Math.max(...discounts) : 100;
-
-          setAbsolutePriceLimits({ min: calculatedMinPrice, max: calculatedMaxPrice });
-          setMinPrice(calculatedMinPrice);
-          setMaxPrice(calculatedMaxPrice);
-
-          setAbsoluteDiscountLimits({ min: calculatedMinDiscount, max: calculatedMaxDiscount });
-          setMinDiscount(calculatedMinDiscount);
-          setMaxDiscount(calculatedMaxDiscount);
-=======
-=======
->>>>>>> 2f2d96f0830a58bf4d760403c82465553d9221bb
           const prices = fetchedProducts.map(p => p.price).filter(p => typeof p === 'number');
           if (prices.length > 0) {
             const minVal = Math.min(...prices);
@@ -210,10 +190,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
             setMinPrice(minVal);
             setMaxPrice(maxVal);
           }
-<<<<<<< HEAD
->>>>>>> c3e24a5a91ce72a293a928fa445a1dd6e71fa60a
-=======
->>>>>>> 2f2d96f0830a58bf4d760403c82465553d9221bb
         }
       } catch (error) {
         console.error("Error retrieving matching subcategory goods catalog:", error);
@@ -335,17 +311,8 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           </div>
         )}
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > absolutePriceLimits.min || maxPrice < absolutePriceLimits.max || minDiscount > absoluteDiscountLimits.min || maxDiscount < absoluteDiscountLimits.max) && (
-=======
         {/* CLEAR ALL FILTERS BUTTON */}
         {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
->>>>>>> c3e24a5a91ce72a293a928fa445a1dd6e71fa60a
-=======
-        {/* CLEAR ALL FILTERS BUTTON */}
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
->>>>>>> 2f2d96f0830a58bf4d760403c82465553d9221bb
           <button
             onClick={() => {
               setSelectedBrands([]);
