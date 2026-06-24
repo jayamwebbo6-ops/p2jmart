@@ -77,7 +77,7 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
   return (
     <div className="w-full flex flex-col gap-10">
       {/* Top Row: Sidebar, Hero, Promos — Always rendered immediately (above the fold) */}
-      <div className="w-full flex flex-col lg:flex-row gap-5 mt-6">
+      <div className="w-full flex flex-col lg:flex-row gap-5 mt-7.5">
         <div className="hidden lg:block lg:w-1/4 xl:w-[22%] flex-shrink-0 lg:h-[460px]">
           <Sidebar />
         </div>
