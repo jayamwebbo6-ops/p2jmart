@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate, Link, useParams } from "react-router-dom";
 import ProductCard from "../../components/ProductCard"; 
 import OfferSlider from "../../components/OfferSlider";
-import { getProductsAPI } from "../../../public/api/productApi";
-import { getCategoriesAPI } from "../../../public/api/categoryApi";
+import { getProductsAPI } from "../../api/productApi";
+import { getCategoriesAPI } from "../../api/categoryApi";
 
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getHomeCMS } from '../api/homeCms'; 
-import { getProductsAPI } from '../api/productApi'; // Ensure this matches your real master products collection api utility path
+import { getHomeCMS } from '../api/homeCms'; ; 
+import { getProductsAPI } from '../api/homeCms'; // Ensure this matches your real master products collection api utility path
 
 const Collections = () => {
   const [sections, setSections] = useState([]);

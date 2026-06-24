@@ -12,9 +12,9 @@ import {
 import { FaFacebookF, FaYoutube, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { isUserAuthenticated, userLogout } from '../../public/api/userApi';
-import { getProductsAPI } from '../../public/api/productApi';
-import { getCategoriesAPI } from '../../public/api/categoryApi';
+import { isUserAuthenticated, userLogout } from '../api/userApi';
+import { getProductsAPI } from '../api/productApi';
+import { getCategoriesAPI } from '../api/categoryApi';
 
 const Header = memo(({ wishlist = [], cart = [] }) => {
   const location = useLocation();

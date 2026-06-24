@@ -14,8 +14,8 @@ import {
   Eye,
   Link2
 } from 'lucide-react';
-import { getCategoriesAPI } from '../../../../public/api/categoryApi';
-import { getProductsAPI } from '../../../../public/api/productApi';
+import { getCategoriesAPI } from '../../../api/categoryApi';
+import { getProductsAPI } from '../../../api/productApi';
 
 // Unified Design System Tokens
 const THEME = {

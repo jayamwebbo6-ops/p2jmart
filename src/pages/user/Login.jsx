@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { googleLoginAPI, isUserAuthenticated } from '../../../public/api/userApi';
+import { googleLoginAPI, isUserAuthenticated } from '../../api/userApi';
 import { toast } from '../../components/toast';
 
 // Integrated Loader sub-component

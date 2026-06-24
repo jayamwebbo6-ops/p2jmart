@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { isUserAuthenticated, getUserProfile } from '../../public/api/userApi';
+import { isUserAuthenticated, getUserProfile } from '../api/userApi';
 
 const UserLayout = ({ wishlist = [], cart = [] }) => {
   const navigate = useNavigate();

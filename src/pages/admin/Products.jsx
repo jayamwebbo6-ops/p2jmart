@@ -34,9 +34,9 @@ import {
   createSubcategoryAPI,
   updateSubcategoryAPI,
   deleteSubcategoryAPI 
-} from '../../../public/api/categoryApi';
-import { getAttributesAPI } from '../../../public/api/attributeApi';
-import { getProductsAPI, deleteProductAPI } from '../../../public/api/productApi';
+} from '../../api/categoryApi';
+import { getAttributesAPI } from '../../api/attributeApi';
+import { getProductsAPI, deleteProductAPI } from '../../api/productApi';
 
 // Initial pre-populated catalog tree data matching user theme
 

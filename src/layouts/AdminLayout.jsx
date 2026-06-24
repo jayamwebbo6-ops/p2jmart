@@ -16,7 +16,7 @@ import {
   Layers
 } from 'lucide-react';
 
-import { isAdminAuthenticated, adminLogout } from '../../public/api/adminApi';
+import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
 
 const AdminLayout = () => {
   const location = useLocation();

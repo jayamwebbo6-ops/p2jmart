@@ -3,7 +3,7 @@ import { VariableSizeList as List } from 'react-window';
 import { Link } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 
-import { getCategoriesAPI } from '../../../public/api/categoryApi'; 
+import { getCategoriesAPI } from '../../api/categoryApi'; 
 
 
 const getSubcategoryImage = (catName, subName, idx, subImage) => {

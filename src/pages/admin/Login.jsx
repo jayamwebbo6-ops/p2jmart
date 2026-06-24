@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff } from 'lucide-react';
-import { adminLogin } from '../../../public/api/adminApi';
+import { adminLogin } from '../../api/adminApi';
 import { toast } from '../../components/toast';
 
 export default function AdminLogin() {
