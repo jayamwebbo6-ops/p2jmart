@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Save, Edit2, X, Eye, EyeOff } from 'lucide-react';
-import { getAdminProfile, updateAdminProfile } from '../../api/adminApi';
+import { getAdminProfile, updateAdminProfile } from '../../../public/api/adminApi';
 import { toast } from '../../components/toast';
 import PageHeader from '../../components/PageHeader';
 import { compressAndConvertToWebP } from '../../utils/helpers';

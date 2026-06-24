@@ -9,8 +9,8 @@ import { toast } from '../../components/toast';
 import "swiper/css";
 import "swiper/css/pagination";
 import ProductCard from '../../components/ProductCard';
-import { getProductByIdAPI } from '../../api/productApi';
-import { getCategoriesAPI } from '../../api/categoryApi';
+import { getProductByIdAPI } from '../../../public/api/productApi';
+import { getCategoriesAPI } from '../../../public/api/categoryApi';
 
 const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { subcategoryId, id } = useParams();

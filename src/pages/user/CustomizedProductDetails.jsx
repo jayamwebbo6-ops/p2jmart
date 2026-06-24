@@ -10,7 +10,7 @@ import { Pagination } from 'swiper/modules';
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
-import { getProductByIdAPI } from '../../api/productApi';
+import { getProductByIdAPI } from '../../../public/api/productApi';
 
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { productId } = useParams();

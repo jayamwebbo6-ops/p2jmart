@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
-import { getHomeCMS, updateHomeCMS } from '../../../api/homeCms';
+import { getHomeCMS, updateHomeCMS } from '../../../../public/api/homeCms';
 
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';

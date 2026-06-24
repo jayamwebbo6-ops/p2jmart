@@ -7,9 +7,9 @@ import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
 import { X} from 'lucide-react';
 
-import { createGstAPI, getAllGstAPI, updateGstAPI, deleteGstAPI } from '../../api/gstApi';
+import { createGstAPI, getAllGstAPI, updateGstAPI, deleteGstAPI } from '../../../public/api/gstApi';
 
-import { getCategoriesAPI } from '../../api/categoryApi'; 
+import { getCategoriesAPI } from '../../../public/api/categoryApi'; 
 
 const GSTSettingsPage = () => {
   const [gstRules, setGstRules] = useState([]);

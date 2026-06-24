@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Star, Search, Filter, TrendingUp, ShieldAlert, ArrowRight, Trash2, Layers, Plus, Check, X, Image as ImageIcon } from 'lucide-react';
-import { getCategoriesAPI } from '../../../api/categoryApi';
-import { getProductsAPI } from '../../../api/productApi';
+import { getCategoriesAPI } from '../../../../public/api/categoryApi';
+import { getProductsAPI } from '../../../../public/api/productApi';
 
 // Unified Design System Tokens
 const THEME = {

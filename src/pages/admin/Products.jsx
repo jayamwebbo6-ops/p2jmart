@@ -34,9 +34,9 @@ import {
   createSubcategoryAPI,
   updateSubcategoryAPI,
   deleteSubcategoryAPI 
-} from '../../api/categoryApi';
-import { getAttributesAPI } from '../../api/attributeApi';
-import { getProductsAPI, deleteProductAPI } from '../../api/productApi';
+} from '../../../public/api/categoryApi';
+import { getAttributesAPI } from '../../../public/api/attributeApi';
+import { getProductsAPI, deleteProductAPI } from '../../../public/api/productApi';
 
 // Initial pre-populated catalog tree data matching user theme
 
@@ -971,8 +971,7 @@ const Products = () => {
             {/* Modal Forms */}
             <form onSubmit={
               modalType === 'cat' ? handleSaveCategory :
-              modalType === 'sub' ? handleSaveSubcategory : 
-              
+              modalType === 'sub' ? handleSaveSubcategory : undefined
             } className="p-5 flex flex-col gap-4">
               
               {/* CATEGORY FORM */}

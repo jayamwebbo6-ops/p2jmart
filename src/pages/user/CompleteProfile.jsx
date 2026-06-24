@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, ShieldCheck } from 'lucide-react';
-import { isUserAuthenticated, getUserProfile, updateUserProfile } from '../../api/userApi';
+import { isUserAuthenticated, getUserProfile, updateUserProfile } from '../../../public/api/userApi';
 import { toast } from '../../components/toast';
 
 const CompleteProfile = () => {

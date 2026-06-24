@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Mail, User, Phone, Edit2, Check, X } from 'lucide-react';
-import { getUserProfile, updateUserProfile } from '../../api/userApi';
+import { getUserProfile, updateUserProfile } from '../../../public/api/userApi';
 import { toast } from '../../components/toast';
 import { compressAndConvertToWebP } from '../../utils/helpers';
 

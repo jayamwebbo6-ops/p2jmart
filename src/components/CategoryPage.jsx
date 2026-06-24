@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getHomeCMS } from '../api/homeCms'; // Adjust this import path to your actual api file path
+import { getHomeCMS } from '../../public/api/homeCms'; // Adjust this import path to your actual api file path
 import { Link } from 'react-router-dom';
 
 const CategoryPage = () => {

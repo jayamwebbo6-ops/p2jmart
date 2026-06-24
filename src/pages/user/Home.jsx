@@ -6,8 +6,8 @@ import ProductSection from '../../components/ProductSection';
 import CategoryPage from '../../components/CategoryPage';
 import Collections from '../../components/Collections';
 import { useLazySection } from '../../utils/helpers';
-import { getHomeCMS } from '../../api/homeCms'; 
-import { getProductsAPI } from '../../api/productApi'; // 1. IMPORT YOUR PRODUCTS FETCH UTILITY
+import { getHomeCMS } from '../../../public/api/homeCms'; 
+import { getProductsAPI } from '../../../public/api/productApi'; // 1. IMPORT YOUR PRODUCTS FETCH UTILITY
 
 const SectionSkeleton = ({ height = '300px' }) => (
   <div className="w-full animate-pulse rounded-lg overflow-hidden" style={{ minHeight: height }}>

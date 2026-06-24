@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, ChevronRight } from 'lucide-react';
 
-import { getCategoriesAPI } from '../api/categoryApi'; 
+import { getCategoriesAPI } from '../../public/api/categoryApi'; 
 
 const Sidebar = () => {
   const [categories, setCategories] = useState([]);

@@ -17,7 +17,7 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
     e.preventDefault();
     if (!categoryId) return;
     
-    navigate("/sub-category", {
+    navigate(`/sub-category/${categoryId}`, {
       state: {
         subcategoryId: categoryId,
         categoryId: categoryId,
@@ -106,15 +106,21 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
               </div>
 
              <button 
-  onClick={() => {
-    if (categorySectionData?.bannerLink) {
-      navigate(categorySectionData.bannerLink);
-    }
-  }} 
-  className="mt-auto bg-white text-gray-900 font-bold text-[11px] tracking-wider py-2.5 px-6 shadow-md rounded-xs group-hover:bg-primary group-hover:text-white transition-all uppercase"
->
-  SHOP NOW
-</button>
+               onClick={(e) => {
+                 e.stopPropagation();
+                 const link = categorySectionData?.bannerLink;
+                 if (link) {
+                   if (link.startsWith('http://') || link.startsWith('https://')) {
+                     window.location.href = link;
+                   } else {
+                     navigate(link);
+                   }
+                 }
+               }} 
+               className="mt-auto bg-white text-gray-900 font-bold text-[11px] tracking-wider py-2.5 px-6 shadow-md rounded-xs group-hover:bg-primary group-hover:text-white transition-all uppercase cursor-pointer"
+             >
+               SHOP NOW
+             </button>
             </div>
           </div>
         </div>

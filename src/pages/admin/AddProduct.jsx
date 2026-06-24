@@ -20,9 +20,9 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/toast';
 import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, UpdateBtn, PrevBtn, NextBtn } from '../../components/AdminButtons';
-import { getCategoriesAPI } from '../../api/categoryApi';
-import { getAttributesAPI } from '../../api/attributeApi';
-import { getProductsAPI, createProductAPI, updateProductAPI } from '../../api/productApi';
+import { getCategoriesAPI } from '../../../public/api/categoryApi';
+import { getAttributesAPI } from '../../../public/api/attributeApi';
+import { getProductsAPI, createProductAPI, updateProductAPI } from '../../../public/api/productApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { compressAndConvertToWebP } from '../../utils/helpers';
 
@@ -320,7 +320,7 @@ const AddProduct = () => {
     setProdForm(prev => ({
       ...prev,
       variants: prev.variants.map(item => {
-        if (item.id === variantId) {
+        if ((item.id || item._id) === variantId) {
           if (isMainImage) {
             return { ...item, image: '' };
           } else {
@@ -348,12 +348,12 @@ const AddProduct = () => {
   const [showVariantForm, setShowVariantForm] = useState(false);
 
   const handleEditVariant = (variant) => {
-    setEditingVariantId(variant.id);
+    setEditingVariantId(variant.id || variant._id);
     setVariantInput({
       attributes: { ...variant.attributes },
-      price: variant.price.toString(),
-      originalPrice: variant.originalPrice ? variant.originalPrice.toString() : '',
-      stock: variant.stock.toString(),
+      price: variant.price !== undefined && variant.price !== null ? variant.price.toString() : '',
+      originalPrice: variant.originalPrice !== undefined && variant.originalPrice !== null ? variant.originalPrice.toString() : '',
+      stock: variant.stock !== undefined && variant.stock !== null ? variant.stock.toString() : '',
       image: variant.image || ''
     });
     setShowVariantForm(true);
@@ -367,7 +367,7 @@ const AddProduct = () => {
     setProdForm(prev => ({
       ...prev,
       variants: prev.variants.map(v => 
-        v.id === editingVariantId 
+        (v.id || v._id) === editingVariantId 
           ? {
               ...v,
               attributes: { ...variantInput.attributes },
@@ -505,7 +505,7 @@ const AddProduct = () => {
   const handleRemoveVariant = (variantId) => {
     setProdForm(prev => ({
       ...prev,
-      variants: prev.variants.filter(v => v.id !== variantId)
+      variants: prev.variants.filter(v => (v.id || v._id) !== variantId)
     }));
     toast.success("Variant removed");
   };
@@ -1065,7 +1065,7 @@ const AddProduct = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                           {prodForm.variants.map((v, vIdx) => (
-                            <tr key={v.id || vIdx} className="hover:bg-slate-50/30 transition-colors">
+                            <tr key={v.id || v._id || vIdx} className="hover:bg-slate-50/30 transition-colors">
                               {supportedAttrs.map(attr => {
                                 const attrName = attr.name.toLowerCase();
                                 const val = v.attributes[attrName];
@@ -1090,7 +1090,7 @@ const AddProduct = () => {
                                     <td key={attr.id} className="py-4 px-4 capitalize">
                                       <div className="flex items-center gap-2">
                                         <span 
-                                          className="w-3.5 h-3.5 rounded-full border border-gray-250 inline-block shrink-0" 
+                                          className="w-3.5 h-3.5 rounded-full border border-gray-255 inline-block shrink-0" 
                                           style={{ backgroundColor: colorHex }}
                                           title={val}
                                         />
@@ -1117,7 +1117,7 @@ const AddProduct = () => {
                               <td className="py-4 px-4 text-right pr-6">
                                 <div className="flex items-center justify-end gap-2">
                                   <EditBtn size={14} onClick={() => handleEditVariant(v)} title="Edit Variant" />
-                                  <DeleteBtn size={14} onClick={() => handleRemoveVariant(v.id)} title="Remove Variant" />
+                                  <DeleteBtn size={14} onClick={() => handleRemoveVariant(v.id || v._id)} title="Remove Variant" />
                                 </div>
                               </td>
                             </tr>
@@ -1159,7 +1159,7 @@ const AddProduct = () => {
                         .join(', ');
 
                       return (
-                        <div key={v.id || idx} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
+                        <div key={v.id || v._id || idx} className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                               <span className="w-6 h-6 rounded-full bg-pink-100 text-pink-700 flex items-center justify-center text-xs font-bold">
@@ -1186,7 +1186,7 @@ const AddProduct = () => {
                                       setProdForm(prev => ({
                                         ...prev,
                                         variants: prev.variants.map(item => 
-                                          item.id === v.id 
+                                          (item.id || item._id) === (v.id || v._id) 
                                             ? { ...item, images: [...(item.images || []), ...compressedImages] }
                                             : item
                                         )
@@ -1228,7 +1228,7 @@ const AddProduct = () => {
                                         const isMainImage = !(v.images && v.images.length > 0);
                                         setDeleteConfirmState({
                                           isOpen: true,
-                                          variantId: v.id,
+                                          variantId: v.id || v._id,
                                           imageIndex: isMainImage ? null : imgIdx,
                                           isMainImage
                                         });

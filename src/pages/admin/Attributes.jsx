@@ -12,7 +12,7 @@ import { GetColorName } from 'hex-color-to-color-name';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { AddBtn, EditBtn, DeleteBtn, SaveBtn, CancelBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
-import { getAttributesAPI, createAttributeAPI, updateAttributeAPI, deleteAttributeAPI } from '../../api/attributeApi';
+import { getAttributesAPI, createAttributeAPI, updateAttributeAPI, deleteAttributeAPI } from '../../../public/api/attributeApi';
 
 const SUGGESTED_COLORS = [
   { name: 'Red', hex: '#FF0000' },

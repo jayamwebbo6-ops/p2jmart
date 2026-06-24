@@ -8,7 +8,7 @@ import {
   AddBtn, 
   SaveBtn 
 } from '../../components/AdminButtons';
-import { toast, ToastContainer } from '../../components/Toast'; 
+import { toast, ToastContainer } from '../../components/toast'; 
 import PageHeader from '../../components/PageHeader';
 import ProductReviews from './ProductReviews'; // Ensure the import path points to your reviews file
 
