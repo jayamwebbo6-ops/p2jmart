@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import ProductCard from "../../components/ProductCard"; 
 import OfferSlider from "../../components/OfferSlider";
 import { getProductsAPI } from "../../api/productApi";
@@ -7,7 +7,7 @@ import { getProductsAPI } from "../../api/productApi";
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
    ========================================================================== */
-const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFilterCommit }) => {
+const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax = 100000, onFilterCommit }) => {
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
 
@@ -16,11 +16,48 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
     setLocalMax(maxPrice);
   }, [minPrice, maxPrice]);
 
+  const handleMinChange = (val) => {
+    setLocalMin(val);
+  };
+
+  const handleMinBlur = () => {
+    let val = Number(localMin);
+    if (isNaN(val) || localMin === "") val = absoluteMin;
+    val = Math.max(absoluteMin, Math.min(val, Number(localMax)));
+    setLocalMin(val);
+    onFilterCommit(val, Number(localMax));
+  };
+
+  const handleMaxChange = (val) => {
+    setLocalMax(val);
+  };
+
+  const handleMaxBlur = () => {
+    let val = Number(localMax);
+    if (isNaN(val) || localMax === "") val = absoluteMax;
+    val = Math.max(Number(localMin), Math.min(val, absoluteMax));
+    setLocalMax(val);
+    onFilterCommit(Number(localMin), val);
+  };
+
+  const handleKeyDown = (e, type) => {
+    if (e.key === "Enter") {
+      if (type === "min") {
+        handleMinBlur();
+      } else {
+        handleMaxBlur();
+      }
+    }
+  };
+
   const handleDragEnd = () => {
-    onFilterCommit(localMin, localMax);
+    onFilterCommit(Number(localMin), Number(localMax));
   };
 
   const rangeDiff = (absoluteMax - absoluteMin) || 1; 
+
+  const leftPercent = Math.min(100, Math.max(0, ((Number(localMin) - absoluteMin) / rangeDiff) * 100));
+  const rightPercent = Math.min(100, Math.max(0, 100 - ((Number(localMax) - absoluteMin) / rangeDiff) * 100));
 
   return (
     <div>
@@ -33,11 +70,9 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
           <input
             type="number"
             value={localMin}
-            onChange={(e) => {
-              const val = Math.max(absoluteMin, Math.min(Number(e.target.value), localMax));
-              setLocalMin(val);
-              onFilterCommit(val, localMax);
-            }}
+            onChange={(e) => handleMinChange(e.target.value)}
+            onBlur={handleMinBlur}
+            onKeyDown={(e) => handleKeyDown(e, "min")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
           />
         </div>
@@ -45,44 +80,44 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
           <input
             type="number"
             value={localMax}
-            onChange={(e) => {
-              const val = Math.max(localMin, Math.min(Number(e.target.value), absoluteMax));
-              setLocalMax(val);
-              onFilterCommit(localMin, val);
-            }}
+            onChange={(e) => handleMaxChange(e.target.value)}
+            onBlur={handleMaxBlur}
+            onKeyDown={(e) => handleKeyDown(e, "max")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
           />
         </div>
       </div>
 
-      <div className="relative w-full h-2 px-1">
+      <div className="relative w-full h-2 px-1 mb-2">
         <div className="absolute inset-0 h-1 bg-gray-200 rounded-full top-1/2 -translate-y-1/2"></div>
         <div
           className="absolute h-1 bg-gray-700 top-1/2 -translate-y-1/2"
           style={{ 
-            left: `${Math.min(100, Math.max(0, ((localMin - absoluteMin) / rangeDiff) * 100))}%`, 
-            right: `${Math.min(100, Math.max(0, 100 - ((localMax - absoluteMin) / rangeDiff) * 100))}%` 
+            left: `${leftPercent}%`, 
+            right: `${rightPercent}%` 
           }}
         ></div>
         <input
           type="range"
           min={absoluteMin}
           max={absoluteMax}
-          value={localMin}
+          value={Number(localMin) || 0}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 1))}
+          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), Number(localMax) - 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
+          style={{ zIndex: Number(localMin) > (absoluteMax - (rangeDiff * 0.15)) ? 5 : 3 }}
         />
         <input
           type="range"
           min={absoluteMin}
           max={absoluteMax}
-          value={localMax}
+          value={Number(localMax) || 0}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 1))}
+          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), Number(localMin) + 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
+          style={{ zIndex: 4 }}
         />
       </div>
     </div>
@@ -92,18 +127,20 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick }) => {
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { subcategoryId, subcategoryName } = location.state || {};
+  const { subcategoryId, subcategoryName, categoryName } = location.state || {};
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("default");
   
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(10000);
+  const [maxPrice, setMaxPrice] = useState(100000);
+  const [minPriceLimit, setMinPriceLimit] = useState(0);
+  const [maxPriceLimit, setMaxPriceLimit] = useState(100000);
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
 
@@ -115,7 +152,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   useEffect(() => {
-    if (!subcategoryId) {
+    if (!isCustomizedPage && !subcategoryId) {
       navigate("/");
       return;
     }
@@ -123,7 +160,13 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
     const fetchSubcategoryCatalog = async () => {
       try {
         setLoading(true);
-        const response = await getProductsAPI({ subcategoryId: subcategoryId });
+        
+        let response;
+        if (isCustomizedPage) {
+          response = await getProductsAPI({ customizeProduct: 'Yes' });
+        } else {
+          response = await getProductsAPI({ subcategoryId: subcategoryId });
+        }
         
         let fetchedProducts = [];
         if (response && response.success && Array.isArray(response.data)) {
@@ -133,10 +176,10 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         } else if (Array.isArray(response)) {
           fetchedProducts = response;
         }
-
         setProducts(fetchedProducts);
 
         if (fetchedProducts.length > 0) {
+<<<<<<< HEAD
           const prices = fetchedProducts.map(p => p.price).filter(p => p !== null && p !== undefined);
           const discounts = fetchedProducts.map(p => p.discount || 0);
 
@@ -152,6 +195,19 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           setAbsoluteDiscountLimits({ min: calculatedMinDiscount, max: calculatedMaxDiscount });
           setMinDiscount(calculatedMinDiscount);
           setMaxDiscount(calculatedMaxDiscount);
+=======
+          const prices = fetchedProducts.map(p => p.price).filter(p => typeof p === 'number');
+          if (prices.length > 0) {
+            const minVal = Math.min(...prices);
+            const maxVal = Math.max(...prices);
+            
+            // Set dynamic limits
+            setMinPriceLimit(minVal);
+            setMaxPriceLimit(maxVal);
+            setMinPrice(minVal);
+            setMaxPrice(maxVal);
+          }
+>>>>>>> c3e24a5a91ce72a293a928fa445a1dd6e71fa60a
         }
       } catch (error) {
         console.error("Error retrieving matching subcategory goods catalog:", error);
@@ -161,7 +217,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
     };
 
     fetchSubcategoryCatalog();
-  }, [subcategoryId, navigate]);
+  }, [subcategoryId, navigate, isCustomizedPage]);
 
   const brandsList = useMemo(() => {
     const brands = products.map(p => p.brand).filter(Boolean);
@@ -215,9 +271,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
       <div className="border border-gray-100 rounded-lg bg-white p-4 shadow-xs flex flex-col gap-6">
         <PriceSliderSection 
           minPrice={minPrice} 
-          maxPrice={maxPrice} 
-          absoluteMin={absolutePriceLimits.min}
-          absoluteMax={absolutePriceLimits.max}
+          maxPrice={maxPrice}
+          absoluteMin={minPriceLimit}
+          absoluteMax={maxPriceLimit}
           onFilterCommit={(min, max) => {
             setMinPrice(min);
             setMaxPrice(max);
@@ -273,15 +329,20 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           </div>
         )}
 
+<<<<<<< HEAD
         {(selectedBrands.length > 0 || selectedSize !== null || minPrice > absolutePriceLimits.min || maxPrice < absolutePriceLimits.max || minDiscount > absoluteDiscountLimits.min || maxDiscount < absoluteDiscountLimits.max) && (
+=======
+        {/* CLEAR ALL FILTERS BUTTON */}
+        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
+>>>>>>> c3e24a5a91ce72a293a928fa445a1dd6e71fa60a
           <button
             onClick={() => {
               setSelectedBrands([]);
               setSelectedSize(null);
-              setMinPrice(absolutePriceLimits.min);
-              setMaxPrice(absolutePriceLimits.max);
-              setMinDiscount(absoluteDiscountLimits.min);
-              setMaxDiscount(absoluteDiscountLimits.max);
+              setMinPrice(minPriceLimit);
+              setMaxPrice(maxPriceLimit);
+              setMinDiscount(0);
+              setMaxDiscount(100);
             }}
             className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded transition-colors uppercase tracking-wider cursor-pointer"
           >
@@ -295,14 +356,30 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   return (
     <div className="w-full pt-8 max-w-7xl mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-4">
       
-      {/* Page Breadcrumbs Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 mb-4 border-b border-gray-100">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{subcategoryName || "Subcategory Products"}</h1>
-        <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
-          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate("/")}>Home</span>
-          <span className="mx-1.5 font-bold">&gt;</span>
-          <span className="text-gray-600 font-medium">{subcategoryName || "Catalog"}</span>
-        </div>
+      {/* Page Breadcrumbs */}
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-5 flex-wrap">
+        <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+        <span className="text-gray-300">/</span>
+        {isCustomizedPage ? (
+          <span className="text-gray-900 font-bold">Customized Products</span>
+        ) : (
+          <>
+            <Link to="/products" className="hover:text-primary transition-colors">
+              {categoryName || "Shop"}
+            </Link>
+            <span className="text-gray-300">/</span>
+            <span className="text-gray-900 font-bold">
+              {subcategoryName || "Catalog"}
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Page Header */}
+      <div className="pb-5 border-b border-gray-100">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
+          {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
+        </h1>
       </div>
 
       {/* Control Toolbar Interface */}

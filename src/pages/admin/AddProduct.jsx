@@ -510,6 +510,35 @@ const AddProduct = () => {
     toast.success("Variant removed");
   };
 
+  const calculateDiscount = (price, originalPrice) => {
+    const p = parseFloat(price);
+    const op = parseFloat(originalPrice);
+    if (!isNaN(p) && !isNaN(op) && op > p && op > 0) {
+      return Math.round(((op - p) / op) * 100).toString();
+    }
+    return '0';
+  };
+
+  const handleBasePriceChange = (val) => {
+    const op = prodForm.originalPrice;
+    const disc = calculateDiscount(val, op);
+    setProdForm(prev => ({
+      ...prev,
+      price: val,
+      discount: disc
+    }));
+  };
+
+  const handleBaseOriginalPriceChange = (val) => {
+    const p = prodForm.price;
+    const disc = calculateDiscount(p, val);
+    setProdForm(prev => ({
+      ...prev,
+      originalPrice: val,
+      discount: disc
+    }));
+  };
+
   // Get active subcategories list
   const activeCategory = catalog.find(c => c.id === selectedCatId);
   const subcategoriesList = activeCategory ? activeCategory.subcategories : [];
@@ -518,26 +547,36 @@ const AddProduct = () => {
     e.preventDefault();
     if (!selectedSubId) return toast.error('Please select a Subcategory');
     if (!prodForm.title.trim()) return toast.error('Product Title is required');
-    let priceNum = parseFloat(prodForm.price);
-    let originalPriceNum = prodForm.originalPrice.toString().trim() ? parseFloat(prodForm.originalPrice) : null;
-    let discountNum = prodForm.discount.toString().trim() ? parseInt(prodForm.discount) : 0;
+    
+    let priceNum = 0;
+    let originalPriceNum = null;
+    let discountNum = 0;
 
-    // Fallback to first variant pricing if base price is left empty
-    if (isNaN(priceNum) && prodForm.variants && prodForm.variants.length > 0) {
+    // Set product pricing from the first variant
+    if (prodForm.variants && prodForm.variants.length > 0) {
       priceNum = parseFloat(prodForm.variants[0].price);
       originalPriceNum = prodForm.variants[0].originalPrice ? parseFloat(prodForm.variants[0].originalPrice) : null;
-      discountNum = 0;
+      if (originalPriceNum && priceNum && originalPriceNum > priceNum) {
+        discountNum = Math.round(((originalPriceNum - priceNum) / originalPriceNum) * 100);
+      }
+    } else {
+      return toast.error('Please add at least one variant with a valid price.');
     }
 
     if (isNaN(priceNum) || priceNum <= 0) {
-      return toast.error('Price is required in the Unit List Tab');
+      return toast.error('Please enter a valid price for the product variants.');
     }
 
     const ratingNum = prodForm.rating.toString().trim() ? parseFloat(prodForm.rating) : 5;
     const reviewsNum = prodForm.reviews.toString().trim() ? parseInt(prodForm.reviews) : 0;
 
     const defaultImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
-    const finalImageUrl = prodForm.image.trim() || defaultImage;
+    let finalImageUrl = prodForm.image.trim();
+    if (!finalImageUrl && prodForm.variants && prodForm.variants.length > 0) {
+      const firstVar = prodForm.variants[0];
+      finalImageUrl = firstVar.image || (firstVar.images && firstVar.images.length > 0 ? firstVar.images[0] : '');
+    }
+    if (!finalImageUrl) finalImageUrl = defaultImage;
 
     const productPayload = {
       title: prodForm.title,
@@ -860,65 +899,13 @@ const AddProduct = () => {
                 </span>
               </div>
 
-              {/* Delivery Mode */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                  Delivery Mode
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Home Delivery"
-                  value={prodForm.deliveryMode}
-                  onChange={(e) => setProdForm({ ...prodForm, deliveryMode: e.target.value })}
-                  className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
-                />
-              </div>
+          
             </div>
           )}
 
           {/* TAB 2: UNIT LIST */}
           {activeTab === 'unit' && (
             <div className="space-y-6 animate-fadeIn">
-              
-              {/* General Pricing (Base Unit) */}
-              <div className="bg-slate-50/50 p-5 border border-gray-200 rounded-2xl grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                    Base Price (₹) *
-                  </label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 499"
-                    value={prodForm.price}
-                    onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
-                    className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-bold"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                    Original Price (₹)
-                  </label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 599"
-                    value={prodForm.originalPrice}
-                    onChange={(e) => setProdForm({ ...prodForm, originalPrice: e.target.value })}
-                    className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
-                    Discount (%)
-                  </label>
-                  <input 
-                    type="number" 
-                    placeholder="e.g. 10"
-                    value={prodForm.discount}
-                    onChange={(e) => setProdForm({ ...prodForm, discount: e.target.value })}
-                    className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
-                  />
-                </div>
-              </div>
 
               {/* Product Variants Header Block */}
               {(() => {

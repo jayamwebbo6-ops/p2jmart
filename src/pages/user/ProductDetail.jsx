@@ -242,15 +242,30 @@ const ProductDetail = () => {
     <div className="w-full font-sans mt-8">
       <div className="w-full">
         {/* Breadcrumbs */}
-        <div className="text-sm text-gray-500 font-medium flex items-center gap-2 flex-wrap mb-5">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-6 flex-wrap">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
-          <span>&gt;</span>
-          <Link to="/shop" className="hover:text-primary transition-colors">Shop</Link>
-          <span>&gt;</span>
-          <Link to={`/category/${product.category.toLowerCase()}`} className="hover:text-primary transition-colors">
-            {product.category}
+          <span className="text-gray-300">/</span>
+          <Link to="/products" className="hover:text-primary transition-colors">
+            {product.category || "Shop"}
           </Link>
-          <span>&gt;</span>
+          {incomingProduct.subcategory && (
+            <>
+              <span className="text-gray-300">/</span>
+              <span 
+                className="hover:text-primary transition-colors cursor-pointer"
+                onClick={() => navigate("/subCategory", { 
+                  state: { 
+                    subcategoryId: incomingProduct.subcategory?._id || incomingProduct.subcategory?.id || incomingProduct.subcategory, 
+                    subcategoryName: typeof incomingProduct.subcategory === 'object' && incomingProduct.subcategory?.name ? incomingProduct.subcategory.name : incomingProduct.subcategory,
+                    categoryName: typeof incomingProduct.category === 'object' && incomingProduct.category?.name ? incomingProduct.category.name : incomingProduct.category
+                  } 
+                })}
+              >
+                {typeof incomingProduct.subcategory === 'object' && incomingProduct.subcategory?.name ? incomingProduct.subcategory.name : incomingProduct.subcategory}
+              </span>
+            </>
+          )}
+          <span className="text-gray-300">/</span>
           <span className="text-gray-900 font-bold">{product.title}</span>
         </div>
 

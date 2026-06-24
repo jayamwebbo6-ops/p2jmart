@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate, Link } from 'react-router-dom';
 import { Heart, ShoppingCart, ShoppingBag, Star, ChevronUp, Share2, Plus, Minus, Upload, Eye, Type, CheckCircle } from 'lucide-react';
 
 // Swiper imports for carousels
@@ -140,20 +140,20 @@ const CustomizedProductDetails = () => {
     <div className="w-full antialiased text-gray-800 selection:bg-gray-200 min-w-0 relative">
       
       {/* Breadcrumbs */}
-      <div className="w-full bg-gray-50/50 border-b border-gray-100 flex items-center justify-end text-xs text-gray-500 gap-1.5 py-2 px-4">
-        <span className="hover:text-blue-500 cursor-pointer" onClick={() => navigate('/')}>Home</span>
-        <span>&gt;</span>
-        <span className="hover:text-blue-500 cursor-pointer">Custom Pages</span>
-        <span>&gt;</span>
-        <span className="text-gray-700 font-medium">CustomProductDetail Page</span>
+      <div className="max-w-[2500px] mx-auto px-4 mt-8">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium flex-wrap">
+          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')}>Home</span>
+          <span className="text-gray-300">/</span>
+          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/shop')}>Shop</span>
+          <span className="text-gray-300">/</span>
+          <span className="text-gray-900 font-bold">{product.title}</span>
+        </div>
       </div>
 
       {/* Main Container Layout */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative px-4 mt-4">
-        
+      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative px-4 mt-4">        
         {/* Left Column Image Layout: Swiper when <= 638px, Grid Desk layout when larger */}
-        <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">
-          
+        <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">        
           {/* Mobile Swiper: Targets screens 638px and below exclusively */}
           <div className="block min-[639px]:hidden w-full pb-8">
             <Swiper
@@ -330,65 +330,7 @@ const CustomizedProductDetails = () => {
               </div>
             </div>
 
-            {/* Scale, Fit, and Position Controls */}
-            <div className="border-t border-gray-200/80 pt-3 flex flex-col gap-3">
-
-              {/* Scale slider: Increase / Decrease Size */}
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex justify-between font-semibold text-gray-700">
-                  <span>Image Size:</span>
-                  <span>{Math.round(imageScale * 100)}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0.5" 
-                  max="2.5" 
-                  step="0.05" 
-                  value={imageScale}
-                  onChange={(e) => setImageScale(parseFloat(e.target.value))}
-                  className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              {/* Offset adjustment controls */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-gray-700">Move Horizontally:</span>
-                  <input 
-                    type="range" 
-                    min="-100" 
-                    max="100" 
-                    value={imageX}
-                    onChange={(e) => setImageX(parseInt(e.target.value))}
-                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-gray-700">Move Vertically:</span>
-                  <input 
-                    type="range" 
-                    min="-100" 
-                    max="100" 
-                    value={imageY}
-                    onChange={(e) => setImageY(parseInt(e.target.value))}
-                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Reset button */}
-              <button
-                onClick={() => {
-                  setImageFit('contain');
-                  setImageScale(1.0);
-                  setImageX(0);
-                  setImageY(0);
-                }}
-                className="text-[11px] text-gray-500 hover:text-red-500 font-medium w-fit self-end mt-1"
-              >
-                Reset Image Adjustments
-              </button>
-            </div>
+        
             
             <p className="text-[10px] text-gray-400">Max file size constraints: 5MB (JPG, PNG, GIF)</p>
 
