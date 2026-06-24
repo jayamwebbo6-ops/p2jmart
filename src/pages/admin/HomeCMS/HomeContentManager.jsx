@@ -80,6 +80,9 @@ const HomeContentManager = () => {
   const [categoryGrid, setCategoryGrid] = useState([]);
   const [categorySections, setCategorySections] = useState([]);
   const [promoBanner, setPromoBanner] = useState({ imgUrl: '', targetUrl: '/offers/mega-sale' });
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [exclusiveProducts, setExclusiveProducts] = useState([]);
   const [categories, setCategories] = useState([
     { id: 1, name: "Gifts", image: null },
     { id: 2, name: "Frames", image: null },
@@ -124,6 +127,9 @@ const HomeContentManager = () => {
               id: section._id || section.id || `sec-${idx}-${Date.now()}`
             }))
           );
+          setFeaturedProducts(cmsData.featuredProducts || []);
+          setTrendingProducts(cmsData.trendingProducts || []);
+          setExclusiveProducts(cmsData.exclusiveProducts || []);
         }
       } catch (err) {
         console.error('Fetch Home CMS error:', err);
@@ -146,7 +152,10 @@ const HomeContentManager = () => {
         offerBanners: offerBanners,
         categoryGrid: categoryGrid,
         categorySections: categorySections,
-        promoBanner: promoBanner
+        promoBanner: promoBanner,
+        featuredProducts,
+        trendingProducts,
+        exclusiveProducts
       });
       if (data && data.success) {
         const cmsData = data.data;
@@ -175,6 +184,9 @@ const HomeContentManager = () => {
             id: section._id || section.id || `sec-${idx}-${Date.now()}`
           }))
         );
+        setFeaturedProducts(cmsData.featuredProducts || []);
+        setTrendingProducts(cmsData.trendingProducts || []);
+        setExclusiveProducts(cmsData.exclusiveProducts || []);
         setToastMessage('Saved changes successfully!');
         setToastType('success');
         setShowToast(true);
@@ -298,7 +310,14 @@ const HomeContentManager = () => {
           )}
 
           {activeTab === 'multiColumnShowcase' && (
-            <MultiShowCaseTab/>
+            <MultiShowCaseTab
+              featuredProducts={featuredProducts}
+              setFeaturedProducts={setFeaturedProducts}
+              trendingProducts={trendingProducts}
+              setTrendingProducts={setTrendingProducts}
+              exclusiveProducts={exclusiveProducts}
+              setExclusiveProducts={setExclusiveProducts}
+            />
           )}
 
           {activeTab === 'contactSetting' && (

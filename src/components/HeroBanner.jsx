@@ -58,8 +58,8 @@ const HeroBanner = () => {
             backgroundSize: "cover"
           }}
         >
-          {/* Transparent darkening gradient restricted solely beneath text lines to shield font readability */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/10 to-transparent z-10" />
+          {/* Light gray translucent overlay to improve text readability */}
+          <div className="absolute inset-0 bg-slate-900/25 z-10" />
         </div>
       ))}
 

@@ -153,7 +153,11 @@ const handleItemClick = (product) => {
   setSearchQuery('');
   
   // FIXED: Added state passing configuration mapping to 'product' context key
-  navigate(`/product/${targetId}`, { state: { product: product } });
+  if (product.customizeProduct === 'Yes') {
+    navigate(`/customizedProductDetail/${targetId}`, { state: { product: product } });
+  } else {
+    navigate(`/product/${targetId}`, { state: { product: product } });
+  }
 };
 
   const clearRecentlyViewed = (e) => {

@@ -39,90 +39,7 @@ import { getAttributesAPI } from '../../api/attributeApi';
 import { getProductsAPI, deleteProductAPI } from '../../api/productApi';
 
 // Initial pre-populated catalog tree data matching user theme
-const INITIAL_CATALOG = [
-  {
-    id: 'cat-1',
-    name: 'Gift Items',
-    image: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?auto=format&fit=crop&w=150&h=150&q=80',
-    subcategories: [
-      {
-        id: 'sub-1-1',
-        name: 'Personalized Gifts',
-        products: [
-          {
-            id: 'prod-1-1-1',
-            title: 'SNAP ART Customized Spotify Plaque',
-            price: 500,
-            originalPrice: 550,
-            discount: 9,
-            rating: 4.8,
-            reviews: 42,
-            image: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=500&h=500&q=80'
-          },
-          {
-            id: 'prod-1-1-2',
-            title: 'Personalized Square Floral Wood Frame',
-            price: 300,
-            originalPrice: 500,
-            discount: 40,
-            rating: 4.6,
-            reviews: 18,
-            image: 'https://images.unsplash.com/photo-1579783928621-7a13d66a6211?auto=format&fit=crop&w=500&h=500&q=80'
-          }
-        ]
-      },
-      {
-        id: 'sub-1-2',
-        name: 'Birthday Plaques',
-        products: [
-          {
-            id: 'prod-1-2-1',
-            title: 'Acrylic Wall Hanging Frame',
-            price: 1200,
-            originalPrice: 1500,
-            discount: 20,
-            rating: 4.9,
-            reviews: 55,
-            image: 'https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=500&h=500&q=80'
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: 'cat-2',
-    name: 'Electronics',
-    image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?auto=format&fit=crop&w=150&h=150&q=80',
-    subcategories: [
-      {
-        id: 'sub-2-1',
-        name: 'Headphones & Speakers',
-        products: [
-          {
-            id: 'prod-2-1-1',
-            title: 'Premium Wireless Headphones',
-            price: 199.00,
-            originalPrice: 249.00,
-            discount: 20,
-            rating: 4.5,
-            reviews: 28,
-            image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&h=500&q=80'
-          },
-          {
-            id: 'prod-2-1-2',
-            title: 'Smart Watch Series 9',
-            price: 299.00,
-            originalPrice: 349.00,
-            discount: 14,
-            rating: 4.8,
-            reviews: 42,
-            image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=500&h=500&q=80'
-          }
-        ]
-      }
-    ]
-  }
-];
+
 
 const Products = () => {
   const navigate = useNavigate();
@@ -629,10 +546,10 @@ const Products = () => {
       </div>
 
       {/* Tree Grid Manager Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div className="flex overflow-x-auto lg:overflow-visible lg:grid lg:grid-cols-12 gap-5 items-start pb-4 custom-scrollbar">
              {/* Step 1: Categories Panel (3 cols) */}
         {!isExpanded && (
-          <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+          <div className="w-[280px] sm:w-[320px] lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
             <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                 <LayoutGrid size={13} className="text-[#001E3C]" /> 1. Categories
@@ -685,7 +602,7 @@ const Products = () => {
 
         {/* Step 2: Subcategories Panel (3 cols) */}
         {!isExpanded && (
-          <div className="lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+          <div className="w-[280px] sm:w-[320px] lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
             <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Folder size={13} className="text-amber-500" /> 2. Subcategories
@@ -744,9 +661,8 @@ const Products = () => {
             </div>
           </div>
         )}
-
         {/* Step 3: Products Panel (6 cols or 12 cols depending on isExpanded) */}
-        <div className={`${isExpanded ? 'lg:col-span-12' : 'lg:col-span-6'} bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-all duration-300`}>
+        <div className={`${isExpanded ? 'w-full lg:col-span-12' : 'w-[320px] sm:w-[480px] lg:w-auto shrink-0 lg:col-span-6'} bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-all duration-300`}>
           <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
               <Package size={13} className="text-emerald-500" /> 3. Products ({filteredProducts.length})

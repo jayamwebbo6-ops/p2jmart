@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link, useParams } from "react-router-dom";
 import ProductCard from "../../components/ProductCard"; 
 import OfferSlider from "../../components/OfferSlider";
 import { getProductsAPI } from "../../api/productApi";
+import { getCategoriesAPI } from "../../api/categoryApi";
 
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
@@ -115,12 +116,14 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { subcategoryId: paramSubcategoryId } = useParams();
 
   // Extract variables with fallback configurations
   const stateData = location.state || {};
-  const subcategoryId = stateData.subcategoryId || stateData.id;
-  const subcategoryName = stateData.subcategoryName || stateData.name;
-  const categoryName = stateData.categoryName || "Shop";
+  const subcategoryId = paramSubcategoryId || stateData.subcategoryId || stateData.id;
+  
+  const [categoryName, setCategoryName] = useState(stateData.categoryName || "Shop");
+  const [subcategoryName, setSubcategoryName] = useState(stateData.subcategoryName || "Catalog");
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +140,41 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, isC
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (!subcategoryId) return;
+    
+    const fetchNames = async () => {
+      try {
+        const catRes = await getCategoriesAPI();
+        if (catRes && catRes.success && Array.isArray(catRes.data)) {
+          for (const cat of catRes.data) {
+            const matchedSub = (cat.subcategories || []).find(
+              sub => (sub._id || sub.id) === subcategoryId
+            );
+            if (matchedSub) {
+              setCategoryName(cat.name);
+              setSubcategoryName(matchedSub.name || matchedSub);
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error looking up subcategory details:", err);
+      }
+    };
+
+    fetchNames();
+  }, [subcategoryId]);
+
+  useEffect(() => {
+    if (stateData.categoryName) {
+      setCategoryName(stateData.categoryName);
+    }
+    if (stateData.subcategoryName) {
+      setSubcategoryName(stateData.subcategoryName);
+    }
+  }, [stateData]);
 
   useEffect(() => {
     // FIXED: Prevent navigation redirection loops on empty initializations 
@@ -334,7 +372,7 @@ const fetchSubcategoryCatalog = async () => {
           <span className="text-gray-900 font-bold">Customized Products</span>
         ) : (
           <>
-            <Link to="/" className="hover:text-primary transition-colors">
+            <Link to="/products" className="hover:text-primary transition-colors">
               {categoryName || "Shop"}
             </Link>
             <span className="text-gray-300">/</span>
@@ -408,7 +446,15 @@ const fetchSubcategoryCatalog = async () => {
                     isWishlisted={wishlist.some(item => item.id === productId)}
                     onWishlist={addToWishlist}
                     onRemoveWishlist={removeFromWishlist}
-                    onClick={() => navigate(`/product/${productId}`, { state: { product } })} 
+                    onClick={() => {
+                      if (product.customizeProduct === 'Yes') {
+                        navigate(`/customizedProductDetail/${productId}`, { state: { product } });
+                      } else if (subcategoryId) {
+                        navigate(`/sub-category/${subcategoryId}/${productId}`, { state: { product } });
+                      } else {
+                        navigate(`/product/${productId}`, { state: { product } });
+                      }
+                    }}
                   />
                 );
               })}

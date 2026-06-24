@@ -16,12 +16,16 @@ const ProductCard = ({
   // 2. Centralized navigation handler
   const handleNavigation = (e) => {
     e.preventDefault();
+    const targetId = product.id || product._id;
     if (onClick) {
       // If a custom click handler is passed (like on the customization page), execute it
       onClick(product);
+    } else if (product.customizeProduct === 'Yes') {
+      // If the product is customized, navigate to the customized details page!
+      navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
     } else {
       // Otherwise, fallback to the standard e-commerce details route
-      navigate(`/product/${product.id}`, { state: { product } });
+      navigate(`/product/${targetId}`, { state: { product } });
     }
   };
 
