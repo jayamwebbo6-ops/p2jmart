@@ -1,30 +1,43 @@
 import React from "react";
+import { getHomeCMS } from '../api/homeCms'; // Adjust this import path to your actual api file path
+import { useState, useEffect } from 'react';
 
-const categories = [
-  {
-    id: 1,
-    name: "Gift Boxes",
-    image: "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=800&q=80",
-    products: 120,
-    description: "Curated collections of premium essentials for discerning tastes.",
-  },
-  {
-    id: 2,
-    name: "Photo Frames",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800&q=80",
-    products: 85,
-    description: "Handcrafted borders designed to turn fleeting moments into permanent art.",
-  },
-  {
-    id: 3,
-    name: "Personalized Gifts",
-    image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=800&q=80",
-    products: 150,
-    description: "Custom-engraved and tailored keepsakes carrying individual narratives.",
-  },
-];
+
 
 const CategoryPage = () => {
+
+  const [categoryData, setCategory] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
+  useEffect(() => {
+      const fetchCategoryData = async () => {
+        try {
+          const res = await getHomeCMS();
+          
+          if (res && res.data && Array.isArray(res.data.categoryGrid)) {
+            setCategory(res.data.categoryGrid);
+          }
+        } catch (error) {
+          console.error("Error fetching categoryGrid banners from CMS:", error);
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchCategoryData();
+    }, []);
+
+
+      if (loading) {
+    return (
+      <div className="w-full h-full flex flex-col gap-4">
+        <div className="w-full flex-1 rounded-lg bg-gray-200 animate-pulse min-h-[120px]" />
+        <div className="w-full flex-1 rounded-lg bg-gray-200 animate-pulse min-h-[120px]" />
+      </div>
+    );
+  }
+
   return (
     // Side screen margins matching ProductSection exactly (w-full max-w-none px-4 sm:px-6 md:px-8)
     <div className="w-full max-w-none px-4 sm:px-6 md:px-0 bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
@@ -32,7 +45,7 @@ const CategoryPage = () => {
       <main className="w-full py-2">
         {/* Compressed layout channels gap-3 matching the high-density grid alignment */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-          {categories.map((category) => (
+          {categoryData.map((category) => (
             <div 
               key={category.id} 
               className="group flex flex-col bg-red-200 border border-gray-200 lg:h-80 shadow-xs hover:border-gray-300 transition-colors duration-200"
