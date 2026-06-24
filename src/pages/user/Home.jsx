@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../../components/Sidebar';
 import HeroBanner from '../../components/HeroBanner';
 import PromoBanners from '../../components/PromoBanners';
@@ -6,77 +6,63 @@ import ProductSection from '../../components/ProductSection';
 import CategoryPage from '../../components/CategoryPage';
 import Collections from '../../components/Collections';
 import { useLazySection } from '../../utils/helpers';
+import { getHomeCMS } from '../../api/homeCms'; 
+import { getProductsAPI } from '../../api/productApi'; // 1. IMPORT YOUR PRODUCTS FETCH UTILITY
 
-const dummyProducts = [
-  {
-    id: 1,
-    title: 'Premium Wireless Headphones',
-    price: 199.00,
-    originalPrice: 249.00,
-    discount: 20,
-    rating: 4.5,
-    reviews: 28,
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=500&h=500&q=80'
-  },
-  {
-    id: 2,
-    title: 'Smart Watch Series 9',
-    price: 299.00,
-    originalPrice: 349.00,
-    discount: 14,
-    rating: 4.8,
-    reviews: 42,
-    image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=500&h=500&q=80'
-  },
-  {
-    id: 3,
-    title: 'Portable Bluetooth Speaker',
-    price: 79.00,
-    originalPrice: 99.00,
-    discount: 20,
-    rating: 4.3,
-    reviews: 19,
-    image: 'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&w=500&h=500&q=80'
-  },
-  {
-    id: 4,
-    title: 'Minimalist Wall Clock',
-    price: 45.00,
-    originalPrice: 59.00,
-    discount: 23,
-    rating: 4.6,
-    reviews: 14,
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=500&h=500&q=80'
-  },
-  
-];
-
-/**
- * Lightweight skeleton placeholder shown while a section is not yet in viewport.
- * Provides a visual hint of upcoming content without loading any heavy components.
- */
 const SectionSkeleton = ({ height = '300px' }) => (
-  <div 
-    className="w-full animate-pulse rounded-lg overflow-hidden"
-    style={{ minHeight: height }}
-  >
+  <div className="w-full animate-pulse rounded-lg overflow-hidden" style={{ minHeight: height }}>
     <div className="w-full h-full bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 rounded-lg" 
       style={{ minHeight: height, backgroundSize: '200% 100%', animation: 'shimmer 1.5s ease-in-out infinite' }} 
     />
   </div>
 );
 
-// 1. Accept the global wishlist state and handlers via props here
-// 1. Accept the global cart addition handler prop here
 const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart }) => {
-  // Lazy-load below-the-fold sections using Intersection Observer
+  const [cmsData, setCmsData] = useState({ categorySections: [] });
+  const [allProducts, setAllProducts] = useState([]); // 2. STORE MASTER PRODUCT CATALOG
+  const [loading, setLoading] = useState(true);
+
   const [productRef, isProductVisible] = useLazySection('300px');
   const [categoryRef, isCategoryVisible] = useLazySection('250px');
   const [collectionsRef, isCollectionsVisible] = useLazySection('250px');
 
+  useEffect(() => {
+    const fetchHomeAndProducts = async () => {
+      try {
+        setLoading(true);
+        
+        // 3. FETCH BOTH CMS DATA AND PRODUCTS SIMULTANEOUSLY
+        const [cmsRes, productsRes] = await Promise.all([
+          getHomeCMS(),
+          getProductsAPI() 
+        ]);
+
+        // Handle Master Products list extraction
+        if (productsRes && productsRes.success && productsRes.data) {
+          setAllProducts(productsRes.data);
+        } else if (Array.isArray(productsRes)) {
+          setAllProducts(productsRes);
+        }
+
+        // Handle CMS layout extraction
+        if (cmsRes && cmsRes.success && cmsRes.data) {
+          setCmsData(cmsRes.data);
+        } else if (cmsRes && cmsRes.categorySections) {
+          setCmsData(cmsRes);
+        }
+      } catch (error) {
+        console.error("Error loading frontend storefront matrices:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeAndProducts();
+  }, []);
+
   return (
     <div className="w-full flex flex-col gap-10">
-      {/* Top Row: Sidebar, Hero, Promos — Always rendered immediately (above the fold) */}
+      {/* Top Row Layout */}
       <div className="w-full flex flex-col lg:flex-row gap-5 mt-7.5">
         <div className="hidden lg:block lg:w-1/4 xl:w-[22%] flex-shrink-0 lg:h-[460px]">
           <Sidebar />
@@ -84,43 +70,55 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
         <div className="w-full lg:flex-1 h-[350px] md:h-[400px] lg:h-[460px]">
           <HeroBanner />
         </div>
-        <div className="w-full lg:w-1/4 xl:w-[22%] flex-shrink-0 flex flex-col min-[360px]:flex-row lg:flex-col gap-5 h-[auto] min-[360px]:h-[200px] lg:h-[460px]">
+        <div className="w-full lg:w-1/4 xl:w-[22%] flex-shrink-0 flex flex-col min-[360px]:flex-row lg:flex-col gap-5">
           <PromoBanners />
         </div>
       </div>
 
-      {/* Product Section — Deferred until user scrolls near it */}
-      <div ref={productRef}>
+      {/* Product Section Layout Box */}
+      <div ref={productRef} className="w-full flex flex-col gap-10">
         {isProductVisible ? (
-          <ProductSection 
-            title="Electronic " 
-            products={dummyProducts}
-            wishlist={wishlist}
-            onWishlist={addToWishlist}
-            onRemoveWishlist={removeFromWishlist} 
-            onAddToCart={onAddToCart}
-          />
+          <>
+            {cmsData?.categorySections && cmsData.categorySections.map((section, idx) => {
+              // 4. FRONTEND POPULATION: Match the string IDs to full product objects
+              const rawIds = section.productIds || [];
+              const matchedProducts = rawIds.map(id => {
+                // Find matching product by checking both id or _id structures
+                return allProducts.find(p => (p._id === id || p.id === id));
+              }).filter(Boolean); // Clears unmatched items safely
+
+              return (
+                <ProductSection 
+                  key={section.categoryId || idx}
+                  title={section.title || "Collection"} 
+                  products={matchedProducts} // Pass populated array down
+                  categorySectionData={section}
+                  wishlist={wishlist}
+                  onWishlist={addToWishlist}
+                  onRemoveWishlist={removeFromWishlist} 
+                  onAddToCart={onAddToCart}
+                />
+              );
+            })}
+
+            {(!cmsData?.categorySections || cmsData.categorySections.length === 0) && !loading && (
+              <div className="w-full text-center py-10 text-gray-400 font-medium">
+                No active home storefront product sections found.
+              </div>
+            )}
+          </>
         ) : (
           <SectionSkeleton height="420px" />
         )}
       </div>
 
-      {/* Category Page — Deferred */}
+      {/* Category & Collections Sections */}
       <div ref={categoryRef}>
-        {isCategoryVisible ? (
-          <CategoryPage />
-        ) : (
-          <SectionSkeleton height="320px" />
-        )}
+        {isCategoryVisible ? <CategoryPage /> : <SectionSkeleton height="320px" />}
       </div>
 
-      {/* Collections — Deferred (heaviest section with 12 product cards) */}
       <div ref={collectionsRef}>
-        {isCollectionsVisible ? (
-          <Collections />
-        ) : (
-          <SectionSkeleton height="500px" />
-        )}
+        {isCollectionsVisible ? <Collections /> : <SectionSkeleton height="500px" />}
       </div>
     </div>
   );

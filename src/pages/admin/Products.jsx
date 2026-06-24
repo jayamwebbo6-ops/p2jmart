@@ -971,7 +971,8 @@ const Products = () => {
             {/* Modal Forms */}
             <form onSubmit={
               modalType === 'cat' ? handleSaveCategory :
-              modalType === 'sub' ? handleSaveSubcategory : handleSaveProduct
+              modalType === 'sub' ? handleSaveSubcategory : 
+              
             } className="p-5 flex flex-col gap-4">
               
               {/* CATEGORY FORM */}

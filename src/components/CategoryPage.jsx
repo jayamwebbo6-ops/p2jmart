@@ -81,8 +81,7 @@ const CategoryPage = () => {
                     </p>
                   </div>
 
-                  {/* FIXED LINK INTERFACE */}
-                 {/* FIXED LINK INTERFACE INSIDE CATEGORYPAGE.JSX */}
+             
 <Link 
   to="/sub-category" 
   state={{ 
