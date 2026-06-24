@@ -142,6 +142,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   // Track operational range filters
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(100000);
+  const [minPriceLimit, setMinPriceLimit] = useState(0);
   const [maxPriceLimit, setMaxPriceLimit] = useState(100000);
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
@@ -185,10 +186,14 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         if (fetchedProducts.length > 0) {
           const prices = fetchedProducts.map(p => p.price).filter(p => typeof p === 'number');
           if (prices.length > 0) {
+            const minVal = Math.min(...prices);
             const maxVal = Math.max(...prices);
-            const upperLimit = Math.max(10000, Math.ceil(maxVal / 1000) * 1000); // round up to nearest 1000
-            setMaxPriceLimit(upperLimit);
-            setMaxPrice(upperLimit);
+            
+            // Set dynamic limits
+            setMinPriceLimit(minVal);
+            setMaxPriceLimit(maxVal);
+            setMinPrice(minVal);
+            setMaxPrice(maxVal);
           }
         }
       } catch (error) {
@@ -258,7 +263,8 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         <PriceSliderSection 
           minPrice={minPrice} 
           maxPrice={maxPrice}
-          maxLimit={maxPriceLimit}
+          absoluteMin={minPriceLimit}
+          absoluteMax={maxPriceLimit}
           onFilterCommit={(min, max) => {
             setMinPrice(min);
             setMaxPrice(max);
@@ -319,12 +325,12 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         )}
 
         {/* CLEAR ALL FILTERS BUTTON */}
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > 0 || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
+        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
           <button
             onClick={() => {
               setSelectedBrands([]);
               setSelectedSize(null);
-              setMinPrice(0);
+              setMinPrice(minPriceLimit);
               setMaxPrice(maxPriceLimit);
               setMinDiscount(0);
               setMaxDiscount(100);

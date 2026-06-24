@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sliders, 
   Grid, 
@@ -10,9 +10,11 @@ import {
   RotateCcw,
   Truck,
   SquareCode,
+  AlertCircle
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
+import api from '../../../api/api';
 
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
@@ -73,37 +75,118 @@ const HomeContentManager = () => {
   };
 
   // Consolidated Parent States
-  const [slides, setSlides] = useState([
-    { id: 1, title: "Boat Headphone", description: "Taking your Viewing Experience to Next Level", btnLabel: "Shop Now", btnLink: "/category/headphones", image: null },
-    { id: 2, title: "SNAP ART Spotify Frame", description: "Personalized scannable frame tokens with live musical elements", btnLabel: "Customize Now", btnLink: "/product/custom-spotify-frame", image: null }
-  ]);
-
-  const [offerBanners, setOfferBanners] = useState([
-    { id: 101, tagline: "iPhone Collection", title: "25% OFF", btnLink: "/category/iphone-cases", image: null },
-    { id: 102, tagline: "MAC Computer", title: "25% OFF", btnLink: "/category/macbook-stands", image: null }
-  ]);
-
+  const [slides, setSlides] = useState([]);
+  const [offerBanners, setOfferBanners] = useState([]);
+  const [categoryGrid, setCategoryGrid] = useState([]);
+  const [promoBanner, setPromoBanner] = useState({ imgUrl: '', targetUrl: '/offers/mega-sale' });
   const [categories, setCategories] = useState([
     { id: 1, name: "Gifts", image: null },
     { id: 2, name: "Frames", image: null },
     { id: 3, name: "Customized Plaque", image: null }
   ]);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('Saved changes successfully!');
+  const [toastType, setToastType] = useState('success');
 
-  const handleSaveChanges = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  // Fetch from DB on mount
+  useEffect(() => {
+    const fetchCMS = async () => {
+      try {
+        setIsLoading(true);
+        const res = await api.get('/api/home-cms');
+        if (res.data && res.data.success) {
+          const cmsData = res.data.data;
+          setSlides(
+            (cmsData.heroSlider || []).map((slide, idx) => ({
+              ...slide,
+              id: slide._id || slide.id || `slide-${idx}-${Date.now()}`
+            }))
+          );
+          setOfferBanners(
+            (cmsData.offerBanners || []).map((banner, idx) => ({
+              ...banner,
+              id: banner._id || banner.id || `offer-${idx}-${Date.now()}`
+            }))
+          );
+          setCategoryGrid(
+            (cmsData.categoryGrid || []).map((card, idx) => ({
+              ...card,
+              id: card._id || card.id || `card-${idx}-${Date.now()}`
+            }))
+          );
+          setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+        }
+      } catch (err) {
+        console.error('Fetch Home CMS error:', err);
+        setToastMessage('Error loading homepage settings.');
+        setToastType('error');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCMS();
+  }, []);
+
+  const handleSaveChanges = async () => {
+    try {
+      setIsSaving(true);
+      const res = await api.post('/api/home-cms', {
+        heroSlider: slides,
+        offerBanners: offerBanners,
+        categoryGrid: categoryGrid,
+        promoBanner: promoBanner
+      });
+      if (res.data && res.data.success) {
+        const cmsData = res.data.data;
+        setSlides(
+          (cmsData.heroSlider || []).map((slide, idx) => ({
+            ...slide,
+            id: slide._id || slide.id || `slide-${idx}-${Date.now()}`
+          }))
+        );
+        setOfferBanners(
+          (cmsData.offerBanners || []).map((banner, idx) => ({
+            ...banner,
+            id: banner._id || banner.id || `offer-${idx}-${Date.now()}`
+          }))
+        );
+        setCategoryGrid(
+          (cmsData.categoryGrid || []).map((card, idx) => ({
+            ...card,
+            id: card._id || card.id || `card-${idx}-${Date.now()}`
+          }))
+        );
+        setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+        setToastMessage('Saved changes successfully!');
+        setToastType('success');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    } catch (err) {
+      console.error('Save Home CMS error:', err);
+      setToastMessage(err.response?.data?.message || 'Failed to save homepage settings.');
+      setToastType('error');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const addSlide = () => setSlides([...slides, { id: Date.now(), title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+  const addSlide = () => setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
       
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed top-6 right-6 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 z-50 text-sm font-semibold tracking-wide transition-all animate-bounce">
-          <CheckCircle size={18} />
-          <span>Saved changes successfully!</span>
+        <div className={`fixed top-6 right-6 ${toastType === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 z-50 text-sm font-semibold tracking-wide transition-all animate-bounce`}>
+          {toastType === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage}</span>
         </div>
       )}
 
@@ -111,7 +194,9 @@ const HomeContentManager = () => {
         title="Home Content Manager"
         subtitle="Customize your storefront experience. Manage banners, asset layouts, and metadata profiles."
       >
-        <SaveBtn onClick={handleSaveChanges} type="button">Save Changes</SaveBtn>
+        <SaveBtn onClick={handleSaveChanges} type="button" disabled={isSaving || isLoading}>
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </SaveBtn>
       </PageHeader>
 
       {/* Primary Tabs Shell */}
@@ -163,20 +248,32 @@ const HomeContentManager = () => {
         {/* Dynamic Route/Tab Content Switcher Area */}
         <div className="p-4 sm:p-5 md:p-6 flex-1 w-full min-w-0">
           
-          {activeTab === 'hero-slider' && (
-            <HeroSliderTab 
-              slides={slides} 
-              setSlides={setSlides} 
-              addSlide={addSlide} 
-              offerBanners={offerBanners} 
-            />
-          )}
+          {isLoading ? (
+            <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+              <span className="text-xs font-semibold uppercase tracking-wider">Loading settings...</span>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'hero-slider' && (
+                <HeroSliderTab 
+                  slides={slides} 
+                  setSlides={setSlides} 
+                  addSlide={addSlide} 
+                  offerBanners={offerBanners} 
+                  setOfferBanners={setOfferBanners}
+                />
+              )}
 
-          {activeTab === 'category-grid' && (
-            <CategoryGridTab 
-              categories={categories} 
-              setCategories={setCategories} 
-            />
+              {activeTab === 'category-grid' && (
+                <CategoryGridTab 
+                  cards={categoryGrid} 
+                  setCards={setCategoryGrid} 
+                  promoBanner={promoBanner}
+                  setPromoBanner={setPromoBanner}
+                />
+              )}
+            </>
           )}
 
           {activeTab === 'featured-products' && (

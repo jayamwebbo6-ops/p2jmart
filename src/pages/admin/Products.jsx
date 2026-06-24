@@ -654,24 +654,24 @@ const Products = () => {
                   <div 
                     key={cat.id}
                     onClick={() => setSelectedCatId(cat.id)}
-                    className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                    className={`group relative flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
                       selectedCatId === cat.id 
                         ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
                         : 'hover:bg-gray-50 border border-transparent text-gray-700'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 pr-6 flex-1">
                       <img 
                         src={cat.image} 
                         alt={cat.name} 
                         className="w-7 h-7 rounded object-cover border border-gray-200 shrink-0" 
                       />
-                      <span className="text-xs truncate">{cat.name}</span>
+                      <span className="text-xs truncate w-full">{cat.name}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <ChevronRight size={12} className={selectedCatId === cat.id ? "text-white/80 shrink-0 ml-auto" : "text-gray-400 shrink-0 ml-auto"} />
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-inherit pl-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-150">
                       <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenCatModal(cat); }} title="Edit Category" />
                       <DeleteBtn size={11} onClick={(e) => handleDeleteCategory(cat.id, e)} title="Delete Category" />
-                      <ChevronRight size={12} className={selectedCatId === cat.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
                     </div>
                   </div>
                 ))
@@ -708,13 +708,13 @@ const Products = () => {
                   <div 
                     key={sub.id}
                     onClick={() => setSelectedSubId(sub.id)}
-                    className={`group flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
+                    className={`group relative flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-all ${
                       selectedSubId === sub.id 
                         ? 'bg-[#001E3C] border border-[#001E3C] text-white font-semibold shadow-sm' 
                         : 'hover:bg-gray-50 border border-transparent text-gray-700'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 pr-6 flex-1">
                       <div className="w-7 h-7 rounded overflow-hidden border shrink-0 bg-white flex items-center justify-center">
                         {sub.image ? (
                           <img src={sub.image} alt={sub.name} className="w-full h-full object-cover" />
@@ -726,12 +726,12 @@ const Products = () => {
                           </div>
                         )}
                       </div>
-                      <span className="text-xs truncate">{sub.name}</span>
+                      <span className="text-xs truncate w-full">{sub.name}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <ChevronRight size={12} className={selectedSubId === sub.id ? "text-white/80 shrink-0 ml-auto" : "text-gray-400 shrink-0 ml-auto"} />
+                    <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-1 bg-inherit pl-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-150">
                       <EditBtn size={11} onClick={(e) => { e.stopPropagation(); handleOpenSubModal(sub); }} title="Edit Subcategory" />
                       <DeleteBtn size={11} onClick={(e) => handleDeleteSubcategory(sub.id, e)} title="Delete Subcategory" />
-                      <ChevronRight size={12} className={selectedSubId === sub.id ? "text-white/80 ml-0.5" : "text-gray-400 ml-0.5"} />
                     </div>
                   </div>
                 ))
@@ -834,7 +834,7 @@ const Products = () => {
                     {/* Variants */}
                     <td className="py-4 px-4">
                       {prod.variants && prod.variants.length > 0 ? (
-                        <div className="flex flex-col gap-2 min-w-[140px]">
+                        <div className="flex flex-col gap-2 min-w-[140px] max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
                           {prod.variants.map((v, index) => {
                             const colorVal = v.attributes?.color || '';
                             const sizeVal = v.attributes?.size || '';
