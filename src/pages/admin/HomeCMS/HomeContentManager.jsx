@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
-import api from '../../../api/api';
+import { getHomeCMS, updateHomeCMS } from '../../../api/homeCms';
 
 // Import Your Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
@@ -95,9 +95,9 @@ const HomeContentManager = () => {
     const fetchCMS = async () => {
       try {
         setIsLoading(true);
-        const res = await api.get('/api/home-cms');
-        if (res.data && res.data.success) {
-          const cmsData = res.data.data;
+        const data = await getHomeCMS();
+        if (data && data.success) {
+          const cmsData = data.data;
           setSlides(
             (cmsData.heroSlider || []).map((slide, idx) => ({
               ...slide,
@@ -134,14 +134,14 @@ const HomeContentManager = () => {
   const handleSaveChanges = async () => {
     try {
       setIsSaving(true);
-      const res = await api.post('/api/home-cms', {
+      const data = await updateHomeCMS({
         heroSlider: slides,
         offerBanners: offerBanners,
         categoryGrid: categoryGrid,
         promoBanner: promoBanner
       });
-      if (res.data && res.data.success) {
-        const cmsData = res.data.data;
+      if (data && data.success) {
+        const cmsData = data.data;
         setSlides(
           (cmsData.heroSlider || []).map((slide, idx) => ({
             ...slide,

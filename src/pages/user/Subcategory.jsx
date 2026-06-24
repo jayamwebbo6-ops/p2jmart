@@ -11,7 +11,6 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
 
-  // Sync when parent values change
   useEffect(() => {
     setLocalMin(minPrice);
     setLocalMax(maxPrice);
@@ -55,7 +54,6 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
     onFilterCommit(Number(localMin), Number(localMax));
   };
 
-  // Prevent divide by zero errors if absolute values are equal
   const rangeDiff = (absoluteMax - absoluteMin) || 1; 
 
   const leftPercent = Math.min(100, Math.max(0, ((Number(localMin) - absoluteMin) / rangeDiff) * 100));
@@ -139,7 +137,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState("default");
   
-  // Track operational range filters
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(100000);
   const [minPriceLimit, setMinPriceLimit] = useState(0);
@@ -147,7 +144,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
 
-  // DYNAMIC ABSOLUTE LIMITS STATE
   const [absolutePriceLimits, setAbsolutePriceLimits] = useState({ min: 0, max: 10000 });
   const [absoluteDiscountLimits, setAbsoluteDiscountLimits] = useState({ min: 0, max: 100 });
 
@@ -155,7 +151,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [selectedSize, setSelectedSize] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  // Sync to retrieve only target subcategory datasets dynamically from backend
   useEffect(() => {
     if (!isCustomizedPage && !subcategoryId) {
       navigate("/");
@@ -206,13 +201,11 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
     fetchSubcategoryCatalog();
   }, [subcategoryId, navigate, isCustomizedPage]);
 
-  // Derive brands list dynamically
   const brandsList = useMemo(() => {
     const brands = products.map(p => p.brand).filter(Boolean);
     return [...new Set(brands)];
   }, [products]);
 
-  // Derive sizes list dynamically
   const sizesList = useMemo(() => {
     const sizes = products.map(p => p.size).filter(Boolean);
     return [...new Set(sizes)];
@@ -258,8 +251,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const FilterContent = () => (
     <div className="flex flex-col gap-6 font-sans">
       <div className="border border-gray-100 rounded-lg bg-white p-4 shadow-xs flex flex-col gap-6">
-        
-        {/* PRICE RANGE SLIDER WITH DYNAMIC ABSOLUTE LIMITS */}
         <PriceSliderSection 
           minPrice={minPrice} 
           maxPrice={maxPrice}
@@ -271,11 +262,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           }} 
         />
 
-        {/* OFFER FILTER SLIDER COMPONENT */}
         <OfferSlider 
           minDiscount={minDiscount}
           maxDiscount={maxDiscount}
-          // If OfferSlider component supports absolute boundary min/max configurations, inject them here similarly:
           absoluteMin={absoluteDiscountLimits.min}
           absoluteMax={absoluteDiscountLimits.max}
           onFilterCommit={(min, max) => {
@@ -284,7 +273,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           }}
         />
 
-        {/* BRAND SELECTION BOXES */}
         {brandsList.length > 0 && (
           <div className="border-t border-gray-100 pt-4">
             <h3 className="font-bold text-gray-800 text-base mb-3">Brand</h3>
@@ -304,7 +292,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           </div>
         )}
 
-        {/* SIZE SELECTION GRID */}
         {sizesList.length > 0 && (
           <div className="border-t border-gray-100 pt-4">
             <h3 className="font-bold text-gray-800 text-base mb-3">Size</h3>
@@ -389,9 +376,10 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-3">
+          {/* Filter toggle button visible only below 850px */}
           <button 
             onClick={() => setIsMobileFilterOpen(true)}
-            className="md:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 font-medium cursor-pointer"
+            className="min-[850px]:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 font-medium cursor-pointer"
           >
             Filters
           </button>
@@ -402,8 +390,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
       </div>
 
       {/* Main Page Layout Body */}
-      <div className="w-full flex flex-col md:flex-row gap-6 items-start">
-        <aside className="hidden md:block w-[260px] lg:w-[290px] flex-shrink-0 sticky top-4">
+      <div className="w-full flex flex-col min-[850px]:flex-row gap-6 items-start">
+        {/* Hide Side filter completely when screen width is above 850px */}
+        <aside className="hidden min-[880px]:block w-[260px] lg:w-[250px] flex-shrink-0 sticky top-4">
           <FilterContent />
         </aside>
 
@@ -417,7 +406,12 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
               <span className="text-lg font-medium text-gray-400 block mb-1">No products found matching this subcategory</span>
             </div>
           ) : (
-            <div className="grid grid-cols-2 min-[850px]:grid-cols-3 lg:grid-cols-4 gap-4">
+            /* Responsive Grid Configuration: 
+              - Default (below 670px): grid-cols-2 
+              - min-width 670px: min-[670px]:grid-cols-3
+              - min-width 1010px: min-[1010px]:grid-cols-4 
+            */
+            <div className="grid grid-cols-2 min-[670px]:grid-cols-3 min-[1010px]:grid-cols-4 gap-4">
               {filteredAndSortedProducts.map((product) => {
                 const productId = product.id || product._id;
                 return (
@@ -436,9 +430,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         </div>
       </div>
 
-      {/* Slide-over Mobile Filter Drawer */}
+      {/* Slide-over Mobile Filter Drawer - Triggered when side filter is hidden (< 850px) */}
       {isMobileFilterOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
+        <div className="fixed inset-0 z-50 flex min-[880px]:hidden">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setIsMobileFilterOpen(false)} />
           <div className="relative ml-0 mr-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-gray-50 p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
