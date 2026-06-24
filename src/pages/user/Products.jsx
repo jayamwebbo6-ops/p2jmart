@@ -5,18 +5,6 @@ import { useNavigate } from "react-router-dom";
 
 import { getCategoriesAPI } from '../../api/categoryApi'; 
 
-const subcategoryImages = [
-  'https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=200&auto=format&fit=crop', // smartwatch
-  'https://images.unsplash.com/photo-1589492477829-5e65395b66ea?q=80&w=200&auto=format&fit=crop', // smart speaker
-  'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?q=80&w=200&auto=format&fit=crop', // white headphones
-  'https://images.unsplash.com/photo-1599643478524-fb524451000f?q=80&w=200&auto=format&fit=crop', // jewelry
-  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop', // gold necklace
-  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=200&auto=format&fit=crop', // red headphones
-  'https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=200&auto=format&fit=crop', // earbuds
-  'https://images.unsplash.com/photo-1606293926075-69a00dbfde81?q=80&w=200&auto=format&fit=crop', // portable speaker
-  'https://images.unsplash.com/photo-1524805444758-089113d48a6d?q=80&w=200&auto=format&fit=crop', // sunglasses
-  'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=200&auto=format&fit=crop', // camera
-];
 
 const getSubcategoryImage = (catName, subName, idx, subImage) => {
   if (subImage) return subImage;
@@ -93,11 +81,10 @@ const CategoryRow = memo(({ category }) => {
           const subName = sub.name || sub;
           const subId = sub.id || sub._id || idx;
           
-         // Find this section inside CategoryRow in Products.jsx and REPLACE it:
-return (
+         return (
   <button
     key={subId}
-    onClick={() => navigate("/subCategory", { state: { subcategoryId: subId, subcategoryName: subName, categoryName: category.name } })}
+    onClick={() => navigate(`/sub-category/${subId}`)}
     className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
   >
     <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">

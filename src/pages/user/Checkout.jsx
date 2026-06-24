@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { 
   MapPin, 
   Plus, 
@@ -18,6 +18,11 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 
 const Checkout = ({ cart = [], setCart }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const directPurchaseItems = location.state?.items || null;
+  const isDirectPurchase = !!location.state?.directPurchase;
+  const checkoutItems = isDirectPurchase && directPurchaseItems ? directPurchaseItems : cart;
 
   // Step state: 1 = Address, 2 = Payment/Order Summary, 3 = Order Success
   const [step, setStep] = useState(1);
@@ -76,19 +81,19 @@ const Checkout = ({ cart = [], setCart }) => {
   const [placedOrder, setPlacedOrder] = useState(null);
 
   // Math Calculations (sync with Cart.jsx)
-  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shippingFee = subtotal > 1000 || subtotal === 0 ? 0 : 100;
   const total = subtotal + shippingFee;
 
   // Selected address object
   const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
 
-  // Redirect if cart is empty and we are not in success step
+  // Redirect if checkout items are empty and we are not in success step
   useEffect(() => {
-    if (cart.length === 0 && step !== 3 && paymentStage === 'idle') {
+    if (checkoutItems.length === 0 && step !== 3 && paymentStage === 'idle') {
       navigate('/cart');
     }
-  }, [cart, step, navigate, paymentStage]);
+  }, [checkoutItems, step, navigate, paymentStage]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -171,7 +176,7 @@ const Checkout = ({ cart = [], setCart }) => {
   const finalizeSuccessfulPayment = () => {
     setPlacedOrder({
       orderId: orderRef,
-      items: [...cart],
+      items: [...checkoutItems],
       subtotal,
       shippingFee,
       total,
@@ -179,7 +184,9 @@ const Checkout = ({ cart = [], setCart }) => {
       date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     });
 
-    setCart([]);
+    if (!isDirectPurchase) {
+      setCart([]);
+    }
     setPaymentStage('idle');
     setStep(3);
   };
@@ -429,7 +436,7 @@ const Checkout = ({ cart = [], setCart }) => {
           )}
 
           <div className="flex flex-col gap-3">
-            {cart.map((item) => (
+            {checkoutItems.map((item) => (
               <div 
                 key={item.id} 
                 className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0"

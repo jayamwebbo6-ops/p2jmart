@@ -15,7 +15,7 @@ const ProductSection = ({ title, products, wishlist = [], onWishlist, onRemoveWi
           View All
         </a>
       </div>
-
+      
       {/* Grid Layout */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Products Grid */}

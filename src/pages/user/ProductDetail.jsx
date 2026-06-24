@@ -1,121 +1,187 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Heart, Star, Share2, ShoppingBag, Eye, Plus } from 'lucide-react';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { toast } from '../../components/toast';
 
 import "swiper/css";
 import "swiper/css/pagination";
 import ProductCard from '../../components/ProductCard';
+import { getProductByIdAPI } from '../../api/productApi';
+import { getCategoriesAPI } from '../../api/categoryApi';
 
-const ProductDetail = () => {
-  const { id } = useParams();
+const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
+  const { subcategoryId, id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
   // --- DYNAMIC DATA INTEGRATION LAYER ---
   // Read the dynamic product passed from parent routing context
   const incomingProduct = location.state?.product;
+  const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
+  const [loading, setLoading] = useState(!incomingProduct);
 
-  // Render a safety state if someone lands directly on this route without product data context
-  if (!incomingProduct) {
-    return (
-      <div className="w-full flex flex-col items-center justify-center py-20 text-center">
-        <h2 className="text-xl font-bold text-gray-800">No Product Data Found</h2>
-        <p className="text-gray-500 text-sm mt-1 mb-4">Please return to the store catalog to select a product.</p>
-        <Link to="/shop" className="bg-primary text-white px-5 py-2 rounded-md font-bold text-sm shadow">
-          Back to Shop
-        </Link>
-      </div>
-    );
-  }
+  const [categoryName, setCategoryName] = useState(
+    typeof incomingProduct?.category === 'object' && incomingProduct?.category?.name
+      ? incomingProduct.category.name
+      : (typeof incomingProduct?.category === 'string' ? incomingProduct.category : 'Shop')
+  );
+  const [subcategoryName, setSubcategoryName] = useState(
+    typeof incomingProduct?.subcategory === 'object' && incomingProduct?.subcategory?.name
+      ? incomingProduct.subcategory.name
+      : (typeof incomingProduct?.subcategory === 'string' ? incomingProduct.subcategory : '')
+  );
+
+  // Sync loadedProduct state if URL id or incomingProduct changes
+  useEffect(() => {
+    if (incomingProduct) {
+      setLoadedProduct(incomingProduct);
+      setLoading(false);
+      return;
+    }
+
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const res = await getProductByIdAPI(id);
+        if (res && res.success && res.data) {
+          setLoadedProduct(res.data);
+        } else if (res && res.data) {
+          setLoadedProduct(res.data);
+        } else if (res) {
+          setLoadedProduct(res);
+        }
+      } catch (err) {
+        console.error("Error fetching product details dynamically:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [id, incomingProduct]);
+
+  // Lookup subcategory and category names for breadcrumbs
+  useEffect(() => {
+    if (!subcategoryId) return;
+    const fetchNames = async () => {
+      try {
+        const catRes = await getCategoriesAPI();
+        if (catRes && catRes.success && Array.isArray(catRes.data)) {
+          for (const cat of catRes.data) {
+            const matchedSub = (cat.subcategories || []).find(
+              sub => (sub._id || sub.id) === subcategoryId
+            );
+            if (matchedSub) {
+              setCategoryName(cat.name);
+              setSubcategoryName(matchedSub.name || matchedSub);
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error looking up names for breadcrumbs:", err);
+      }
+    };
+    fetchNames();
+  }, [subcategoryId]);
 
   // Pure data parsing direct from Mongoose model parameters
-  const product = {
-    id: incomingProduct._id || incomingProduct.id,
-    brand: incomingProduct.brand || '',
-    title: incomingProduct.title || incomingProduct.name || 'Product Details',
-    // Safe extraction of populated Category object string { id, name }
-    category: typeof incomingProduct.category === 'object' && incomingProduct.category?.name
-      ? incomingProduct.category.name 
-      : (incomingProduct.category || 'Catalog'),
-    price: incomingProduct.price || 0,
-    originalPrice: incomingProduct.originalPrice || Math.round((incomingProduct.price || 0) * 1.4),
-    discount: incomingProduct.discount || 0,
-    rating: incomingProduct.rating ?? 5,
-    reviews: incomingProduct.reviews || 0,
-    // Extract images safely from variant trees, or slide in the master cover image
-    images: incomingProduct.images || (incomingProduct.image ? [incomingProduct.image] : []),
-    
-    // Fallback parser processing variant attribute configurations dynamically
-    colors: incomingProduct.colors || (incomingProduct.variants 
-      ? [...new Set(incomingProduct.variants.map(v => v.attributes?.color))].filter(Boolean).map(c => ({ name: c, hex: c }))
-      : []),
+  const product = useMemo(() => {
+    if (!loadedProduct) return null;
+    return {
+      id: loadedProduct._id || loadedProduct.id,
+      brand: loadedProduct.brand || '',
+      title: loadedProduct.title || loadedProduct.name || 'Product Details',
+      // Safe extraction of populated Category object string { id, name }
+      category: typeof loadedProduct.category === 'object' && loadedProduct.category?.name
+        ? loadedProduct.category.name 
+        : (loadedProduct.category || 'Catalog'),
+      price: loadedProduct.price || 0,
+      originalPrice: loadedProduct.originalPrice || Math.round((loadedProduct.price || 0) * 1.4),
+      discount: loadedProduct.discount || 0,
+      rating: loadedProduct.rating ?? 5,
+      reviews: loadedProduct.reviews || 0,
+      // Extract images safely from variant trees, or slide in the master cover image
+      images: loadedProduct.images || (loadedProduct.image ? [loadedProduct.image] : []),
       
-    sizes: incomingProduct.sizes || (incomingProduct.variants
-      ? [...new Set(incomingProduct.variants.map(v => v.attributes?.size))].filter(Boolean)
-      : []),
-      
-    inStock: incomingProduct.inStock !== undefined 
-      ? incomingProduct.inStock 
-      : (incomingProduct.variants?.some(v => v.stock > 0) ?? true)
-  };
+      // Fallback parser processing variant attribute configurations dynamically
+      colors: loadedProduct.colors || (loadedProduct.variants 
+        ? [...new Set(loadedProduct.variants.map(v => v.attributes?.color))].filter(Boolean).map(c => ({ name: c, hex: c }))
+        : []),
+        
+      sizes: loadedProduct.sizes || (loadedProduct.variants
+        ? [...new Set(loadedProduct.variants.map(v => v.attributes?.size))].filter(Boolean)
+        : []),
+        
+      inStock: loadedProduct.inStock !== undefined 
+        ? loadedProduct.inStock 
+        : (loadedProduct.variants?.some(v => v.stock > 0) ?? true)
+    };
+  }, [loadedProduct]);
+
+  // Handle dynamic initialization of variant selection rules safely
+  const [selectedColor, setSelectedColor] = useState('Default');
+  const [selectedSize, setSelectedSize] = useState('Default');
+  const [quantity, setQuantity] = useState(1);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Handle dynamic initialization of variant selection rules safely
-  const [selectedColor, setSelectedColor] = useState(product.colors[0]?.name || 'Default');
-  const [selectedSize, setSelectedSize] = useState(product.sizes[0] || 'Default');
-  const [quantity, setQuantity] = useState(1);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
   // Sync selection instances if alternative product parameters swap
   useEffect(() => {
-    if (product.colors[0]?.name) setSelectedColor(product.colors[0].name);
-    if (product.sizes[0]) setSelectedSize(product.sizes[0]);
-    setActiveImageIndex(0);
-    setQuantity(1);
-  }, [id]);
+    if (product) {
+      if (product.colors?.[0]?.name) setSelectedColor(product.colors[0].name);
+      if (product.sizes?.[0]) setSelectedSize(product.sizes[0]);
+      setActiveImageIndex(0);
+      setQuantity(1);
+    }
+  }, [id, product]);
 
   // --- INTERACTIVE DUMMY DATA FOR COMBO PRODUCT INTEGRATION ---
-  const comboData = {
-    id: "COMBO-WS100",
-    title: "Premium Executive Desk Gift Combo",
-    discountPercent: 50,
-    items: [
-      {
-        id: product.id,
-        title: `${product.title} (${selectedColor} / ${selectedSize}) (This Item)`,
-        price: product.price,
-        image: product.images[0] || '',
-        isCurrent: true
-      },
-      {
-        id: 'combo-sub-2',
-        title: 'Luxury Matte Black Signature Pen',
-        price: 150,
-        image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=300&h=300&q=80',
-        isCurrent: false
-      },
-      {
-        id: 'combo-sub-3',
-        title: 'Handcrafted Leather Card Holder',
-        price: 250,
-        image: 'https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?auto=format&fit=crop&w=300&h=300&q=80',
-        isCurrent: false
-      }
-    ]
-  };
+  const comboData = useMemo(() => {
+    if (!product) return null;
+    return {
+      id: "COMBO-WS100",
+      title: "Premium Executive Desk Gift Combo",
+      discountPercent: 50,
+      items: [
+        {
+          id: product.id,
+          title: `${product.title} (${selectedColor} / ${selectedSize}) (This Item)`,
+          price: product.price,
+          image: product.images[0] || '',
+          isCurrent: true
+        },
+        {
+          id: 'combo-sub-2',
+          title: 'Luxury Matte Black Signature Pen',
+          price: 150,
+          image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=300&h=300&q=80',
+          isCurrent: false
+        },
+        {
+          id: 'combo-sub-3',
+          title: 'Handcrafted Leather Card Holder',
+          price: 250,
+          image: 'https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?auto=format&fit=crop&w=300&h=300&q=80',
+          isCurrent: false
+        }
+      ]
+    };
+  }, [product, selectedColor, selectedSize]);
 
-  const [selectedComboItemIds, setSelectedComboItemIds] = useState(comboData.items.map(item => item.id));
+  const [selectedComboItemIds, setSelectedComboItemIds] = useState([]);
 
   useEffect(() => {
-    setSelectedComboItemIds(comboData.items.map(item => item.id));
-  }, [id]);
+    if (comboData) {
+      setSelectedComboItemIds(comboData.items.map(item => item.id));
+    }
+  }, [id, comboData]);
 
   const [zoomStyle, setZoomStyle] = useState({ transformOrigin: 'center center', transform: 'scale(1)' });
   const containerRef = useRef(null);
@@ -132,6 +198,55 @@ const ProductDetail = () => {
     setZoomStyle({ transformOrigin: 'center center', transform: 'scale(1)' });
   };
 
+  const isWishlisted = useMemo(() => {
+    return wishlist.some(item => item.id === product?.id);
+  }, [wishlist, product?.id]);
+
+  const handleWishlistToggle = () => {
+    if (!product) return;
+    if (isWishlisted) {
+      if (removeFromWishlist) removeFromWishlist(product.id);
+      toast.success("Removed from wishlist");
+    } else {
+      if (addToWishlist) addToWishlist(product);
+      toast.success("Added to wishlist!");
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    if (onAddToCart) {
+      onAddToCart({
+        ...product,
+        quantity: quantity,
+        selectedOptions: {
+          color: selectedColor,
+          size: selectedSize
+        }
+      });
+      toast.success("Product added to cart!");
+    }
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    navigate('/checkout', {
+      state: {
+        directPurchase: true,
+        items: [
+          {
+            ...product,
+            quantity: quantity,
+            selectedOptions: {
+              color: selectedColor,
+              size: selectedSize
+            }
+          }
+        ]
+      }
+    });
+  };
+
   const toggleComboItem = (itemId, isCurrent) => {
     if (isCurrent) return;
     if (selectedComboItemIds.includes(itemId)) {
@@ -141,18 +256,19 @@ const ProductDetail = () => {
     }
   };
 
-  const isFullComboSelected = selectedComboItemIds.length === comboData.items.length;
-  const regularComboSum = comboData.items
+  const isFullComboSelected = selectedComboItemIds.length === (comboData?.items?.length || 0);
+  const regularComboSum = (comboData?.items || [])
     .filter(item => selectedComboItemIds.includes(item.id))
     .reduce((sum, item) => sum + item.price, 0);
 
   const finalComboPrice = isFullComboSelected 
-    ? Math.round(regularComboSum * (1 - comboData.discountPercent / 100)) 
+    ? Math.round(regularComboSum * (1 - (comboData?.discountPercent || 0) / 100)) 
     : regularComboSum;
 
   const totalComboSavings = regularComboSum - finalComboPrice;
 
   const handleAddBundleToCart = () => {
+    if (!comboData) return;
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCartPayload = {
       id: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
@@ -174,6 +290,7 @@ const ProductDetail = () => {
   };
 
   const handleAddBundleToBuy = () => {
+    if (!comboData) return;
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCheckoutPayload = {
       id: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
@@ -238,6 +355,26 @@ const ProductDetail = () => {
   ];
   const showNavigation = relatedProducts.length > 4;
 
+  if (loading) {
+    return (
+      <div className="w-full flex items-center justify-center py-40">
+        <div className="w-10 h-10 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-20 text-center">
+        <h2 className="text-xl font-bold text-gray-800">No Product Data Found</h2>
+        <p className="text-gray-500 text-sm mt-1 mb-4">Please return to the store catalog to select a product.</p>
+        <Link to="/products" className="bg-primary text-white px-5 py-2 rounded-md font-bold text-sm shadow">
+          Back to Shop
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full font-sans mt-8">
       <div className="w-full">
@@ -246,23 +383,17 @@ const ProductDetail = () => {
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
           <span className="text-gray-300">/</span>
           <Link to="/products" className="hover:text-primary transition-colors">
-            {product.category || "Shop"}
+            {categoryName || "Shop"}
           </Link>
-          {incomingProduct.subcategory && (
+          {subcategoryId && subcategoryName && (
             <>
               <span className="text-gray-300">/</span>
-              <span 
+              <Link 
+                to={`/sub-category/${subcategoryId}`}
                 className="hover:text-primary transition-colors cursor-pointer"
-                onClick={() => navigate("/subCategory", { 
-                  state: { 
-                    subcategoryId: incomingProduct.subcategory?._id || incomingProduct.subcategory?.id || incomingProduct.subcategory, 
-                    subcategoryName: typeof incomingProduct.subcategory === 'object' && incomingProduct.subcategory?.name ? incomingProduct.subcategory.name : incomingProduct.subcategory,
-                    categoryName: typeof incomingProduct.category === 'object' && incomingProduct.category?.name ? incomingProduct.category.name : incomingProduct.category
-                  } 
-                })}
               >
-                {typeof incomingProduct.subcategory === 'object' && incomingProduct.subcategory?.name ? incomingProduct.subcategory.name : incomingProduct.subcategory}
-              </span>
+                {subcategoryName}
+              </Link>
             </>
           )}
           <span className="text-gray-300">/</span>
@@ -465,8 +596,15 @@ const ProductDetail = () => {
                 </button>
               </div>
 
-              <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
-                <Heart size={16} className="text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors" />
+              <button 
+                onClick={handleWishlistToggle}
+                className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
+              >
+                <Heart 
+                  size={16} 
+                  fill={isWishlisted ? "#EF4444" : "none"} 
+                  className={isWishlisted ? "text-red-500" : "text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors"} 
+                />
               </button>
               <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
                 <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
@@ -475,10 +613,16 @@ const ProductDetail = () => {
 
             {/* Action Buttons */}
            <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
-  <button className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm">
+  <button 
+    onClick={handleAddToCart}
+    className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm"
+  >
     <ShoppingCart size={15} /> Add to Cart
   </button>
-  <button className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm">
+  <button 
+    onClick={handleBuyNow}
+    className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm"
+  >
     <ShoppingBag size={15} /> Buy Now
   </button>
 </div>
@@ -496,7 +640,7 @@ const ProductDetail = () => {
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
               <span className="font-bold text-gray-900 text-sm sm:col-span-1">Description:</span>
               <span className="sm:col-span-3 text-gray-600 text-xs font-medium">
-                {incomingProduct.detailedDescription || incomingProduct.description || `${product.title} processing configuration metadata options.`}
+                {loadedProduct?.detailedDescription || loadedProduct?.description || `${product.title} processing configuration metadata options.`}
               </span>
             </div>
           </div>
