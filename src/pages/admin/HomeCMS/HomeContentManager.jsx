@@ -78,6 +78,7 @@ const HomeContentManager = () => {
   const [slides, setSlides] = useState([]);
   const [offerBanners, setOfferBanners] = useState([]);
   const [categoryGrid, setCategoryGrid] = useState([]);
+  const [categorySections, setCategorySections] = useState([]);
   const [promoBanner, setPromoBanner] = useState({ imgUrl: '', targetUrl: '/offers/mega-sale' });
   const [categories, setCategories] = useState([
     { id: 1, name: "Gifts", image: null },
@@ -96,7 +97,7 @@ const HomeContentManager = () => {
       try {
         setIsLoading(true);
         const data = await getHomeCMS();
-        if (data && data.success) {fetchCMS
+        if (data && data.success) {
           const cmsData = data.data;
           setSlides(
             (cmsData.heroSlider || []).map((slide, idx) => ({
@@ -117,6 +118,12 @@ const HomeContentManager = () => {
             }))
           );
           setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+          setCategorySections(
+            (cmsData.categorySections || []).map((section, idx) => ({
+              ...section,
+              id: section._id || section.id || `sec-${idx}-${Date.now()}`
+            }))
+          );
         }
       } catch (err) {
         console.error('Fetch Home CMS error:', err);
@@ -138,6 +145,7 @@ const HomeContentManager = () => {
         heroSlider: slides,
         offerBanners: offerBanners,
         categoryGrid: categoryGrid,
+        categorySections: categorySections,
         promoBanner: promoBanner
       });
       if (data && data.success) {
@@ -161,6 +169,12 @@ const HomeContentManager = () => {
           }))
         );
         setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+        setCategorySections(
+          (cmsData.categorySections || []).map((section, idx) => ({
+            ...section,
+            id: section._id || section.id || `sec-${idx}-${Date.now()}`
+          }))
+        );
         setToastMessage('Saved changes successfully!');
         setToastType('success');
         setShowToast(true);
@@ -273,11 +287,14 @@ const HomeContentManager = () => {
                   setPromoBanner={setPromoBanner}
                 />
               )}
-            </>
-          )}
 
-          {activeTab === 'featured-products' && (
-            <CategoryTab />
+              {activeTab === 'featured-products' && (
+                <CategoryTab 
+                  sections={categorySections} 
+                  setSections={setCategorySections} 
+                />
+              )}
+            </>
           )}
 
           {activeTab === 'multiColumnShowcase' && (
