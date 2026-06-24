@@ -16,20 +16,12 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
     setLocalMax(maxPrice);
   }, [minPrice, maxPrice]);
 
-  const handleMinChange = (val) => {
-    setLocalMin(val);
-  };
-
   const handleMinBlur = () => {
     let val = Number(localMin);
     if (isNaN(val) || localMin === "") val = absoluteMin;
     val = Math.max(absoluteMin, Math.min(val, Number(localMax)));
     setLocalMin(val);
     onFilterCommit(val, Number(localMax));
-  };
-
-  const handleMaxChange = (val) => {
-    setLocalMax(val);
   };
 
   const handleMaxBlur = () => {
@@ -42,11 +34,8 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 
   const handleKeyDown = (e, type) => {
     if (e.key === "Enter") {
-      if (type === "min") {
-        handleMinBlur();
-      } else {
-        handleMaxBlur();
-      }
+      if (type === "min") handleMinBlur();
+      else handleMaxBlur();
     }
   };
 
@@ -55,7 +44,6 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
   };
 
   const rangeDiff = (absoluteMax - absoluteMin) || 1; 
-
   const leftPercent = Math.min(100, Math.max(0, ((Number(localMin) - absoluteMin) / rangeDiff) * 100));
   const rightPercent = Math.min(100, Math.max(0, 100 - ((Number(localMax) - absoluteMin) / rangeDiff) * 100));
 
@@ -70,7 +58,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
           <input
             type="number"
             value={localMin}
-            onChange={(e) => handleMinChange(e.target.value)}
+            onChange={(e) => setLocalMin(e.target.value)}
             onBlur={handleMinBlur}
             onKeyDown={(e) => handleKeyDown(e, "min")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
@@ -80,7 +68,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
           <input
             type="number"
             value={localMax}
-            onChange={(e) => handleMaxChange(e.target.value)}
+            onChange={(e) => setLocalMax(e.target.value)}
             onBlur={handleMaxBlur}
             onKeyDown={(e) => handleKeyDown(e, "max")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
@@ -92,10 +80,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
         <div className="absolute inset-0 h-1 bg-gray-200 rounded-full top-1/2 -translate-y-1/2"></div>
         <div
           className="absolute h-1 bg-gray-700 top-1/2 -translate-y-1/2"
-          style={{ 
-            left: `${leftPercent}%`, 
-            right: `${rightPercent}%` 
-          }}
+          style={{ left: `${leftPercent}%`, right: `${rightPercent}%` }}
         ></div>
         <input
           type="range"
@@ -127,11 +112,15 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onProductClick, isCustomizedPage = false }) => {
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { subcategoryId, subcategoryName, categoryName } = location.state || {};
+  // Extract variables with fallback configurations
+  const stateData = location.state || {};
+  const subcategoryId = stateData.subcategoryId || stateData.id;
+  const subcategoryName = stateData.subcategoryName || stateData.name;
+  const categoryName = stateData.categoryName || "Shop";
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,30 +133,34 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
   const [minDiscount, setMinDiscount] = useState(0);
   const [maxDiscount, setMaxDiscount] = useState(100);
 
-  const [absolutePriceLimits, setAbsolutePriceLimits] = useState({ min: 0, max: 10000 });
-  const [absoluteDiscountLimits, setAbsoluteDiscountLimits] = useState({ min: 0, max: 100 });
-
+  const [absoluteDiscountLimits] = useState({ min: 0, max: 100 });
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
   useEffect(() => {
+    // FIXED: Prevent navigation redirection loops on empty initializations 
     if (!isCustomizedPage && !subcategoryId) {
-      navigate("/");
-      return;
+      console.warn("SubCategory target configuration lacks identification state values.");
     }
 
-    const fetchSubcategoryCatalog = async () => {
-      try {
-        setLoading(true);
-        
-        let response;
-        if (isCustomizedPage) {
-          response = await getProductsAPI({ customizeProduct: 'Yes' });
-        } else {
-          response = await getProductsAPI({ subcategoryId: subcategoryId });
-        }
-        
+    // Inside SubCategoryPage.jsx -> useEffect() -> fetchSubcategoryCatalog:
+const fetchSubcategoryCatalog = async () => {
+  try {
+    setLoading(true);
+    let response;
+    
+    if (isCustomizedPage) {
+      response = await getProductsAPI({ customizeProduct: 'Yes' });
+    } else if (subcategoryId) {
+      response = await getProductsAPI({ subcategoryId: subcategoryId });
+    } else if (location.state?.categoryId) {
+      // FALLBACK: If we came from CategoryPage, query products via parent categoryId field
+      response = await getProductsAPI({ categoryId: location.state.categoryId });
+    } else {
+      response = await getProductsAPI();
+    }
+            
         let fetchedProducts = [];
         if (response && response.success && Array.isArray(response.data)) {
           fetchedProducts = response.data;
@@ -176,6 +169,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         } else if (Array.isArray(response)) {
           fetchedProducts = response;
         }
+        
         setProducts(fetchedProducts);
 
         if (fetchedProducts.length > 0) {
@@ -184,7 +178,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
             const minVal = Math.min(...prices);
             const maxVal = Math.max(...prices);
             
-            // Set dynamic limits
             setMinPriceLimit(minVal);
             setMaxPriceLimit(maxVal);
             setMinPrice(minVal);
@@ -199,7 +192,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
     };
 
     fetchSubcategoryCatalog();
-  }, [subcategoryId, navigate, isCustomizedPage]);
+  }, [subcategoryId, isCustomizedPage]);
 
   const brandsList = useMemo(() => {
     const brands = products.map(p => p.brand).filter(Boolean);
@@ -311,7 +304,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           </div>
         )}
 
-        {/* CLEAR ALL FILTERS BUTTON */}
         {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
           <button
             onClick={() => {
@@ -342,7 +334,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
           <span className="text-gray-900 font-bold">Customized Products</span>
         ) : (
           <>
-            <Link to="/products" className="hover:text-primary transition-colors">
+            <Link to="/" className="hover:text-primary transition-colors">
               {categoryName || "Shop"}
             </Link>
             <span className="text-gray-300">/</span>
@@ -376,7 +368,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         </div>
 
         <div className="flex items-center justify-between sm:justify-end gap-3">
-          {/* Filter toggle button visible only below 850px */}
           <button 
             onClick={() => setIsMobileFilterOpen(true)}
             className="min-[850px]:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 font-medium cursor-pointer"
@@ -391,7 +382,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
 
       {/* Main Page Layout Body */}
       <div className="w-full flex flex-col min-[850px]:flex-row gap-6 items-start">
-        {/* Hide Side filter completely when screen width is above 850px */}
         <aside className="hidden min-[880px]:block w-[260px] lg:w-[250px] flex-shrink-0 sticky top-4">
           <FilterContent />
         </aside>
@@ -403,14 +393,11 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
             </div>
           ) : filteredAndSortedProducts.length === 0 ? (
             <div className="w-full text-center py-16 bg-white border border-gray-200 rounded-lg p-6">
-              <span className="text-lg font-medium text-gray-400 block mb-1">No products found matching this subcategory</span>
+              <span className="text-lg font-medium text-gray-400 block mb-1">
+                No products found matching this subcategory
+              </span>
             </div>
           ) : (
-            /* Responsive Grid Configuration: 
-              - Default (below 670px): grid-cols-2 
-              - min-width 670px: min-[670px]:grid-cols-3
-              - min-width 1010px: min-[1010px]:grid-cols-4 
-            */
             <div className="grid grid-cols-2 min-[670px]:grid-cols-3 min-[1010px]:grid-cols-4 gap-4">
               {filteredAndSortedProducts.map((product) => {
                 const productId = product.id || product._id;
@@ -430,7 +417,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
         </div>
       </div>
 
-      {/* Slide-over Mobile Filter Drawer - Triggered when side filter is hidden (< 850px) */}
+      {/* Slide-over Mobile Filter Drawer */}
       {isMobileFilterOpen && (
         <div className="fixed inset-0 z-50 flex min-[880px]:hidden">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setIsMobileFilterOpen(false)} />

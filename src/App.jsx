@@ -208,7 +208,7 @@ function App() {
             />
 
            <Route 
-              path="subCategory" 
+              path="sub-category" 
               element={
                 <Subcategory 
                   wishlist={wishlist}
