@@ -833,7 +833,44 @@ const Products = () => {
 
                     {/* Variants */}
                     <td className="py-4 px-4">
-                      {prod.selectedAttributes && Object.keys(prod.selectedAttributes).length > 0 ? (
+                      {prod.variants && prod.variants.length > 0 ? (
+                        <div className="flex flex-col gap-2 min-w-[140px]">
+                          {prod.variants.map((v, index) => {
+                            const colorVal = v.attributes?.color || '';
+                            const sizeVal = v.attributes?.size || '';
+                            
+                            const hasPipe = colorVal.includes('|');
+                            const colorName = hasPipe ? colorVal.split('|')[0] : colorVal;
+                            const colorHex = hasPipe ? colorVal.split('|')[1] : null;
+                            
+                            const labelParts = [];
+                            if (colorName) labelParts.push(colorName);
+                            if (sizeVal) labelParts.push(sizeVal);
+                            const label = labelParts.join(' / ') || 'Standard Variant';
+
+                            return (
+                              <div 
+                                key={v.id || v._id || index}
+                                className="flex flex-col border border-gray-205 rounded-2xl p-3 bg-white shadow-xs leading-normal font-sans"
+                              >
+                                <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
+                                  <span 
+                                    className="w-2.5 h-2.5 rounded-full border border-gray-200 block shrink-0"
+                                    style={{ backgroundColor: colorHex || '#E5E7EB' }}
+                                  />
+                                  <span>{label}</span>
+                                </div>
+                                <div className="text-[9px] text-gray-400 font-bold mt-1.5">
+                                  Price: <span className="text-purple-600 font-extrabold">₹{Number(v.price).toLocaleString()}</span>
+                                </div>
+                                <div className="text-[9px] text-gray-400 font-bold mt-0.5">
+                                  Inv: <span className="text-pink-600 font-extrabold">{v.stock} units</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : prod.selectedAttributes && Object.keys(prod.selectedAttributes).length > 0 ? (
                         <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal gap-1">
                           {Object.entries(prod.selectedAttributes).map(([attrName, values]) => (
                             <div key={attrName} className="text-[9px] text-gray-500 font-medium">
@@ -843,14 +880,17 @@ const Products = () => {
                           <div className="text-[9px] font-bold text-purple-600 border-t border-slate-100 pt-0.5 mt-0.5">Price: ₹{prod.price}</div>
                         </div>
                       ) : (
-                        <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal">
+                        <div className="flex flex-col border border-gray-250 rounded-2xl p-3 bg-white min-w-[140px] shadow-xs leading-normal font-sans">
                           <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
-                            <span className="w-2 h-2 rounded-full bg-yellow-400 block"></span>
-                            <span>Yellow</span>
+                            <span className="w-2.5 h-2.5 rounded-full border border-gray-200 bg-gray-200 block shrink-0" />
+                            <span>Standard</span>
                           </div>
-                          <div className="text-[9px] text-gray-400 font-medium mt-0.5">Size: 8 inch</div>
-                          <div className="text-[9px] font-bold text-purple-600 mt-1">Price: ₹{prod.price}</div>
-                          <div className="text-[9px] font-bold text-pink-600">Inv: 10 units</div>
+                          <div className="text-[9px] text-gray-400 font-bold mt-1.5">
+                            Price: <span className="text-purple-600 font-extrabold">₹{Number(prod.price).toLocaleString()}</span>
+                          </div>
+                          <div className="text-[9px] text-gray-400 font-bold mt-0.5">
+                            Inv: <span className="text-pink-600 font-extrabold">{prod.stock !== undefined ? prod.stock : 10} units</span>
+                          </div>
                         </div>
                       )}
                     </td>

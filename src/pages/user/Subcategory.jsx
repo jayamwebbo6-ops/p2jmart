@@ -7,7 +7,7 @@ import { getProductsAPI } from "../../api/productApi";
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
    ========================================================================== */
-const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFilterCommit }) => {
+const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax = 100000, onFilterCommit }) => {
   const [localMin, setLocalMin] = useState(minPrice);
   const [localMax, setLocalMax] = useState(maxPrice);
 
@@ -17,12 +17,49 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
     setLocalMax(maxPrice);
   }, [minPrice, maxPrice]);
 
+  const handleMinChange = (val) => {
+    setLocalMin(val);
+  };
+
+  const handleMinBlur = () => {
+    let val = Number(localMin);
+    if (isNaN(val) || localMin === "") val = absoluteMin;
+    val = Math.max(absoluteMin, Math.min(val, Number(localMax)));
+    setLocalMin(val);
+    onFilterCommit(val, Number(localMax));
+  };
+
+  const handleMaxChange = (val) => {
+    setLocalMax(val);
+  };
+
+  const handleMaxBlur = () => {
+    let val = Number(localMax);
+    if (isNaN(val) || localMax === "") val = absoluteMax;
+    val = Math.max(Number(localMin), Math.min(val, absoluteMax));
+    setLocalMax(val);
+    onFilterCommit(Number(localMin), val);
+  };
+
+  const handleKeyDown = (e, type) => {
+    if (e.key === "Enter") {
+      if (type === "min") {
+        handleMinBlur();
+      } else {
+        handleMaxBlur();
+      }
+    }
+  };
+
   const handleDragEnd = () => {
-    onFilterCommit(localMin, localMax);
+    onFilterCommit(Number(localMin), Number(localMax));
   };
 
   // Prevent divide by zero errors if absolute values are equal
   const rangeDiff = (absoluteMax - absoluteMin) || 1; 
+
+  const leftPercent = Math.min(100, Math.max(0, ((Number(localMin) - absoluteMin) / rangeDiff) * 100));
+  const rightPercent = Math.min(100, Math.max(0, 100 - ((Number(localMax) - absoluteMin) / rangeDiff) * 100));
 
   return (
     <div>
@@ -35,11 +72,9 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
           <input
             type="number"
             value={localMin}
-            onChange={(e) => {
-              const val = Math.max(absoluteMin, Math.min(Number(e.target.value), localMax));
-              setLocalMin(val);
-              onFilterCommit(val, localMax);
-            }}
+            onChange={(e) => handleMinChange(e.target.value)}
+            onBlur={handleMinBlur}
+            onKeyDown={(e) => handleKeyDown(e, "min")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
           />
         </div>
@@ -47,44 +82,44 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin, absoluteMax, onFi
           <input
             type="number"
             value={localMax}
-            onChange={(e) => {
-              const val = Math.max(localMin, Math.min(Number(e.target.value), absoluteMax));
-              setLocalMax(val);
-              onFilterCommit(localMin, val);
-            }}
+            onChange={(e) => handleMaxChange(e.target.value)}
+            onBlur={handleMaxBlur}
+            onKeyDown={(e) => handleKeyDown(e, "max")}
             className="w-full outline-none text-gray-700 font-medium bg-transparent"
           />
         </div>
       </div>
 
-      <div className="relative w-full h-2 px-1">
+      <div className="relative w-full h-2 px-1 mb-2">
         <div className="absolute inset-0 h-1 bg-gray-200 rounded-full top-1/2 -translate-y-1/2"></div>
         <div
           className="absolute h-1 bg-gray-700 top-1/2 -translate-y-1/2"
           style={{ 
-            left: `${Math.min(100, Math.max(0, ((localMin - absoluteMin) / rangeDiff) * 100))}%`, 
-            right: `${Math.min(100, Math.max(0, 100 - ((localMax - absoluteMin) / rangeDiff) * 100))}%` 
+            left: `${leftPercent}%`, 
+            right: `${rightPercent}%` 
           }}
         ></div>
         <input
           type="range"
           min={absoluteMin}
           max={absoluteMax}
-          value={localMin}
+          value={Number(localMin) || 0}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), localMax - 1))}
+          onChange={(e) => setLocalMin(Math.min(Number(e.target.value), Number(localMax) - 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
+          style={{ zIndex: Number(localMin) > (absoluteMax - (rangeDiff * 0.15)) ? 5 : 3 }}
         />
         <input
           type="range"
           min={absoluteMin}
           max={absoluteMax}
-          value={localMax}
+          value={Number(localMax) || 0}
           onMouseUp={handleDragEnd}
           onTouchEnd={handleDragEnd}
-          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), localMin + 1))}
+          onChange={(e) => setLocalMax(Math.max(Number(e.target.value), Number(localMin) + 1))}
           className="absolute w-full h-1 top-1/2 -translate-y-1/2 appearance-none bg-transparent pointer-events-none cursor-pointer accent-gray-800 [&::-webkit-slider-thumb]:pointer-events-auto"
+          style={{ zIndex: 4 }}
         />
       </div>
     </div>
@@ -326,7 +361,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onP
       </div>
 
       {/* Page Header */}
-      <div className="pb-6 mb-4 border-b border-gray-100">
+      <div className="pb-5 border-b border-gray-100">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
           {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
         </h1>
