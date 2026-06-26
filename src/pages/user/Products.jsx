@@ -5,9 +5,23 @@ import { useNavigate } from "react-router-dom";
 
 import { getCategoriesAPI } from '../../api/categoryApi'; 
 
+// Placeholder/fallback image array so the hash selection doesn't crash the UI
+const subcategoryImages = [
+  "https://via.placeholder.com/150?text=Category+1",
+  "https://via.placeholder.com/150?text=Category+2",
+  "https://via.placeholder.com/150?text=Category+3",
+];
 
 const getSubcategoryImage = (catName, subName, idx, subImage) => {
-  if (subImage) return subImage;
+  if (subImage) {
+    const BACKEND_URL = "http://localhost:5000";
+    // If the image is already a fully qualified URL, return it directly
+    if (subImage.startsWith('http://') || subImage.startsWith('https://')) {
+      return subImage;
+    }
+    // Clean leading slashes and prefix with backend API server authority domain
+    return `${BACKEND_URL}/${subImage.replace(/^\//, '')}`;
+  }
   const hash = catName.length + subName.length + (idx * 3);
   return subcategoryImages[hash % subcategoryImages.length];
 };
@@ -52,6 +66,7 @@ const CategoryRow = memo(({ category }) => {
         {/* Navigation Arrows in Top Right */}
         <div className="flex items-center space-x-2 mr-2">
           <button 
+            type="button"
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
             className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
@@ -60,6 +75,7 @@ const CategoryRow = memo(({ category }) => {
           </button>
           
           <button 
+            type="button"
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
             className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
@@ -76,32 +92,38 @@ const CategoryRow = memo(({ category }) => {
         className="flex overflow-x-auto gap-6 md:gap-12 pb-4 scrollbar-hide snap-x px-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {category.subcategories.map((sub, idx) => {
-          // Extract variables supporting both nested objects and raw string mappings securely
+        {category.subcategories && category.subcategories.map((sub, idx) => {
           const subName = sub.name || sub;
           const subId = sub.id || sub._id || idx;
           
-         return (
-  <button
-    key={subId}
-    onClick={() => navigate(`/sub-category/${subId}`)}
-    className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
-  >
-    <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
-      <img 
-        src={getSubcategoryImage(category.name, subName, idx, sub.image)} 
-        alt={subName}
-        className="w-full h-full object-contain p-2"
-      />
-    </div>
-    <span className="text-sm md:text-base text-gray-600 font-normal text-center w-full block">{subName}</span>
-  </button>
-);
+          return (
+            <button
+              key={subId}
+              type="button"
+              onClick={() => navigate(`/sub-category/${subId}`)}
+              className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
+            >
+              <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
+                <img 
+                  src={getSubcategoryImage(category.name, subName, idx, sub.image)} 
+                  alt={subName}
+                  className="w-full h-full object-contain p-2"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.src = "https://via.placeholder.com/150?text=No+Image";
+                  }}
+                />
+              </div>
+              <span className="text-sm md:text-base text-gray-600 font-normal text-center w-full block">{subName}</span>
+            </button>
+          );
         })}
       </div>
     </div>
   );
 });
+
+CategoryRow.displayName = 'CategoryRow';
 
 // Extracted Header to dynamically measure its own height
 const HeaderRow = memo(({ setHeaderHeight }) => {
@@ -110,6 +132,7 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
   useEffect(() => {
     if (!ref.current) return;
     const observer = new ResizeObserver((entries) => {
+      if (!entries || !entries[0]) return;
       const height = entries[0].target.offsetHeight;
       setHeaderHeight(height);
     });
@@ -130,6 +153,8 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
     </div>
   );
 });
+
+HeaderRow.displayName = 'HeaderRow';
 
 const Products = () => {
   const [categories, setCategories] = useState([]);
