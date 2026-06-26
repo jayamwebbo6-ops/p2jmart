@@ -39,6 +39,11 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
 
   const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated());
   const [userProfile, setUserProfile] = useState(null);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [userProfile?.photo]);
 
   // --- HOOKS MOVED TO TOP LEVEL OF HEADER COMPONENT ---
   const uniqueBrands = useMemo(() => {
@@ -376,8 +381,19 @@ const handleItemClick = (product) => {
             
             <div className="relative" ref={userMenuRef}>
               <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="hover:text-secondary transition-colors hover:scale-110 transform flex items-center focus:outline-none">
-                {isAuthenticated && userProfile?.photo ? (
-                  <img src={userProfile.photo} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-gray-200" />
+                {isAuthenticated ? (
+                  userProfile?.photo && !imgError ? (
+                    <img 
+                      src={userProfile.photo} 
+                      alt="Profile" 
+                      onError={() => setImgError(true)}
+                      className="w-6 h-6 rounded-full object-cover border border-gray-200" 
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-extrabold text-[10px] border border-gray-200">
+                      {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )
                 ) : (
                   <User size={24} strokeWidth={1.5} />
                 )}
