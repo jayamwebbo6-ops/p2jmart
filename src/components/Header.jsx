@@ -15,8 +15,13 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { isUserAuthenticated, userLogout } from '../api/userApi';
 import { getProductsAPI } from '../api/productApi';
 import { getCategoriesAPI } from '../api/categoryApi';
+import { getHomeCMS } from '../api/homeCms'; 
 
 const Header = memo(({ wishlist = [], cart = [] }) => {
+
+  const [HeaderIconData, setHeaderIconData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -40,6 +45,38 @@ const Header = memo(({ wishlist = [], cart = [] }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(isUserAuthenticated());
   const [userProfile, setUserProfile] = useState(null);
   const [imgError, setImgError] = useState(false);
+
+
+
+
+    useEffect(() => {
+      const fetchFooterCMS = async () => {
+        try {
+          setIsLoading(true);
+          const res = await getHomeCMS();
+          
+          console.log("Footer CMS Raw Response:", res);
+  
+          // Extract object out of data envelope or assign directly
+          if (res && res.data && res.data.contactSetting) {
+            setHeaderIconData(res.data.contactSetting);
+          } else if (res && res.contactSetting) {
+            setHeaderIconData(res.contactSetting);
+          } else if (res && !Array.isArray(res) && typeof res === 'object') {
+            setHeaderIconData(res);
+          } else {
+            console.warn("Unexpected data payload structure for Footer contact settings.");
+          }
+        } catch (err) {
+          console.error("Error fetching Footer contact schema:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+    
+      fetchFooterCMS();
+    }, []);
+
 
   useEffect(() => {
     setImgError(false);
@@ -309,12 +346,39 @@ const handleItemClick = (product) => {
           <Link to="/track-order" className="hidden sm:block hover:text-gray-300 transition-colors tracking-wide">Track your order</Link>
           <span className="hidden sm:block w-px h-3 bg-gray-400 opacity-50"></span>
           <Link to="/support" className="hover:text-gray-300 transition-colors tracking-wide">Need support?</Link>
-          <div className="flex items-center space-x-3 pl-2">
-            <a href="#" className="hover:text-gray-300 transition-transform hover:scale-110"><FaFacebookF size={14} /></a>
-            <a href="#" className="hover:text-gray-300 transition-transform hover:scale-110"><FaXTwitter size={14} /></a>
-            <a href="#" className="hover:text-gray-300 transition-transform hover:scale-110"><FaYoutube size={14} /></a>
-            <a href="#" className="hover:text-gray-300 transition-transform hover:scale-110"><FaInstagram size={14} /></a>
-          </div>
+         
+         {isLoading ? (
+                       <p className="text-[13px] text-gray-400 animate-pulse">Loading icons data...</p>
+                     ) : HeaderIconData ? (
+                       <div>
+                         <div className="flex items-center space-x-3 pl-2">
+                           {HeaderIconData.instagram && (
+                             <a href={HeaderIconData.instagram} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
+                               <FaInstagram size={16} />
+                             </a>
+                           )}
+                           {HeaderIconData.twitter && (
+                             <a href={HeaderIconData.twitter} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
+                               <FaXTwitter size={16} />
+                             </a>
+                           )}
+                           {HeaderIconData.youtube && (
+                             <a href={HeaderIconData.youtube} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
+                               <FaYoutube size={16} />
+                             </a>
+                           )}
+                           {HeaderIconData.facebook && (
+                             <a href={HeaderIconData.facebook} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
+                               <FaFacebookF size={16} />
+                             </a>
+                           )}
+                         </div>
+                       </div>
+                     ) : (
+                       <p className="text-[13px] text-gray-400">no icons</p>
+                     )}
+         
+         
         </div>
       </div>
 

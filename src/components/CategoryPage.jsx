@@ -97,7 +97,7 @@ const CategoryPage = () => {
                       }}
                       className="px-3 py-1.5 border border-white text-white bg-transparent text-[10px] font-bold tracking-wider uppercase hover:bg-white hover:text-primary transition-colors duration-200 text-center inline-block cursor-pointer z-30"
                     >
-                      View Collection
+                      {category.buttonText || button}
                     </Link>
 
                   </div>
