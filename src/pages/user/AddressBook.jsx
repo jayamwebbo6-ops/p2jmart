@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
-import { initialAddresses } from '../../utils/mockAddresses';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, MapPin, X, Home, CheckCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { toast } from '../../components/toast';
+import {
+  createAddressAPI,
+  getMyAddressesAPI,
+  updateAddressAPI,
+  deleteAddressAPI,
+  setDefaultAddressAPI
+} from '../../api/addressApi';
+import { getAllShippingAPI } from '../../api/shippingApi';
 
 const emptyAddress = {
   fullName: '',
@@ -10,16 +18,51 @@ const emptyAddress = {
   apartment: '',
   city: '',
   state: '',
+  stateId: '',
   pincode: '',
   isDefault: false,
 };
 
 const AddressBook = () => {
-  const [addresses, setAddresses] = useState(initialAddresses);
+  const [addresses, setAddresses] = useState([]);
+  const [shippingStates, setShippingStates] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(emptyAddress);
   const [addressToDelete, setAddressToDelete] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load addresses and configured shipping states
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [addressRes, shippingRes] = await Promise.all([
+        getMyAddressesAPI(),
+        getAllShippingAPI()
+      ]);
+
+      if (addressRes && addressRes.success) {
+        setAddresses(addressRes.data);
+      } else {
+        toast.error(addressRes?.message || 'Failed to load addresses');
+      }
+      
+      if (shippingRes && shippingRes.success) {
+        setShippingStates(shippingRes.data);
+      } else {
+        toast.error(shippingRes?.message || 'Failed to load shipping states');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load Address Book details from server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleOpenAddForm = () => {
     setFormData(emptyAddress);
@@ -28,15 +71,45 @@ const AddressBook = () => {
   };
 
   const handleOpenEditForm = (address) => {
-    setFormData(address);
-    setEditingId(address.id);
+    setFormData({
+      fullName: address.fullName || '',
+      phoneNumber: address.phoneNumber || '',
+      streetAddress: address.streetAddress || '',
+      apartment: address.apartment || '',
+      city: address.city || '',
+      state: address.state || '',
+      stateId: address.stateId || '',
+      pincode: address.pincode || '',
+      isDefault: !!address.isDefault,
+    });
+    setEditingId(address._id);
     setIsFormOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (addressToDelete) {
-      setAddresses((prev) => prev.filter((addr) => addr.id !== addressToDelete));
-      setAddressToDelete(null);
+      setLoading(true);
+      try {
+        const res = await deleteAddressAPI(addressToDelete);
+        if (res && res.success) {
+          toast.success(res.message || 'Address deleted successfully');
+          setAddresses((prev) => prev.filter((addr) => addr._id !== addressToDelete));
+          
+          // Re-load to update new default address if deleted address was default
+          const deletedAddress = addresses.find(addr => addr._id === addressToDelete);
+          if (deletedAddress && deletedAddress.isDefault) {
+            await loadData();
+          }
+        } else {
+          toast.error(res?.message || 'Failed to delete address');
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error('Server error deleting address');
+      } finally {
+        setAddressToDelete(null);
+        setLoading(false);
+      }
     }
   };
 
@@ -48,20 +121,75 @@ const AddressBook = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleStateChange = (e) => {
+    const selectedStateId = e.target.value;
+    const selectedStateObj = shippingStates.find(s => s._id === selectedStateId);
+    setFormData((prev) => ({
+      ...prev,
+      stateId: selectedStateId,
+      state: selectedStateObj ? selectedStateObj.stateName : ''
+    }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      setAddresses((prev) =>
-        prev.map((addr) => (addr.id === editingId ? { ...formData, id: editingId } : addr))
-      );
-    } else {
-      const newAddress = {
-        ...formData,
-        id: Date.now().toString(),
-      };
-      setAddresses((prev) => [...prev, newAddress]);
+    if (!formData.fullName || !formData.phoneNumber || !formData.streetAddress || !formData.city || !formData.state || !formData.stateId || !formData.pincode) {
+      toast.error('Please fill in all required fields.');
+      return;
     }
-    setIsFormOpen(false);
+
+    setLoading(true);
+    try {
+      if (editingId) {
+        const res = await updateAddressAPI(editingId, formData);
+        if (res && res.success) {
+          toast.success(res.message || 'Address updated successfully');
+          setAddresses((prev) =>
+            prev.map((addr) => (addr._id === editingId ? res.data : addr))
+          );
+          setIsFormOpen(false);
+        } else {
+          toast.error(res?.message || 'Failed to update address');
+        }
+      } else {
+        const res = await createAddressAPI(formData);
+        if (res && res.success) {
+          toast.success(res.message || 'Address added successfully');
+          setAddresses((prev) => [...prev, res.data]);
+          setIsFormOpen(false);
+        } else {
+          toast.error(res?.message || 'Failed to add address');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error saving address');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetDefault = async (id) => {
+    setLoading(true);
+    try {
+      const res = await setDefaultAddressAPI(id);
+      if (res && res.success) {
+        toast.success(res.message || 'Default address updated successfully');
+        setAddresses((prev) =>
+          prev.map((addr) => ({
+            ...addr,
+            isDefault: addr._id === id
+          }))
+        );
+      } else {
+        toast.error(res?.message || 'Failed to set default address');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Server error setting default address');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (isFormOpen) {
@@ -130,23 +258,33 @@ const AddressBook = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+              <select
+                name="stateId"
+                required
+                value={formData.stateId}
+                onChange={handleStateChange}
+                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white"
+              >
+                <option value="">Select a State</option>
+                {shippingStates.length === 0 ? (
+                  <option value="" disabled>No shipping states available</option>
+                ) : (
+                  shippingStates.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.stateName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
               <input
                 type="text"
                 name="city"
                 required
                 value={formData.city}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="state"
-                required
-                value={formData.state}
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
@@ -181,9 +319,10 @@ const AddressBook = () => {
           <div className="flex space-x-4 pt-4 border-t border-gray-100">
             <button
               type="submit"
-              className="bg-primary text-white px-6 py-2 rounded-md hover:opacity-90 transition-opacity font-medium shadow-sm"
+              disabled={loading}
+              className="bg-primary text-white px-6 py-2 rounded-md hover:opacity-90 transition-opacity font-medium shadow-sm disabled:opacity-55"
             >
-              Save Address
+              {loading ? 'Saving...' : 'Save Address'}
             </button>
             <button
               type="button"
@@ -211,7 +350,12 @@ const AddressBook = () => {
         </button>
       </div>
 
-      {addresses.length === 0 ? (
+      {loading && addresses.length === 0 ? (
+        <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
+          <div className="w-8 h-8 border-4 border-slate-200 border-t-[#002B49] rounded-full animate-spin"></div>
+          <span className="text-xs font-semibold uppercase tracking-wider">Loading Address Book...</span>
+        </div>
+      ) : addresses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-50 rounded-lg border border-gray-100 border-dashed">
           <MapPin size={48} className="text-gray-300 mb-4" />
           <p className="text-gray-500 mb-4">No addresses saved yet.</p>
@@ -226,7 +370,7 @@ const AddressBook = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {addresses.map((address) => (
             <div 
-              key={address.id} 
+              key={address._id} 
               className="border border-gray-100 rounded-xl p-6 flex flex-col justify-between bg-white shadow-sm"
             >
               <div>
@@ -258,18 +402,22 @@ const AddressBook = () => {
                 <button 
                   onClick={() => handleOpenEditForm(address)}
                   className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-700 hover:bg-gray-100 transition-colors"
+                  title="Edit Address"
                 >
                   <Edit2 size={16} strokeWidth={2} />
                 </button>
-               <button
-  onClick={() => setAddressToDelete(address.id)}
-  className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 hover:bg-red-700 hover:text-white transition-colors"
->
-  <Trash2 size={16} strokeWidth={2} />
-</button>
+                <button
+                  onClick={() => setAddressToDelete(address._id)}
+                  className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 hover:bg-red-700 hover:text-white transition-colors"
+                  title="Delete Address"
+                >
+                  <Trash2 size={16} strokeWidth={2} />
+                </button>
                 <button 
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${address.isDefault ? 'bg-primary/20 text-primary' : 'bg-primary/5 text-primary/50 hover:bg-primary/10 hover:text-primary'}`}
-                  title="Set as Default"
+                  onClick={() => !address.isDefault && handleSetDefault(address._id)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${address.isDefault ? 'bg-primary/20 text-primary cursor-default' : 'bg-primary/5 text-primary/50 hover:bg-primary/10 hover:text-primary'}`}
+                  title={address.isDefault ? "Default Address" : "Set as Default"}
+                  disabled={address.isDefault}
                 >
                   <CheckCircle size={16} strokeWidth={2} />
                 </button>

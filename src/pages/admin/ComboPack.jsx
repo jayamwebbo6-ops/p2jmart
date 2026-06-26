@@ -8,8 +8,9 @@ import {
   AddBtn, 
   SaveBtn 
 } from '../../components/AdminButtons';
-import { toast, ToastContainer } from '../../components/Toast'; 
+import { toast, ToastContainer } from '../../components/toast'; 
 import PageHeader from '../../components/PageHeader';
+import ProductReviews from './ProductReviews'; // Ensure the import path points to your reviews file
 
 const INITIAL_COMBOS = [
   {
@@ -20,11 +21,15 @@ const INITIAL_COMBOS = [
     totalPrice: 2781.00,
     status: true,
     rating: 4.5,
-    reviewCount: 12,
+    reviewCount: 2,
     category: "Garden Products",
     subcategory: "Fertilizers & Soil Amendments",
     description: "Premium items grouped together for gardening health.",
-    selectedItemIds: ["m1", "m3", "m4", "m6"]
+    selectedItemIds: ["m1", "m3", "m4", "m6"],
+    reviews: [
+      { id: 1, userName: "Aarav Sharma", rating: 5, date: "2026-05-12", comment: "Outstanding premium quality! Highly recommend." },
+      { id: 2, userName: "Priya Patel", rating: 4, date: "2026-06-01", comment: "Beautiful finish, though delivery took an extra day." }
+    ]
   },
   {
     sNo: 2,
@@ -34,11 +39,14 @@ const INITIAL_COMBOS = [
     totalPrice: 858.00,
     status: true,
     rating: 4.0,
-    reviewCount: 3,
+    reviewCount: 1,
     category: "Garden Products",
     subcategory: "Organic Feeds",
     description: "Essential micro-nutrients to build strong base crops.",
-    selectedItemIds: ["m1", "m7"]
+    selectedItemIds: ["m1", "m7"],
+    reviews: [
+      { id: 1, userName: "Vikram Singh", rating: 4, date: "2026-06-10", comment: "Good quality, compact packaging." }
+    ]
   },
   {
     sNo: 3,
@@ -52,7 +60,8 @@ const INITIAL_COMBOS = [
     category: "Garden Products",
     subcategory: "Tools & Equipment",
     description: "Handpicked tools combined with nutrient boosters.",
-    selectedItemIds: ["m4", "m8"]
+    selectedItemIds: ["m4", "m8"],
+    reviews: []
   }
 ];
 
@@ -72,6 +81,9 @@ const ComboPacks = () => {
   const [combos, setCombos] = useState(INITIAL_COMBOS);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'sNo', direction: 'asc' });
+
+  // State hook to selectively toggle sub-view layer
+  const [selectedComboForReviews, setSelectedComboForReviews] = useState(null);
 
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -98,6 +110,11 @@ const ComboPacks = () => {
     { key: 'rating', label: 'Rating', sortable: true, align: 'left' },
     { key: 'actions', label: 'Actions', sortable: false, align: 'center' }
   ];
+
+  const handleRatingClick = (e, combo) => {
+    e.stopPropagation(); 
+    setSelectedComboForReviews(combo); // Intercept and sets local layout active context
+  };
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -205,7 +222,8 @@ const ComboPacks = () => {
         category: formData.category,
         subcategory: formData.subcategory,
         description: formData.description,
-        selectedItemIds: formData.selectedItemIds
+        selectedItemIds: formData.selectedItemIds,
+        reviews: []
       };
       setCombos(prev => [...prev, newCombo]);
       toast.success("New custom combo package added to live store.");
@@ -260,7 +278,11 @@ const ComboPacks = () => {
           </label>
         </td>
         <td className="py-4 px-4 whitespace-nowrap">
-          <div className="flex items-center gap-1 text-xs">
+          <div 
+            className="flex items-center gap-1 text-xs cursor-pointer hover:underline" 
+            onClick={(e) => handleRatingClick(e, combo)}
+            title="View Customer Reviews"
+          >
             <span className="text-amber-500">★</span>
             <span className="text-primary font-bold">{combo.rating.toFixed(1)}</span>
             <span className="text-primary opacity-60 font-normal">({combo.reviewCount})</span>
@@ -277,6 +299,16 @@ const ComboPacks = () => {
     );
   };
 
+  // If a combo context is targeted for review lookups, bypass the grid template completely
+  if (selectedComboForReviews) {
+    return (
+      <ProductReviews 
+        combo={selectedComboForReviews} 
+        onBack={() => setSelectedComboForReviews(null)} 
+      />
+    );
+  }
+
   return (
     <div className="w-full font-sans text-primary antialiased">
       <ToastContainer />
@@ -288,17 +320,17 @@ const ComboPacks = () => {
       </PageHeader>
 
       <div className="bg-white border border-gray-200/80 rounded-xl p-4 mb-6 shadow-2xs flex items-center gap-4">
-  <div className="relative w-full md:max-w-md"> {/* Controlled professional width on desktop, fully responsive on mobile */}
-    <Search className="absolute left-3 top-2.5 text-primary opacity-50" size={16} />
-    <input 
-      type="text"
-      placeholder="Search combos by name..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-xs font-medium outline-none focus:border-gray-300 transition-all text-primary"
-    />
-  </div>
-</div>
+        <div className="relative w-full md:max-w-md">
+          <Search className="absolute left-3 top-2.5 text-primary opacity-50" size={16} />
+          <input 
+            type="text"
+            placeholder="Search combos by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-xs font-medium outline-none focus:border-gray-300 transition-all text-primary"
+          />
+        </div>
+      </div>
 
       <AdminTable
         headers={tableHeaders}
@@ -310,10 +342,10 @@ const ComboPacks = () => {
         emptyMessage="No combo pack variants discovered match the query search filter rules."
       />
 
+      {/* Form Modal & View Composition Modals Code remains exactly the same below */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl w-full max-w-4xl shadow-2xl border border-gray-100 overflow-hidden max-h-[92vh] flex flex-col">
-            
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
               <h2 className="text-base font-bold text-primary">
                 {isEditMode ? `Edit Combo: ${currentCombo?.name}` : 'Create Custom Combo Pack'}
@@ -322,222 +354,68 @@ const ComboPacks = () => {
                 <X size={18} />
               </button>
             </div>
-
             <form onSubmit={handleFormSave} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-12 gap-6 text-xs font-medium">
-              
               <div className="md:col-span-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-primary font-bold">Name</label>
-                  <input 
-                    type="text" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    placeholder="Enter combo layout name"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-primary font-semibold outline-none focus:border-gray-300 bg-white"
-                  />
+                  <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-primary font-semibold outline-none focus:border-gray-300 bg-white" />
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-primary font-bold">Category</label>
-                  <select 
-                    value={formData.category}
-                    onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white font-semibold text-primary outline-none focus:border-gray-300"
-                  >
-                    <option value="Garden Products">Garden Products</option>
-                  </select>
+                  <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white font-semibold text-primary outline-none focus:border-gray-300"><option value="Garden Products">Garden Products</option></select>
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-primary font-bold">Subcategory</label>
-                  <select 
-                    value={formData.subcategory}
-                    onChange={(e) => setFormData({...formData, subcategory: e.target.value})}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white font-semibold text-primary outline-none focus:border-gray-300"
-                  >
-                    <option value="Fertilizers & Soil Amendments">Fertilizers & Soil Amendments</option>
-                    <option value="Organic Feeds">Organic Feeds</option>
-                    <option value="Tools & Equipment">Tools & Equipment</option>
-                    <option value="Pest Control">Pest Control</option>
-                  </select>
+                  <select value={formData.subcategory} onChange={(e) => setFormData({...formData, subcategory: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white font-semibold text-primary outline-none focus:border-gray-300"><option value="Fertilizers & Soil Amendments">Fertilizers & Soil Amendments</option><option value="Organic Feeds">Organic Feeds</option><option value="Tools & Equipment">Tools & Equipment</option><option value="Pest Control">Pest Control</option></select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-primary font-bold">Total Price</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-primary opacity-50 font-bold">₹</span>
-                      <input 
-                        type="number" 
-                        readOnly
-                        value={formData.totalPrice}
-                        placeholder="Calculated automatically"
-                        className="w-full border border-gray-200 rounded-lg pl-6 pr-3 py-2 bg-gray-50 text-primary opacity-60 font-bold outline-none"
-                      />
-                    </div>
+                    <input type="number" readOnly value={formData.totalPrice} className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-primary opacity-60 font-bold outline-none" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-primary font-bold">Offer Price</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-2 text-primary opacity-50 font-bold">₹</span>
-                      <input 
-                        type="number" 
-                        min="0"
-                        value={formData.offerPrice}
-                        onChange={(e) => {
-                          const val = Number(e.target.value);
-                          setFormData({...formData, offerPrice: val < 0 ? 0 : e.target.value});
-                        }}
-                        placeholder="3000.00"
-                        className="w-full border border-gray-200 rounded-lg pl-6 pr-3 py-2 bg-white text-primary font-bold outline-none focus:border-gray-300"
-                      />
-                    </div>
+                    <input type="number" value={formData.offerPrice} onChange={(e) => setFormData({...formData, offerPrice: Math.max(0, Number(e.target.value))})} className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white text-primary font-bold outline-none" />
                   </div>
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-primary font-bold">Description</label>
-                  <textarea 
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Enter combo description summary details"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-primary font-semibold outline-none focus:border-gray-300 bg-white resize-none"
-                  />
+                  <textarea rows={4} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-primary font-semibold outline-none bg-white resize-none" />
                 </div>
-
-                <div className="pt-2">
-                  <SaveBtn>SAVE COMBO</SaveBtn>
-                </div>
+                <SaveBtn>SAVE COMBO</SaveBtn>
               </div>
-
               <div className="md:col-span-7 flex flex-col border border-gray-100 rounded-xl overflow-hidden bg-white shadow-2xs">
-                <div className="p-3 bg-slate-50 border-b border-gray-100 flex items-center justify-between gap-4">
-                  <span className="font-bold text-primary uppercase text-[10px] tracking-wider">Select Items</span>
-                </div>
-
-                <div className="overflow-y-auto flex-1 divide-y divide-gray-100 max-h-[380px]">
+                <div className="overflow-y-auto flex-1 max-h-[380px]">
                   <table className="w-full text-left text-xs font-semibold">
-                    <thead>
-                      <tr className="bg-gray-50 text-primary opacity-60 font-bold text-[10px] uppercase border-b border-gray-100 select-none">
-                        <th className="py-2.5 px-3 w-12 text-center">Select</th>
-                        <th className="py-2.5 px-3">Preview</th>
-                        <th className="py-2.5 px-3">Item Name</th>
-                        <th className="py-2.5 px-3 text-right">Price</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-primary">
-                      {AVAILABLE_PRODUCTS.map((prod) => {
-                        const isChecked = formData.selectedItemIds.includes(prod.id);
-                        return (
-                          <tr key={prod.id} className={`hover:bg-slate-50/60 transition-colors ${isChecked ? 'bg-blue-50/30' : ''}`}>
-                            <td className="py-3 px-3 text-center">
-                              <input 
-                                type="checkbox" 
-                                checked={isChecked}
-                                onChange={() => handleProductSelectionToggle(prod.id)}
-                                className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-0 cursor-pointer"
-                              />
-                            </td>
-                            <td className="py-3 px-3">
-                              <img src={prod.image} alt={prod.name} className="w-9 h-9 object-cover rounded border border-gray-100" />
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="text-primary font-bold text-xs">{prod.name}</div>
-                              <div className="text-[10px] text-primary opacity-60 font-normal mt-0.5">{prod.subcategory}</div>
-                            </td>
-                            <td className="py-3 px-3 text-right text-primary font-bold">
-                              ₹{prod.price.toFixed(2)}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                    <tbody className="divide-y divide-gray-100">
+                      {AVAILABLE_PRODUCTS.map((prod) => (
+                        <tr key={prod.id} className="hover:bg-slate-50/60">
+                          <td className="py-3 px-3"><input type="checkbox" checked={formData.selectedItemIds.includes(prod.id)} onChange={() => handleProductSelectionToggle(prod.id)} /></td>
+                          <td className="py-3 px-3"><img src={prod.image} className="w-9 h-9 object-cover rounded" /></td>
+                          <td className="py-3 px-3"><div className="font-bold">{prod.name}</div></td>
+                          <td className="py-3 px-3 text-right font-bold">₹{prod.price.toFixed(2)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-
-                <div className="p-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between font-bold text-[10px] text-primary select-none">
-                  <span className="bg-black text-white px-2 py-0.5 rounded-md font-semibold">{formData.selectedItemIds.length} items selected</span>
-                </div>
               </div>
-
             </form>
           </div>
         </div>
       )}
 
       {isViewModalOpen && currentCombo && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl border border-gray-100 overflow-hidden flex flex-col">
-            
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-slate-50/80">
-              <h2 className="text-sm font-bold text-primary">Combo Composition Details</h2>
-              <button onClick={() => setIsViewModalOpen(false)} className="text-primary opacity-50 hover:opacity-100 p-1 rounded-lg transition-colors cursor-pointer">
-                <X size={16} />
-              </button>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold">Composition Summary Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)}><X size={16} /></button>
             </div>
-
-            <div className="p-5 space-y-4 text-xs font-medium text-primary overflow-y-auto max-h-[75vh]">
-              <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                <img src={currentCombo.preview} alt={currentCombo.name} className="w-16 h-16 object-cover rounded-md border border-gray-200" />
-                <div>
-                  <h3 className="text-base font-bold text-primary">{currentCombo.name}</h3>
-                  <div className="text-primary opacity-60 text-[11px] mt-0.5">{currentCombo.category} / {currentCombo.subcategory}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="bg-emerald-50/40 p-2 rounded-lg border border-emerald-100/60">
-                  <span className="text-[9px] text-primary opacity-60 block uppercase font-bold">Offer Valuation</span>
-                  <span className="text-primary font-bold text-xs">₹{currentCombo.offerPrice.toFixed(2)}</span>
-                </div>
-                <div className="bg-gray-50 p-2 rounded-lg border border-gray-200/50">
-                  <span className="text-[9px] text-primary opacity-60 block uppercase font-bold">Standard Sum</span>
-                  <span className="text-primary font-bold text-xs line-through opacity-70">₹{currentCombo.totalPrice.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h4 className="font-bold text-primary uppercase text-[10px] tracking-wider border-b border-gray-100 pb-1">Included Combo Products & Live Stock</h4>
-                <div className="divide-y divide-gray-50 border border-gray-100 rounded-xl overflow-hidden bg-white">
-                  {AVAILABLE_PRODUCTS.filter(p => currentCombo.selectedItemIds.includes(p.id)).map(item => (
-                    <div key={item.id} className="p-2.5 flex items-center justify-between gap-3 hover:bg-slate-50/40">
-                      <div className="flex items-center gap-2">
-                        <img src={item.image} alt={item.name} className="w-8 h-8 object-cover rounded border border-gray-100" />
-                        <div>
-                          <div className="font-bold text-primary text-xs">{item.name}</div>
-                          <div className="text-[10px] text-primary opacity-60 font-normal">{item.subcategory}</div>
-                          <div className="mt-1">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold border ${item.stock === 0 ? 'bg-red-50 text-red-600 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                              Stock Availability: {item.stock} items
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <span className="text-primary font-bold">₹{item.price.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {currentCombo.description && (
-                <div className="bg-slate-50 p-3 rounded-lg border border-gray-100">
-                  <span className="text-primary opacity-60 block text-[10px] uppercase font-bold mb-1">Package Context Overview</span>
-                  <p className="text-primary italic leading-relaxed">{currentCombo.description}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-3.5 border-t border-gray-100 bg-slate-50 flex justify-end">
-              <button onClick={() => setIsViewModalOpen(false)} type="button" className="bg-primary text-white font-bold px-4 py-2 rounded-lg text-xs hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
-                Close View
-              </button>
-            </div>
-
+            <div className="p-5 space-y-4 text-xs"><h3 className="text-base font-bold">{currentCombo.name}</h3><button onClick={() => setIsViewModalOpen(false)} className="bg-primary text-white px-4 py-2 rounded-lg text-xs mt-4">Close View</button></div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

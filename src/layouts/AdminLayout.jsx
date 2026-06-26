@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
+import { getEnqueriesAPI } from '../api/enqueriesApi';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -61,8 +62,27 @@ const AdminLayout = () => {
         setUnreadCount(0);
       }
     };
+
+    const fetchInitialEnquiries = async () => {
+      if (isAdminAuthenticated()) {
+        try {
+          const res = await getEnqueriesAPI();
+          if (res && res.success && Array.isArray(res.data)) {
+            const mapped = res.data.map(item => ({
+              ...item,
+              id: item._id || item.id
+            }));
+            localStorage.setItem('p2j_mart_enquiries', JSON.stringify(mapped));
+            updateUnreadCount();
+          }
+        } catch (err) {
+          console.error("Error fetching initial enquiries for badge:", err);
+        }
+      }
+    };
     
     updateUnreadCount();
+    fetchInitialEnquiries();
     window.addEventListener('enquiriesUpdated', updateUnreadCount);
     return () => window.removeEventListener('enquiriesUpdated', updateUnreadCount);
   }, []);

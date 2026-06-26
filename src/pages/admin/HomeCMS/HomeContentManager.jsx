@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Sliders, 
   Grid, 
@@ -10,11 +10,13 @@ import {
   RotateCcw,
   Truck,
   SquareCode,
+  AlertCircle
 } from 'lucide-react';
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
+import { getHomeCMS, updateHomeCMS } from '../../../api/homeCms';
 
-// Import Your Split Sub-Components
+// Import Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
 import CategoryGridTab from './CategoryGridTab';
 import CategoryTab from './CategoryTab';
@@ -73,37 +75,185 @@ const HomeContentManager = () => {
   };
 
   // Consolidated Parent States
-  const [slides, setSlides] = useState([
-    { id: 1, title: "Boat Headphone", description: "Taking your Viewing Experience to Next Level", btnLabel: "Shop Now", btnLink: "/category/headphones", image: null },
-    { id: 2, title: "SNAP ART Spotify Frame", description: "Personalized scannable frame tokens with live musical elements", btnLabel: "Customize Now", btnLink: "/product/custom-spotify-frame", image: null }
-  ]);
+  const [slides, setSlides] = useState([]);
+  const [offerBanners, setOfferBanners] = useState([]);
+  const [categoryGrid, setCategoryGrid] = useState([]);
+  const [categorySections, setCategorySections] = useState([]);
+  const [promoBanner, setPromoBanner] = useState({ imgUrl: '', targetUrl: '/offers/mega-sale' });
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [exclusiveProducts, setExclusiveProducts] = useState([]);
+  
+  // Contact & Policy Dynamic States
+  const [contactSetting, setContactSetting] = useState({
+    phones: '',
+    email: '',
+    address: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    youtube: ''
+  });
+  const [privacyPolicy, setPrivacyPolicy] = useState([]);
+  const [cancellationReturnPolicy, setCancellationReturnPolicy] = useState([]);
+  const [deliveryPolicy, setDeliveryPolicy] = useState([]);
+  const [termsConditions, setTermsConditions] = useState([]);
 
-  const [offerBanners, setOfferBanners] = useState([
-    { id: 101, tagline: "iPhone Collection", title: "25% OFF", btnLink: "/category/iphone-cases", image: null },
-    { id: 102, tagline: "MAC Computer", title: "25% OFF", btnLink: "/category/macbook-stands", image: null }
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toastMessage, setToastMessage] = useState('Saved changes successfully!');
+  const [toastType, setToastType] = useState('success');
 
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Gifts", image: null },
-    { id: 2, name: "Frames", image: null },
-    { id: 3, name: "Customized Plaque", image: null }
-  ]);
+  // Fetch from DB on mount
+  useEffect(() => {
+    const fetchCMS = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getHomeCMS();
+        if (data && data.success) {
+          const cmsData = data.data;
+          setSlides(
+            (cmsData.heroSlider || []).map((slide, idx) => ({
+              ...slide,
+              id: slide._id || slide.id || `slide-${idx}-${Date.now()}`
+            }))
+          );
+          setOfferBanners(
+            (cmsData.offerBanners || []).map((banner, idx) => ({
+              ...banner,
+              id: banner._id || banner.id || `offer-${idx}-${Date.now()}`
+            }))
+          );
+          setCategoryGrid(
+            (cmsData.categoryGrid || []).map((card, idx) => ({
+              ...card,
+              id: card._id || card.id || `card-${idx}-${Date.now()}`
+            }))
+          );
+          setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+          setCategorySections(
+            (cmsData.categorySections || []).map((section, idx) => ({
+              ...section,
+              id: section._id || section.id || `sec-${idx}-${Date.now()}`
+            }))
+          );
+          setFeaturedProducts(cmsData.featuredProducts || []);
+          setTrendingProducts(cmsData.trendingProducts || []);
+          setExclusiveProducts(cmsData.exclusiveProducts || []);
+          
+          // Populate dynamic policies and contact settings
+          setContactSetting(cmsData.contactSetting || {
+            phones: '',
+            email: '',
+            address: '',
+            facebook: '',
+            twitter: '',
+            instagram: '',
+            youtube: ''
+          });
+          setPrivacyPolicy(cmsData.privacyPolicy || []);
+          setCancellationReturnPolicy(cmsData.cancellationReturnPolicy || []);
+          setDeliveryPolicy(cmsData.deliveryPolicy || []);
+          setTermsConditions(cmsData.termsConditions || []);
+        }
+      } catch (err) {
+        console.error('Fetch Home CMS error:', err);
+        setToastMessage('Error loading homepage settings.');
+        setToastType('error');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchCMS();
+  }, []);
 
-  const handleSaveChanges = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
+  const handleSaveChanges = async (customPayload = {}) => {
+    try {
+      setIsSaving(true);
+      // Merge parent states with any state overrides provided on action invocation
+      const payload = {
+        heroSlider: slides,
+        offerBanners: offerBanners,
+        categoryGrid: categoryGrid,
+        categorySections: categorySections,
+        promoBanner: promoBanner,
+        featuredProducts,
+        trendingProducts,
+        exclusiveProducts,
+        contactSetting,
+        privacyPolicy,
+        cancellationReturnPolicy,
+        deliveryPolicy,
+        termsConditions,
+        ...customPayload
+      };
+
+      const data = await updateHomeCMS(payload);
+      if (data && data.success) {
+        const cmsData = data.data;
+        setSlides(
+          (cmsData.heroSlider || []).map((slide, idx) => ({
+            ...slide,
+            id: slide._id || slide.id || `slide-${idx}-${Date.now()}`
+          }))
+        );
+        setOfferBanners(
+          (cmsData.offerBanners || []).map((banner, idx) => ({
+            ...banner,
+            id: banner._id || banner.id || `offer-${idx}-${Date.now()}`
+          }))
+        );
+        setCategoryGrid(
+          (cmsData.categoryGrid || []).map((card, idx) => ({
+            ...card,
+            id: card._id || card.id || `card-${idx}-${Date.now()}`
+          }))
+        );
+        setPromoBanner(cmsData.promoBanner || { imgUrl: '', targetUrl: '/offers/mega-sale' });
+        setCategorySections(
+          (cmsData.categorySections || []).map((section, idx) => ({
+            ...section,
+            id: section._id || section.id || `sec-${idx}-${Date.now()}`
+          }))
+        );
+        setFeaturedProducts(cmsData.featuredProducts || []);
+        setTrendingProducts(cmsData.trendingProducts || []);
+        setExclusiveProducts(cmsData.exclusiveProducts || []);
+        
+        setContactSetting(cmsData.contactSetting || {});
+        setPrivacyPolicy(cmsData.privacyPolicy || []);
+        setCancellationReturnPolicy(cmsData.cancellationReturnPolicy || []);
+        setDeliveryPolicy(cmsData.deliveryPolicy || []);
+        setTermsConditions(cmsData.termsConditions || []);
+
+        setToastMessage('Saved changes successfully!');
+        setToastType('success');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    } catch (err) {
+      console.error('Save Home CMS error:', err);
+      setToastMessage(err.response?.data?.message || 'Failed to save homepage settings.');
+      setToastType('error');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const addSlide = () => setSlides([...slides, { id: Date.now(), title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+  const addSlide = () => setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
       
       {/* Toast Notification */}
       {showToast && (
-        <div className="fixed top-6 right-6 bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 z-50 text-sm font-semibold tracking-wide transition-all animate-bounce">
-          <CheckCircle size={18} />
-          <span>Saved changes successfully!</span>
+        <div className={`fixed top-6 right-6 ${toastType === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2.5 z-50 text-sm font-semibold tracking-wide transition-all animate-bounce`}>
+          {toastType === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage}</span>
         </div>
       )}
 
@@ -111,7 +261,9 @@ const HomeContentManager = () => {
         title="Home Content Manager"
         subtitle="Customize your storefront experience. Manage banners, asset layouts, and metadata profiles."
       >
-        <SaveBtn onClick={handleSaveChanges} type="button">Save Changes</SaveBtn>
+        <SaveBtn onClick={() => handleSaveChanges()} type="button" disabled={isSaving || isLoading}>
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </SaveBtn>
       </PageHeader>
 
       {/* Primary Tabs Shell */}
@@ -136,7 +288,7 @@ const HomeContentManager = () => {
               { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
               { id: 'cancellationReturnPolicy', label: 'Cancellation & Returns', icon: RotateCcw },
               { id: 'deliveryPolicy', label: 'Delivery Policy', icon: Truck },
-              { id: 'termsCOnditions', label: 'Terms Conditions', icon:SquareCode,  }
+              { id: 'termsConditions', label: 'Terms Conditions', icon: SquareCode }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -162,50 +314,96 @@ const HomeContentManager = () => {
         {/* Dynamic Route/Tab Content Switcher Area */}
         <div className="p-4 sm:p-5 md:p-6 flex-1 w-full min-w-0">
           
-          {activeTab === 'hero-slider' && (
-            <HeroSliderTab 
-              slides={slides} 
-              setSlides={setSlides} 
-              addSlide={addSlide} 
-              offerBanners={offerBanners} 
-            />
-          )}
+          {isLoading ? (
+            <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+              <span className="text-xs font-semibold uppercase tracking-wider">Loading settings...</span>
+            </div>
+          ) : (
+            <>
+              {activeTab === 'hero-slider' && (
+                <HeroSliderTab 
+                  slides={slides} 
+                  setSlides={setSlides} 
+                  addSlide={addSlide} 
+                  offerBanners={offerBanners} 
+                  setOfferBanners={setOfferBanners}
+                />
+              )}
 
-          {activeTab === 'category-grid' && (
-            <CategoryGridTab 
-              categories={categories} 
-              setCategories={setCategories} 
-            />
-          )}
+              {activeTab === 'category-grid' && (
+                <CategoryGridTab 
+                  cards={categoryGrid} 
+                  setCards={setCategoryGrid} 
+                  promoBanner={promoBanner}
+                  setPromoBanner={setPromoBanner}
+                />
+              )}
 
-          {activeTab === 'featured-products' && (
-            <CategoryTab />
-          )}
+              {activeTab === 'featured-products' && (
+                <CategoryTab 
+                  sections={categorySections} 
+                  setSections={setCategorySections} 
+                />
+              )}
 
-          {activeTab === 'multiColumnShowcase' && (
-            <MultiShowCaseTab/>
-          )}
+              {activeTab === 'multiColumnShowcase' && (
+                <MultiShowCaseTab
+                  featuredProducts={featuredProducts}
+                  setFeaturedProducts={setFeaturedProducts}
+                  trendingProducts={trendingProducts}
+                  setTrendingProducts={setTrendingProducts}
+                  exclusiveProducts={exclusiveProducts}
+                  setExclusiveProducts={setExclusiveProducts}
+                />
+              )}
 
-          {activeTab === 'contactSetting' && (
-            <ContactSetting/>
-          )}
+              {activeTab === 'contactSetting' && (
+                <ContactSetting
+                  formData={contactSetting}
+                  setFormData={setContactSetting}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
 
-          {activeTab === 'privacyPolicy' && (
-            <PrivacyPolicyManager />
-          )}
+              {activeTab === 'privacyPolicy' && (
+                <PrivacyPolicyManager
+                  sections={privacyPolicy}
+                  setSections={setPrivacyPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
 
-          {activeTab === 'cancellationReturnPolicy' && (
-            <CancellationReturnPolicyManager />
-          )}
-          
-          {activeTab === 'deliveryPolicy' && (
-            <DeliveryPolicyManager/>
-          )}
+              {activeTab === 'cancellationReturnPolicy' && (
+                <CancellationReturnPolicyManager
+                  sections={cancellationReturnPolicy}
+                  setSections={setCancellationReturnPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+              
+              {activeTab === 'deliveryPolicy' && (
+                <DeliveryPolicyManager
+                  sections={deliveryPolicy}
+                  setSections={setDeliveryPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
 
-           {activeTab === 'termsConditions' && (
-            <TermsCondition/>
+              {activeTab === 'termsConditions' && (
+                <TermsCondition
+                  sections={termsConditions}
+                  setSections={setTermsConditions}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+            </>
           )}
- 
 
         </div>
       </div>

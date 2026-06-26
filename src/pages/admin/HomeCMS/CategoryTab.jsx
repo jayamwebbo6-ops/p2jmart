@@ -2,21 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Star, 
   Search, 
-  Plus, 
-  Link2, 
   Trash2, 
   Check, 
-  Filter, 
   Upload, 
   Image as ImageIcon, 
   Layers, 
-  X, 
   ArrowUp, 
   ArrowDown,
   Layout,
   PlusCircle,
-  Eye
+  Eye,
+  Link2
 } from 'lucide-react';
+import { getCategoriesAPI } from '../../../api/categoryApi';
+import { getProductsAPI } from '../../../api/productApi';
 
 // Unified Design System Tokens
 const THEME = {
@@ -31,98 +30,55 @@ const THEME = {
   inputBg: 'bg-white',
 };
 
-// Fallback initial products in case catalog is empty
-const MOCK_PRODUCTS = [
-  { id: 'SKU-201', name: 'Premium Wireless Headphones', price: 199.00, originalPrice: 249.00, discount: '20% Off', rating: 4.5, reviews: 28, category: 'Electronics', subcategory: 'Audio', imgUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&auto=format&fit=crop&q=60' },
-  { id: 'SKU-202', name: 'Smart Watch Series 9', price: 299.00, originalPrice: 349.00, discount: '14% Off', rating: 4.8, reviews: 42, category: 'Electronics', subcategory: 'Wearables', imgUrl: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&auto=format&fit=crop&q=60' },
-  { id: 'SKU-203', name: 'Portable Bluetooth Speaker', price: 79.00, originalPrice: 99.00, discount: '20% Off', rating: 4.2, reviews: 19, category: 'Electronics', subcategory: 'Audio', imgUrl: 'https://images.unsplash.com/photo-1545454675-3531b543be5d?w=300&auto=format&fit=crop&q=60' },
-  { id: 'SKU-204', name: 'Minimalist Wall Clock', price: 45.00, originalPrice: 59.00, discount: '23% Off', rating: 4.6, reviews: 14, category: 'Electronics', subcategory: 'Decor', imgUrl: 'https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?w=300&auto=format&fit=crop&q=60' },
-  { id: 'SKU-205', name: 'Custom Spotify Frame Plaque', price: 500.00, originalPrice: 550.00, discount: '10% Off', rating: 5.0, reviews: 36, category: 'Gift Items', subcategory: 'Personalized Gifts', imgUrl: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=300&auto=format&fit=crop&q=60' },
-  { id: 'SKU-206', name: 'Personalized Photo Keychain', price: 120.00, originalPrice: 150.00, discount: '20% Off', rating: 4.7, reviews: 18, category: 'Gift Items', subcategory: 'Keychains', imgUrl: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=300&auto=format&fit=crop&q=60' }
-];
-
-const CategoryTab = () => {
-  const [catalog, setCatalog] = useState([]);
-  const [sections, setSections] = useState([]);
+const CategoryTab = ({ sections = [], setSections }) => {
+  const [categories, setCategories] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [searchQueries, setSearchQueries] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  // 1. Load catalog and sections
+  // Load categories and products from backend
   useEffect(() => {
-    const savedCatalog = localStorage.getItem('p2j_mart_catalog');
-    let parsedCatalog = [];
-    if (savedCatalog) {
+    const fetchData = async () => {
+      setLoading(true);
       try {
-        parsedCatalog = JSON.parse(savedCatalog);
-      } catch (e) {
-        console.error("Failed to parse catalog", e);
-      }
-    }
-
-    // Seed mock catalog if empty so user has something to select
-    if (parsedCatalog.length === 0) {
-      parsedCatalog = [
-        {
-          id: 'cat-electronics',
-          name: 'Electronics',
-          subcategories: [
-            { id: 'sub-audio', name: 'Audio', products: MOCK_PRODUCTS.slice(0, 3) },
-            { id: 'sub-decor', name: 'Decor', products: [MOCK_PRODUCTS[3]] }
-          ]
-        },
-        {
-          id: 'cat-gifts',
-          name: 'Gift Items',
-          subcategories: [
-            { id: 'sub-personalized', name: 'Personalized Gifts', products: [MOCK_PRODUCTS[4]] },
-            { id: 'sub-keychains', name: 'Keychains', products: [MOCK_PRODUCTS[5]] }
-          ]
+        // Fetch categories with subcategories
+        const catRes = await getCategoriesAPI();
+        if (catRes && catRes.success) {
+          setCategories(catRes.data.map(cat => ({
+            ...cat,
+            id: cat._id || cat.id,
+            subcategories: (cat.subcategories || []).map(sub => ({
+              ...sub,
+              id: sub._id || sub.id
+            }))
+          })));
         }
-      ];
-    }
-    setCatalog(parsedCatalog);
 
-    // Load saved homepage sections
-    const savedSections = localStorage.getItem('p2j_mart_category_sections');
-    if (savedSections) {
-      try {
-        setSections(JSON.parse(savedSections));
-      } catch (e) {
-        console.error("Failed to parse sections", e);
-      }
-    } else {
-      // Default dynamic sections
-      const defaultSections = [
-        {
-          id: `sec-${Date.now()}-1`,
-          categoryId: parsedCatalog[0]?.id || '',
-          subCategoryId: parsedCatalog[0]?.subcategories[0]?.id || '',
-          title: parsedCatalog[0]?.name || 'Electronics Showcase',
-          bannerImage: '',
-          bannerLink: parsedCatalog[0] ? `/subCategory?catId=${parsedCatalog[0].id}` : '',
-          productIds: []
+        // Fetch all products
+        const prodRes = await getProductsAPI();
+        if (prodRes && prodRes.success) {
+          setAllProducts(prodRes.data);
         }
-      ];
-      setSections(defaultSections);
-      localStorage.setItem('p2j_mart_category_sections', JSON.stringify(defaultSections));
-    }
+      } catch (err) {
+        console.error("Failed to fetch catalog data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   // Helper to save sections
   const saveSections = (updatedSections) => {
     setSections(updatedSections);
-    localStorage.setItem('p2j_mart_category_sections', JSON.stringify(updatedSections));
-    window.dispatchEvent(new Event('home_cms_updated'));
   };
 
   // Add new section
   const handleAddSection = () => {
-    const firstCat = catalog[0];
-    const firstSub = firstCat?.subcategories[0];
-    
+    const firstCat = categories[0];
     const newSection = {
       id: `sec-${Date.now()}`,
       categoryId: firstCat?.id || '',
-      subCategoryId: firstSub?.id || '',
       title: firstCat?.name || 'New Showcase',
       bannerImage: '',
       bannerLink: firstCat ? `/subCategory?catId=${firstCat.id}` : '',
@@ -133,104 +89,73 @@ const CategoryTab = () => {
 
   // Delete section
   const handleDeleteSection = (id) => {
-    const updated = sections.filter(sec => sec.id !== id);
-    saveSections(updated);
+    saveSections(sections.filter(sec => sec.id !== id));
   };
 
-  // Handle Category selection change - Sets dynamic main category title & link
+  // Handle Category selection change
   const handleCategoryChange = (sectionId, catId) => {
-    const selectedCat = catalog.find(c => c.id === catId);
-    const sub = selectedCat?.subcategories[0];
-
-    const updated = sections.map(sec => {
+    const selectedCat = categories.find(c => c.id === catId);
+    saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
         return {
           ...sec,
           categoryId: catId,
-          subCategoryId: sub ? sub.id : '',
           title: selectedCat ? selectedCat.name : '',
           bannerLink: catId ? `/subCategory?catId=${catId}` : '',
-          productIds: [] // Clear previously selected products
+          productIds: []
         };
       }
       return sec;
-    });
-    saveSections(updated);
+    }));
   };
 
-  // Handle Subcategory selection change - Filters product picker only (no link modification)
-  const handleSubCategoryChange = (sectionId, subId) => {
-    const updated = sections.map(sec => {
-      if (sec.id === sectionId) {
-        return {
-          ...sec,
-          subCategoryId: subId
-        };
-      }
-      return sec;
-    });
-    saveSections(updated);
-  };
-
-  // Update other section property
+  // Update section property
   const handleUpdateSectionProp = (sectionId, key, value) => {
-    const updated = sections.map(sec => {
-      if (sec.id === sectionId) {
-        return { ...sec, [key]: value };
-      }
-      return sec;
-    });
-    saveSections(updated);
+    saveSections(sections.map(sec =>
+      sec.id === sectionId ? { ...sec, [key]: value } : sec
+    ));
   };
 
-  // Upload local banner image
+  // Upload banner image using base64
   const handleBannerUpload = (e, sectionId) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const updated = sections.map(sec => {
-          if (sec.id === sectionId) {
-            return { ...sec, bannerImage: reader.result };
-          }
-          return sec;
-        });
-        saveSections(updated);
+        saveSections(sections.map(sec =>
+          sec.id === sectionId ? { ...sec, bannerImage: reader.result } : sec
+        ));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Add product to section shelf
+  // Add product to section
   const handleAddProductToSection = (sectionId, prodId) => {
-    const updated = sections.map(sec => {
+    saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
         if (sec.productIds.includes(prodId)) return sec;
         return { ...sec, productIds: [...sec.productIds, prodId] };
       }
       return sec;
-    });
-    saveSections(updated);
+    }));
   };
 
-  // Remove product from section shelf
+  // Remove product from section
   const handleRemoveProductFromSection = (sectionId, prodId) => {
-    const updated = sections.map(sec => {
+    saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
         return { ...sec, productIds: sec.productIds.filter(id => id !== prodId) };
       }
       return sec;
-    });
-    saveSections(updated);
+    }));
   };
 
   // Move up
   const handleMoveUp = (index) => {
     if (index === 0) return;
     const updated = [...sections];
-    const temp = updated[index];
-    updated[index] = updated[index - 1];
-    updated[index - 1] = temp;
+    [updated[index], updated[index - 1]] = [updated[index - 1], updated[index]];
     saveSections(updated);
   };
 
@@ -238,11 +163,18 @@ const CategoryTab = () => {
   const handleMoveDown = (index) => {
     if (index === sections.length - 1) return;
     const updated = [...sections];
-    const temp = updated[index];
-    updated[index] = updated[index + 1];
-    updated[index + 1] = temp;
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
     saveSections(updated);
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-[#002B49] rounded-full animate-spin"></div>
+        <span className="text-xs font-semibold uppercase tracking-wider">Loading catalog...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -254,12 +186,12 @@ const CategoryTab = () => {
             Category Showcase Sections
           </h2>
           <p className="text-xs text-gray-400 mt-1">
-            Choose a Category (for title and link) and filter by Subcategory to choose specific products.
+            Choose a Category, pick products, and upload a promotional banner image.
           </p>
         </div>
         <button 
           onClick={handleAddSection}
-          className="flex items-center gap-2 bg-[#002B49] hover:bg-[#001F35] text-white font-bold tracking-wider text-xs px-4 py-2.5 rounded-xl uppercase transition-all shadow-sm"
+          className="flex items-center gap-2 bg-[#002B49] hover:bg-[#001F35] text-white font-bold tracking-wider text-xs px-4 py-2.5 rounded-xl uppercase transition-all shadow-sm cursor-pointer"
         >
           <PlusCircle size={15} />
           Add Category Section
@@ -276,37 +208,26 @@ const CategoryTab = () => {
           {sections.map((section, index) => {
             const searchQuery = searchQueries[section.id] || '';
 
-            // Find current category and its subcategories from catalog
-            const activeCategory = catalog.find(c => c.id === section.categoryId);
-            const subcategoriesList = activeCategory ? activeCategory.subcategories : [];
+            // Get products filtered by selected category
+            const categoryProducts = allProducts.filter(p => {
+              const catId = p.category?.id || p.category?._id || p.category;
+              return catId === section.categoryId;
+            });
 
-            // Extract all products from all subcategories under the active Category
-            const categoryProducts = activeCategory ? activeCategory.subcategories.flatMap(sub => 
-              (sub.products || []).map(p => ({
-                id: p.id,
-                name: p.title,
-                price: parseFloat(p.price) || 0,
-                originalPrice: parseFloat(p.originalPrice) || null,
-                discount: p.discount ? `${p.discount}% Off` : '0% Off',
-                rating: parseFloat(p.rating) || 5.0,
-                reviews: parseInt(p.reviews) || 0,
-                imgUrl: p.image || 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=300&auto=format&fit=crop&q=60',
-                subCategoryId: sub.id
-              }))
-            ) : [];
-
-            // Filter products for the active subcategory filter dropdown to display in the inline picker
-            const subcategoryProducts = categoryProducts.filter(p => p.subCategoryId === section.subCategoryId);
-
-            // Selected shelf products - resolved category-wide so they persist across subcategory switching
+            // Selected products - resolved from allProducts
             const shelfProducts = section.productIds
-              .map(id => categoryProducts.find(p => p.id === id))
+              .map(id => allProducts.find(p => (p.id || p._id) === id))
               .filter(Boolean);
 
-            // Fallback display products if none manually selected: take the first 4 products from the active subcategory
+            // Display products: selected ones, or first 4 from category
             const displayProducts = shelfProducts.length > 0 
               ? shelfProducts 
-              : subcategoryProducts.slice(0, 4);
+              : categoryProducts.slice(0, 4);
+
+            // Filter available products for picker by search
+            const filteredPickerProducts = categoryProducts.filter(prod =>
+              prod.title?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
 
             return (
               <div 
@@ -329,24 +250,8 @@ const CategoryTab = () => {
                         className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 focus:outline-none cursor-pointer"
                       >
                         <option value="">Select Category...</option>
-                        {catalog.map(cat => (
+                        {categories.map(cat => (
                           <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Subcategory Select Dropdown (For product choosing only) */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[9px] font-black uppercase text-slate-400">2. Subcategory Filter</label>
-                      <select
-                        value={section.subCategoryId}
-                        onChange={(e) => handleSubCategoryChange(section.id, e.target.value)}
-                        disabled={!section.categoryId}
-                        className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 bg-slate-50 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        <option value="">Select Subcategory...</option>
-                        {subcategoriesList.map(sub => (
-                          <option key={sub.id} value={sub.id}>{sub.name}</option>
                         ))}
                       </select>
                     </div>
@@ -369,20 +274,20 @@ const CategoryTab = () => {
                     <button 
                       onClick={() => handleMoveUp(index)}
                       disabled={index === 0}
-                      className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <ArrowUp size={14} />
                     </button>
                     <button 
                       onClick={() => handleMoveDown(index)}
                       disabled={index === sections.length - 1}
-                      className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
                       <ArrowDown size={14} />
                     </button>
                     <button 
                       onClick={() => handleDeleteSection(section.id)}
-                      className="p-2 bg-red-50 hover:bg-red-100 border border-red-150 rounded-xl text-red-600 transition-colors"
+                      className="p-2 bg-red-50 hover:bg-red-100 border border-red-150 rounded-xl text-red-600 transition-colors cursor-pointer"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -395,7 +300,7 @@ const CategoryTab = () => {
                   <div className="lg:col-span-4 space-y-4">
                     <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <ImageIcon size={12} />
-                      Promotion Banner
+                      Promotion Banner (Right Side)
                     </h3>
 
                     <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden relative flex flex-col items-center justify-center group hover:bg-slate-100/50 hover:border-slate-300 transition-all">
@@ -405,7 +310,7 @@ const CategoryTab = () => {
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <button 
                               onClick={() => handleUpdateSectionProp(section.id, 'bannerImage', '')} 
-                              className="bg-white p-2 rounded-full text-red-600 hover:text-red-700 shadow-xl"
+                              className="bg-white p-2 rounded-full text-red-600 hover:text-red-700 shadow-xl cursor-pointer"
                             >
                               <Trash2 size={16} />
                             </button>
@@ -415,7 +320,7 @@ const CategoryTab = () => {
                         <div className="text-center p-4 flex flex-col items-center gap-2">
                           <Upload size={20} className="text-slate-400" />
                           <span className="text-[11px] font-bold text-slate-700">Upload Banner Image</span>
-                          <span className="text-[9px] text-slate-400">Drag or click to choose (Local Files)</span>
+                          <span className="text-[9px] text-slate-400">This image appears on the right side of products</span>
                         </div>
                       )}
                       <input 
@@ -426,17 +331,17 @@ const CategoryTab = () => {
                       />
                     </div>
 
-                    {/* Destination Link - Automatically prefilled to Main Category */}
+                    {/* Destination Link */}
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                        <Link2 size={10} /> Auto Destination Link
+                        <Link2 size={10} /> Banner Click Redirect Link
                       </label>
                       <input 
                         type="text"
-                        readOnly
                         value={section.bannerLink || ''}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[11px] bg-slate-100 text-slate-500 font-mono focus:outline-none select-all"
-                        title="This link is auto-populated based on category selection."
+                        onChange={(e) => handleUpdateSectionProp(section.id, 'bannerLink', e.target.value)}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-[11px] bg-slate-50 text-slate-600 font-mono focus:outline-none"
+                        placeholder="/subCategory?catId=..."
                       />
                     </div>
                   </div>
@@ -445,12 +350,16 @@ const CategoryTab = () => {
                   <div className="lg:col-span-8 space-y-4">
                     <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <Layers size={12} />
-                      Choose Products to Display
+                      Choose Products to Display ({section.productIds.length} selected)
                     </h3>
 
-                    {!section.subCategoryId ? (
+                    {!section.categoryId ? (
                       <div className="text-center py-12 bg-slate-50/30 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400">
-                        Please select Category & Subcategory Filter first to list products.
+                        Please select a Category first to list products.
+                      </div>
+                    ) : categoryProducts.length === 0 ? (
+                      <div className="text-center py-12 bg-slate-50/30 border border-dashed border-slate-200 rounded-2xl text-xs text-slate-400">
+                        No products found in this category. Add products first.
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -459,7 +368,7 @@ const CategoryTab = () => {
                           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                           <input 
                             type="text"
-                            placeholder="Filter products in this subcategory..."
+                            placeholder="Search products in this category..."
                             value={searchQuery}
                             onChange={(e) => setSearchQueries({ ...searchQueries, [section.id]: e.target.value })}
                             className="w-full border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-slate-50/50"
@@ -467,50 +376,53 @@ const CategoryTab = () => {
                         </div>
 
                         {/* Checklist Grid */}
-                        {subcategoryProducts.length === 0 ? (
-                          <div className="text-center py-8 text-xs text-slate-400">No products found in this subcategory.</div>
-                        ) : (
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto p-1 border border-slate-100 rounded-xl bg-slate-50/20 custom-scrollbar">
-                            {subcategoryProducts
-                              .filter(prod => prod.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                              .map(prod => {
-                                const isSelected = section.productIds.includes(prod.id);
-                                return (
-                                  <div 
-                                    key={prod.id}
-                                    onClick={() => {
-                                      if (isSelected) {
-                                        handleRemoveProductFromSection(section.id, prod.id);
-                                      } else {
-                                        handleAddProductToSection(section.id, prod.id);
-                                      }
-                                    }}
-                                    className={`border rounded-xl p-2 bg-white transition-all shadow-3xs cursor-pointer relative flex flex-col justify-between select-none ${
-                                      isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' : 'border-slate-150 hover:border-slate-350'
-                                    }`}
-                                  >
-                                    {/* Selection badge */}
-                                    <div className={`absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center border text-[9px] z-10 ${
-                                      isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-transparent'
-                                    }`}>
-                                      <Check size={10} strokeWidth={3} />
-                                    </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto p-1 border border-slate-100 rounded-xl bg-slate-50/20 custom-scrollbar">
+                          {filteredPickerProducts.map(prod => {
+                            const prodId = prod.id || prod._id;
+                            const isSelected = section.productIds.includes(prodId);
+                            const prodPrice = prod.price || (prod.variants?.[0]?.price) || 0;
+                            const prodImage = prod.image || '';
 
-                                    <div>
-                                      <div className="aspect-square rounded-lg overflow-hidden border border-slate-100 bg-white">
-                                        <img src={prod.imgUrl} alt={prod.name} className="w-full h-full object-cover" />
+                            return (
+                              <div 
+                                key={prodId}
+                                onClick={() => {
+                                  if (isSelected) {
+                                    handleRemoveProductFromSection(section.id, prodId);
+                                  } else {
+                                    handleAddProductToSection(section.id, prodId);
+                                  }
+                                }}
+                                className={`border rounded-xl p-2 bg-white transition-all shadow-3xs cursor-pointer relative flex flex-col justify-between select-none ${
+                                  isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' : 'border-slate-150 hover:border-slate-350'
+                                }`}
+                              >
+                                {/* Selection badge */}
+                                <div className={`absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center border text-[9px] z-10 ${
+                                  isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-transparent'
+                                }`}>
+                                  <Check size={10} strokeWidth={3} />
+                                </div>
+
+                                <div>
+                                  <div className="aspect-square rounded-lg overflow-hidden border border-slate-100 bg-white">
+                                    {prodImage ? (
+                                      <img src={prodImage} alt={prod.title} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                                        <ImageIcon size={20} />
                                       </div>
-                                      <span className="text-[8px] font-mono text-slate-400 block mt-1">{prod.id}</span>
-                                      <h4 className="text-[10px] font-black text-slate-800 leading-tight line-clamp-2 mt-0.5">{prod.name}</h4>
-                                    </div>
-                                    <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
-                                      <span className="text-[10px] font-black text-slate-900">₹{prod.price}</span>
-                                    </div>
+                                    )}
                                   </div>
-                                );
-                              })}
-                          </div>
-                        )}
+                                  <h4 className="text-[10px] font-black text-slate-800 leading-tight line-clamp-2 mt-1.5">{prod.title}</h4>
+                                </div>
+                                <div className="flex items-center justify-between mt-2 pt-1 border-t border-slate-100">
+                                  <span className="text-[10px] font-black text-slate-900">₹{Number(prodPrice).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -536,35 +448,49 @@ const CategoryTab = () => {
                     <div className="grid grid-cols-12 gap-4">
                       {/* Products */}
                       <div className="col-span-12 md:col-span-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {displayProducts.map(prod => (
-                          <div key={prod.id} className="bg-white border border-gray-150 rounded-xl p-2.5 flex flex-col justify-between shadow-3xs">
-                            <div className="space-y-2">
-                              <div className="aspect-square rounded-lg overflow-hidden border border-gray-100 bg-white">
-                                <img src={prod.imgUrl} alt={prod.name} className="w-full h-full object-cover" />
+                        {displayProducts.slice(0, 4).map(prod => {
+                          const prodPrice = prod.price || (prod.variants?.[0]?.price) || 0;
+                          const prodOriginalPrice = prod.originalPrice || (prod.variants?.[0]?.originalPrice) || null;
+                          const prodImage = prod.image || '';
+                          const prodRating = prod.rating || 5;
+                          const prodReviews = prod.reviews || 0;
+
+                          return (
+                            <div key={prod.id || prod._id} className="bg-white border border-gray-150 rounded-xl p-2.5 flex flex-col justify-between shadow-3xs">
+                              <div className="space-y-2">
+                                <div className="aspect-square rounded-lg overflow-hidden border border-gray-100 bg-white">
+                                  {prodImage ? (
+                                    <img src={prodImage} alt={prod.title} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                                      <ImageIcon size={20} />
+                                    </div>
+                                  )}
+                                </div>
+                                <h4 className="text-[10px] font-extrabold text-slate-800 leading-tight line-clamp-2">{prod.title}</h4>
                               </div>
-                              <h4 className="text-[10px] font-extrabold text-slate-800 leading-tight line-clamp-2">{prod.name}</h4>
+                              <div className="mt-2">
+                                <div className="flex items-baseline gap-1">
+                                  <span className="text-[10px] font-black text-slate-900">₹{Number(prodPrice).toFixed(2)}</span>
+                                  {prodOriginalPrice && (
+                                    <span className="text-[8px] text-slate-400 line-through">₹{Number(prodOriginalPrice).toFixed(2)}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-0.5 mt-0.5">
+                                  <Star size={8} className="text-amber-400 fill-amber-400" />
+                                  <span className="text-[8px] font-bold text-slate-500">{Number(prodRating).toFixed(1)}</span>
+                                  <span className="text-[8px] text-slate-400">({prodReviews})</span>
+                                </div>
+                                <button className="w-full mt-2 bg-[#001E3C] hover:bg-[#002b55] text-white text-[8px] font-extrabold py-1.5 rounded transition-colors uppercase tracking-wider">
+                                  Add To Cart
+                                </button>
+                              </div>
                             </div>
-                            <div className="mt-2">
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-[10px] font-black text-slate-900">₹{prod.price.toFixed(2)}</span>
-                                {prod.originalPrice && (
-                                  <span className="text-[8px] text-slate-400 line-through">₹{prod.originalPrice.toFixed(2)}</span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-0.5 mt-0.5">
-                                <Star size={8} className="text-amber-400 fill-amber-400" />
-                                <span className="text-[8px] font-bold text-slate-500">{prod.rating.toFixed(1)}</span>
-                                <span className="text-[8px] text-slate-400">({prod.reviews})</span>
-                              </div>
-                              <button className="w-full mt-2 bg-[#001E3C] hover:bg-[#002b55] text-white text-[8px] font-extrabold py-1.5 rounded transition-colors uppercase tracking-wider">
-                                Add To Cart
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
 
                         {/* Fillers */}
-                        {Array.from({ length: Math.max(0, 4 - displayProducts.length) }).map((_, idx) => (
+                        {Array.from({ length: Math.max(0, 4 - displayProducts.slice(0, 4).length) }).map((_, idx) => (
                           <div key={idx} className="bg-white/40 border border-dashed border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center text-[9px] text-gray-400 aspect-square">
                             <span>No Product</span>
                           </div>
@@ -578,18 +504,11 @@ const CategoryTab = () => {
                             <img src={section.bannerImage} alt="Promo" className="absolute inset-0 w-full h-full object-cover" />
                           ) : (
                             <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-amber-600 flex flex-col items-center justify-center p-3 text-center">
-                              <span className="text-xs font-black uppercase tracking-wider">Mega Sale</span>
-                              <span className="text-[9px] font-bold mt-1">UP TO 30% OFF</span>
+                              <span className="text-xs font-black uppercase tracking-wider">Upload Banner</span>
+                              <span className="text-[9px] font-bold mt-1">Use the upload above</span>
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-0"></div>
-                          
-                          <div className="relative z-10 text-center w-full space-y-1">
-                            <span className="text-[8px] font-bold tracking-widest bg-white/20 px-2 py-0.5 rounded-full uppercase inline-block">Special Offer</span>
-                            <button className="w-full bg-white text-slate-900 text-[8px] font-black py-1.5 rounded-lg uppercase tracking-wider transition-all">
-                              Shop Now
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>

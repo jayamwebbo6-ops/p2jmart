@@ -20,6 +20,128 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/toast';
 import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, UpdateBtn, PrevBtn, NextBtn } from '../../components/AdminButtons';
+import { getCategoriesAPI } from '../../api/categoryApi';
+import { getAttributesAPI } from '../../api/attributeApi';
+import { getProductsAPI, createProductAPI, updateProductAPI } from '../../api/productApi';
+import ConfirmationModal from '../../components/ConfirmationModal';
+import { compressAndConvertToWebP } from '../../utils/helpers';
+
+const AttributeDropdown = ({ attr, attrName, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const isColor = attrName === 'color';
+
+  const getColorDetails = (term) => {
+    let colorName = term;
+    let colorHex = '#CCCCCC';
+    if (term.includes('|')) {
+      const parts = term.split('|');
+      colorName = parts[0];
+      colorHex = parts[1];
+    } else {
+      const lower = term.toLowerCase();
+      if (lower === 'red') colorHex = '#EF4444';
+      else if (lower === 'blue') colorHex = '#3B82F6';
+      else if (lower === 'green') colorHex = '#10B981';
+      else if (lower === 'purple') colorHex = '#8B5CF6';
+      else if (lower === 'orange') colorHex = '#F97316';
+      else if (lower === 'brown') colorHex = '#78350F';
+      else if (lower === 'yellow') colorHex = '#FBBF24';
+      else if (lower === 'white') colorHex = '#FFFFFF';
+      else if (lower === 'black') colorHex = '#000000';
+    }
+    return { name: colorName, hex: colorHex };
+  };
+
+  const getDisplayDetails = (term) => {
+    if (isColor) {
+      return getColorDetails(term);
+    }
+    return { name: term, hex: null };
+  };
+
+  const selectedTerm = attr.terms.find(t => {
+    if (isColor) {
+      return t.startsWith(value + '|') || t === value;
+    }
+    return t === value;
+  });
+
+  const selectedDetails = value ? getDisplayDetails(selectedTerm || value) : null;
+
+  return (
+    <div className="md:col-span-3 flex flex-col gap-1.5 font-bold text-gray-700 relative">
+      <label className="text-[10px] font-black text-slate-450 tracking-wider uppercase">
+        CHOOSE {attrName} *
+      </label>
+      
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full border border-gray-250 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold cursor-pointer flex items-center justify-between min-h-[34px] select-none"
+      >
+        {selectedDetails ? (
+          <div className="flex items-center gap-2">
+            {isColor && (
+              <span 
+                className="w-3 h-3 rounded-full border border-gray-200 inline-block shrink-0 animate-fadeIn" 
+                style={{ backgroundColor: selectedDetails.hex }}
+              />
+            )}
+            <span>{selectedDetails.name}</span>
+          </div>
+        ) : (
+          <span className="text-gray-400 font-normal">Select {attrName}</span>
+        )}
+        
+        <svg className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setIsOpen(false)} />
+          {/* Scroll options enabled by setting max-height (max-h-[200px] holds ~6 items) and overflow-y-auto */}
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-250 rounded-xl shadow-lg max-h-[200px] overflow-y-auto custom-scrollbar z-40 py-1">
+            <div 
+              onClick={() => {
+                onChange('');
+                setIsOpen(false);
+              }}
+              className="px-3 py-2 hover:bg-slate-50 text-xs text-gray-400 font-normal cursor-pointer"
+            >
+              Select {attrName}
+            </div>
+            {attr.terms.map(term => {
+              const details = getDisplayDetails(term);
+              const isSelected = value === details.name;
+              
+              return (
+                <div 
+                  key={term}
+                  onClick={() => {
+                    onChange(details.name);
+                    setIsOpen(false);
+                  }}
+                  className={`px-3 py-2 hover:bg-slate-50 text-xs cursor-pointer flex items-center gap-2 ${
+                    isSelected ? 'bg-blue-50 font-bold text-blue-600' : 'text-gray-700'
+                  }`}
+                >
+                  {isColor && (
+                    <span 
+                      className="w-3 h-3 rounded-full border border-gray-200 inline-block shrink-0" 
+                      style={{ backgroundColor: details.hex }}
+                    />
+                  )}
+                  <span>{details.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -50,27 +172,100 @@ const AddProduct = () => {
   const isFirstTab = TAB_ORDER.indexOf(activeTab) === 0;
   const isLastTab  = TAB_ORDER.indexOf(activeTab) === TAB_ORDER.length - 1;
 
-  // Load catalog
-  const [catalog, setCatalog] = useState(() => {
-    const saved = localStorage.getItem('p2j_mart_catalog');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Load attributes variation templates
-  const [attributesList, setAttributesList] = useState(() => {
-    const saved = localStorage.getItem('p2j_mart_attributes');
-    return saved ? JSON.parse(saved) : [
-      { id: 'attr-1', name: 'color', terms: ['Blue|#0000FF', 'Red|#FF0000', 'Green|#008000', 'Yellow|#FFFF00', 'White|#FFFFFF', 'Black|#000000'] },
-      { id: 'attr-2', name: 'material', terms: ['Wood', 'Acrylic', 'Glass', 'Metal', 'Leather'] },
-      { id: 'attr-3', name: 'design', terms: ['Minimalist', 'Floral', 'Modern', 'Classic', 'Vintage'] },
-      { id: 'attr-4', name: 'size', terms: ['3 inch', '5 inch', '7 inch', 'Small', 'Medium', 'Large'] },
-      { id: 'attr-5', name: 'ramsize', terms: ['4GB', '8GB', '16GB', '32GB'] }
-    ];
-  });
+  // Catalog state
+  const [catalog, setCatalog] = useState([]);
+  // Attributes list state
+  const [attributesList, setAttributesList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Selected category and subcategory
   const [selectedCatId, setSelectedCatId] = useState(catId);
   const [selectedSubId, setSelectedSubId] = useState(subId);
+
+  // Helper to initialize products map if not present
+  const initializeProductsMap = () => {
+    const savedCatalog = localStorage.getItem('p2j_mart_catalog');
+    let catalogSource = [];
+    if (savedCatalog) {
+      try {
+        catalogSource = JSON.parse(savedCatalog);
+      } catch (e) {}
+    }
+    
+    const map = {};
+    catalogSource.forEach(cat => {
+      (cat.subcategories || []).forEach(sub => {
+        map[sub.id] = sub.products || [];
+      });
+    });
+    return map;
+  };
+
+  // Load Categories & Attributes on mount
+  const loadCatalogData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch available attributes from server
+      const attrRes = await getAttributesAPI();
+      if (attrRes && attrRes.success) {
+        setAttributesList(attrRes.data.map(attr => ({
+          id: attr._id,
+          _id: attr._id,
+          name: attr.name,
+          terms: attr.terms
+        })));
+      }
+
+      // 2. Fetch categories from server
+      const catRes = await getCategoriesAPI();
+      if (catRes && catRes.success) {
+        const backendCats = catRes.data;
+
+        // 3. Fetch products dynamically from server
+        let fetchedProducts = [];
+        try {
+          const prodRes = await getProductsAPI();
+          if (prodRes && prodRes.success) {
+            fetchedProducts = prodRes.data;
+          }
+        } catch (e) {
+          console.error("Failed to load products from server", e);
+        }
+
+        const productsMap = {};
+        fetchedProducts.forEach(prod => {
+          const subId = prod.subcategory?._id || prod.subcategory?.id || prod.subcategory;
+          if (subId) {
+            if (!productsMap[subId]) productsMap[subId] = [];
+            productsMap[subId].push(prod);
+          }
+        });
+
+        // Merge products into subcategories
+        const mergedCatalog = backendCats.map(cat => ({
+          ...cat,
+          id: cat._id,
+          supportedAttributes: (cat.supportedAttributes || []).map(attr => attr._id || attr.id),
+          subcategories: (cat.subcategories || []).map(sub => ({
+            ...sub,
+            id: sub._id,
+            products: productsMap[sub._id] || productsMap[sub.id] || []
+          }))
+        }));
+
+        setCatalog(mergedCatalog);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load catalog or attribute data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCatalogData();
+  }, []);
 
   // Form states matching user fields
   const [prodForm, setProdForm] = useState({
@@ -111,6 +306,43 @@ const AddProduct = () => {
     stock: '',
     image: ''
   });
+
+  const [deleteConfirmState, setDeleteConfirmState] = useState({
+    isOpen: false,
+    variantId: null,
+    imageIndex: null,
+    isMainImage: false
+  });
+
+  const handleConfirmDeleteImage = () => {
+    const { variantId, imageIndex, isMainImage } = deleteConfirmState;
+    
+    setProdForm(prev => ({
+      ...prev,
+      variants: prev.variants.map(item => {
+        if (item.id === variantId) {
+          if (isMainImage) {
+            return { ...item, image: '' };
+          } else {
+            const updatedImages = item.images.filter((_, i) => i !== imageIndex);
+            let newMainImg = item.image;
+            if (item.image === item.images[imageIndex]) {
+              newMainImg = updatedImages.length > 0 ? updatedImages[0] : '';
+            }
+            return {
+              ...item,
+              images: updatedImages,
+              image: newMainImg
+            };
+          }
+        }
+        return item;
+      })
+    }));
+    
+    toast.success("Image removed successfully!");
+    setDeleteConfirmState({ isOpen: false, variantId: null, imageIndex: null, isMainImage: false });
+  };
 
   const [editingVariantId, setEditingVariantId] = useState(null);
   const [showVariantForm, setShowVariantForm] = useState(false);
@@ -278,26 +510,73 @@ const AddProduct = () => {
     toast.success("Variant removed");
   };
 
+  const calculateDiscount = (price, originalPrice) => {
+    const p = parseFloat(price);
+    const op = parseFloat(originalPrice);
+    if (!isNaN(p) && !isNaN(op) && op > p && op > 0) {
+      return Math.round(((op - p) / op) * 100).toString();
+    }
+    return '0';
+  };
+
+  const handleBasePriceChange = (val) => {
+    const op = prodForm.originalPrice;
+    const disc = calculateDiscount(val, op);
+    setProdForm(prev => ({
+      ...prev,
+      price: val,
+      discount: disc
+    }));
+  };
+
+  const handleBaseOriginalPriceChange = (val) => {
+    const p = prodForm.price;
+    const disc = calculateDiscount(p, val);
+    setProdForm(prev => ({
+      ...prev,
+      originalPrice: val,
+      discount: disc
+    }));
+  };
+
   // Get active subcategories list
   const activeCategory = catalog.find(c => c.id === selectedCatId);
   const subcategoriesList = activeCategory ? activeCategory.subcategories : [];
 
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!selectedSubId) return toast.error('Please select a Subcategory');
     if (!prodForm.title.trim()) return toast.error('Product Title is required');
-    if (!prodForm.price.toString().trim()) return toast.error('Price is required in the Unit List Tab');
+    
+    let priceNum = 0;
+    let originalPriceNum = null;
+    let discountNum = 0;
 
-    const priceNum = parseFloat(prodForm.price);
-    const originalPriceNum = prodForm.originalPrice.trim() ? parseFloat(prodForm.originalPrice) : null;
-    const discountNum = prodForm.discount.trim() ? parseInt(prodForm.discount) : 0;
-    const ratingNum = prodForm.rating.trim() ? parseFloat(prodForm.rating) : 5;
-    const reviewsNum = prodForm.reviews.trim() ? parseInt(prodForm.reviews) : 0;
+    // Set product pricing from the first variant
+    if (prodForm.variants && prodForm.variants.length > 0) {
+      priceNum = parseFloat(prodForm.variants[0].price);
+      originalPriceNum = prodForm.variants[0].originalPrice ? parseFloat(prodForm.variants[0].originalPrice) : null;
+      if (originalPriceNum && priceNum && originalPriceNum > priceNum) {
+        discountNum = Math.round(((originalPriceNum - priceNum) / originalPriceNum) * 100);
+      }
+    } else {
+      return toast.error('Please add at least one variant with a valid price.');
+    }
+
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return toast.error('Please enter a valid price for the product variants.');
+    }
+
+    const ratingNum = prodForm.rating.toString().trim() ? parseFloat(prodForm.rating) : 5;
+    const reviewsNum = prodForm.reviews.toString().trim() ? parseInt(prodForm.reviews) : 0;
 
     const defaultImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
-    const finalImageUrl = prodForm.image.trim() || defaultImage;
-
-    let updatedCatalog = [];
+    let finalImageUrl = prodForm.image.trim();
+    if (!finalImageUrl && prodForm.variants && prodForm.variants.length > 0) {
+      const firstVar = prodForm.variants[0];
+      finalImageUrl = firstVar.image || (firstVar.images && firstVar.images.length > 0 ? firstVar.images[0] : '');
+    }
+    if (!finalImageUrl) finalImageUrl = defaultImage;
 
     const productPayload = {
       title: prodForm.title,
@@ -323,52 +602,37 @@ const AddProduct = () => {
       detailedDescription: prodForm.detailedDescription
     };
 
-    if (isEdit && prodId) {
-      // Edit Mode
-      updatedCatalog = catalog.map(cat => ({
-        ...cat,
-        subcategories: cat.subcategories.map(sub => {
-          if (sub.id === selectedSubId) {
-            return {
-              ...sub,
-              products: sub.products.map(p => 
-                p.id === prodId 
-                  ? { 
-                      ...p, 
-                      ...productPayload
-                    } 
-                  : p
-              )
-            };
-          }
-          return sub;
-        })
-      }));
-      toast.success('Product updated successfully');
-    } else {
-      // Add Mode
-      const newProd = {
-        id: `prod-${Date.now()}`,
-        ...productPayload
-      };
+    setLoading(true);
+    const apiPayload = {
+      ...productPayload,
+      categoryId: selectedCatId,
+      subcategoryId: selectedSubId
+    };
 
-      updatedCatalog = catalog.map(cat => ({
-        ...cat,
-        subcategories: cat.subcategories.map(sub => {
-          if (sub.id === selectedSubId) {
-            return {
-              ...sub,
-              products: [...sub.products, newProd]
-            };
-          }
-          return sub;
-        })
-      }));
-      toast.success('Product added successfully');
+    try {
+      if (isEdit && prodId) {
+        const res = await updateProductAPI(prodId, apiPayload);
+        if (res && res.success) {
+          toast.success('Product updated successfully');
+          navigate('/admin/products');
+        } else {
+          toast.error(res?.message || 'Failed to update product');
+        }
+      } else {
+        const res = await createProductAPI(apiPayload);
+        if (res && res.success) {
+          toast.success('Product added successfully');
+          navigate('/admin/products');
+        } else {
+          toast.error(res?.message || 'Failed to add product');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to save product to database');
+    } finally {
+      setLoading(false);
     }
-
-    localStorage.setItem('p2j_mart_catalog', JSON.stringify(updatedCatalog));
-    navigate('/admin/products');
   };
 
   // Return policy days dropdown helper
@@ -642,7 +906,7 @@ const AddProduct = () => {
           {/* TAB 2: UNIT LIST */}
           {activeTab === 'unit' && (
             <div className="space-y-6 animate-fadeIn">
-              
+
               {/* Product Variants Header Block */}
               {(() => {
                 const currentCat = catalog.find(c => c.id === selectedCatId);
@@ -697,47 +961,46 @@ const AddProduct = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                      {/* Dynamic dropdown selectors for category supported attributes */}
+                      {/* Dynamic custom dropdown selectors for category supported attributes */}
                       {supportedAttrs.map(attr => {
                         const attrName = attr.name.toLowerCase();
 
                         return (
-                          <div key={attr.id} className="md:col-span-3 flex flex-col gap-1.5 font-bold text-gray-700">
-                            <label className="text-[10px] font-black text-slate-450 tracking-wider capitalize">
-                              CHOOSE {attrName} *
-                            </label>
-                            <select 
-                              value={variantInput.attributes[attrName] || ''}
-                              onChange={(e) => setVariantInput(prev => ({
-                                ...prev,
-                                attributes: {
-                                  ...prev.attributes,
-                                  [attrName]: e.target.value
-                                }
-                              }))}
-                              className="w-full border border-gray-250 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold cursor-pointer"
-                            >
-                              <option value="">Select {attrName}</option>
-                              {attr.terms.map(term => {
-                                let displayName = term;
-                                if (attrName === 'color' && term.includes('|')) {
-                                  displayName = term.split('|')[0];
-                                }
-                                return (
-                                  <option key={term} value={displayName}>
-                                    {displayName}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </div>
+                          <AttributeDropdown 
+                            key={attr.id}
+                            attr={attr}
+                            attrName={attrName}
+                            value={variantInput.attributes[attrName] || ''}
+                            onChange={(val) => setVariantInput(prev => ({
+                              ...prev,
+                              attributes: {
+                                ...prev.attributes,
+                                [attrName]: val
+                              }
+                            }))}
+                          />
                         );
                       })}
 
-                      {/* Variant Price */}
+                    
+                      {/* Variant Original Price */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Price (₹) *
+                          MRP Price (₹)
+                        </label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 600"
+                          value={variantInput.originalPrice}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                        />
+                      </div>
+
+                        {/* Variant Price */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                         Original Price (₹) *
                         </label>
                         <input 
                           type="number"
@@ -748,19 +1011,6 @@ const AddProduct = () => {
                         />
                       </div>
 
-                      {/* Variant Original Price */}
-                      <div className="md:col-span-3 flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Original Price (₹)
-                        </label>
-                        <input 
-                          type="number"
-                          placeholder="e.g. 600"
-                          value={variantInput.originalPrice}
-                          onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
-                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                        />
-                      </div>
 
                       {/* Variant Stock */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
@@ -820,9 +1070,40 @@ const AddProduct = () => {
                             <tr key={v.id || vIdx} className="hover:bg-slate-50/30 transition-colors">
                               {supportedAttrs.map(attr => {
                                 const attrName = attr.name.toLowerCase();
+                                const val = v.attributes[attrName];
+                                if (attrName === 'color' && val) {
+                                  const term = attr.terms.find(t => t.startsWith(val + '|') || t === val);
+                                  let colorHex = '#CCCCCC';
+                                  if (term && term.includes('|')) {
+                                    colorHex = term.split('|')[1];
+                                  } else {
+                                    const lower = val.toLowerCase();
+                                    if (lower === 'red') colorHex = '#EF4444';
+                                    else if (lower === 'blue') colorHex = '#3B82F6';
+                                    else if (lower === 'green') colorHex = '#10B981';
+                                    else if (lower === 'purple') colorHex = '#8B5CF6';
+                                    else if (lower === 'orange') colorHex = '#F97316';
+                                    else if (lower === 'brown') colorHex = '#78350F';
+                                    else if (lower === 'yellow') colorHex = '#FBBF24';
+                                    else if (lower === 'white') colorHex = '#FFFFFF';
+                                    else if (lower === 'black') colorHex = '#000000';
+                                  }
+                                  return (
+                                    <td key={attr.id} className="py-4 px-4 capitalize">
+                                      <div className="flex items-center gap-2">
+                                        <span 
+                                          className="w-3.5 h-3.5 rounded-full border border-gray-250 inline-block shrink-0" 
+                                          style={{ backgroundColor: colorHex }}
+                                          title={val}
+                                        />
+                                        <span>{val}</span>
+                                      </div>
+                                    </td>
+                                  );
+                                }
                                 return (
                                   <td key={attr.id} className="py-4 px-4 capitalize">
-                                    {v.attributes[attrName] || '-'}
+                                    {val || '-'}
                                   </td>
                                 );
                               })}
@@ -897,30 +1178,26 @@ const AddProduct = () => {
                                 type="file"
                                 multiple
                                 accept="image/*"
-                                onChange={(e) => {
+                                onChange={async (e) => {
                                   const files = Array.from(e.target.files);
                                   if (files.length > 0) {
-                                    const loadedImages = [];
-                                    let processed = 0;
-                                    files.forEach(file => {
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        loadedImages.push(reader.result);
-                                        processed++;
-                                        if (processed === files.length) {
-                                          setProdForm(prev => ({
-                                            ...prev,
-                                            variants: prev.variants.map(item => 
-                                              item.id === v.id 
-                                                ? { ...item, images: [...(item.images || []), ...loadedImages] }
-                                                : item
-                                            )
-                                          }));
-                                          toast.success(`Added ${files.length} image(s) to variant`);
-                                        }
-                                      };
-                                      reader.readAsDataURL(file);
-                                    });
+                                    try {
+                                      const promises = files.map(file => compressAndConvertToWebP(file));
+                                      const compressedImages = await Promise.all(promises);
+                                      
+                                      setProdForm(prev => ({
+                                        ...prev,
+                                        variants: prev.variants.map(item => 
+                                          item.id === v.id 
+                                            ? { ...item, images: [...(item.images || []), ...compressedImages] }
+                                            : item
+                                        )
+                                      }));
+                                      toast.success(`Added ${files.length} image(s) to variant`);
+                                    } catch (err) {
+                                      toast.error(err.message || 'Failed to process variant images');
+                                      e.target.value = '';
+                                    }
                                   }
                                 }}
                                 className="hidden"
@@ -930,65 +1207,43 @@ const AddProduct = () => {
 
                           {/* Render uploaded image thumbnails */}
                           <div className="flex flex-wrap gap-4">
-                            {/* If old main image exists, include it as index 1 */}
-                            {v.image && (
-                              <div className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-xs group">
-                                <img src={v.image} alt="variant main thumbnail" className="w-full h-full object-cover" />
-                                <span className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/60 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                  1
-                                </span>
-                                <button 
-                                  type="button"
-                                  onClick={() => {
-                                    setProdForm(prev => ({
-                                      ...prev,
-                                      variants: prev.variants.map(item => 
-                                        item.id === v.id 
-                                          ? { ...item, image: '' }
-                                          : item
-                                      )
-                                    }));
-                                    toast.success("Image removed");
-                                  }}
-                                  className="absolute inset-0 bg-red-655/80 text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
+                            {(() => {
+                              const displayImages = v.images && v.images.length > 0
+                                ? v.images
+                                : (v.image ? [v.image] : []);
 
-                            {v.images && v.images.map((img, imgIdx) => {
-                              // If there is a main image, start indexing after it
-                              const indexNum = v.image ? imgIdx + 2 : imgIdx + 1;
-                              return (
-                                <div key={imgIdx} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-xs group">
-                                  <img src={img} alt="variant thumbnail" className="w-full h-full object-cover" />
-                                  <span className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/60 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                                    {indexNum}
-                                  </span>
-                                  <button 
-                                    type="button"
-                                    onClick={() => {
-                                      setProdForm(prev => ({
-                                        ...prev,
-                                        variants: prev.variants.map(item => 
-                                          item.id === v.id 
-                                            ? { ...item, images: item.images.filter((_, i) => i !== imgIdx) }
-                                            : item
-                                        )
-                                      }));
-                                      toast.success("Image removed");
-                                    }}
-                                    className="absolute inset-0 bg-red-655/80 text-white text-[10px] font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              );
-                            })}
-                            {(!v.image && (!v.images || v.images.length === 0)) && (
-                              <span className="text-[11px] text-slate-400 italic">No images uploaded for this variant yet.</span>
-                            )}
+                              if (displayImages.length === 0) {
+                                return <span className="text-[11px] text-slate-400 italic">No images uploaded for this variant yet.</span>;
+                              }
+
+                              return displayImages.map((img, imgIdx) => {
+                                const indexNum = imgIdx + 1;
+                                return (
+                                  <div key={imgIdx} className="relative w-20 h-20 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 shadow-xs group">
+                                    <img src={img} alt="variant thumbnail" className="w-full h-full object-cover" />
+                                    <span className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/60 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                      {indexNum}
+                                    </span>
+                                    <button 
+                                      type="button"
+                                      onClick={() => {
+                                        const isMainImage = !(v.images && v.images.length > 0);
+                                        setDeleteConfirmState({
+                                          isOpen: true,
+                                          variantId: v.id,
+                                          imageIndex: isMainImage ? null : imgIdx,
+                                          isMainImage
+                                        });
+                                      }}
+                                      className="absolute inset-0 bg-red-600/80 text-white text-[10px] font-bold flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity gap-1"
+                                    >
+                                      <Trash2 size={16} />
+                                      <span>Delete</span>
+                                    </button>
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                       );
@@ -1094,6 +1349,16 @@ const AddProduct = () => {
 
         </form>
       </div>
+      <ConfirmationModal 
+        isOpen={deleteConfirmState.isOpen}
+        onClose={() => setDeleteConfirmState({ isOpen: false, variantId: null, imageIndex: null, isMainImage: false })}
+        onConfirm={handleConfirmDeleteImage}
+        title="Delete Variant Image"
+        message="Are you sure you want to delete this variant image? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDanger={true}
+      />
     </div>
   );
 };

@@ -1,55 +1,50 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { getHomeCMS } from '../../api/homeCms'; 
 
 const PrivacyPolicy = () => {
+  const [policyData, setPolicyData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch privacy policy from backend CMS config on component mount
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      try {
+        setIsLoading(true);
+        const res = await getHomeCMS();
+        
+        console.log("CMS API Response:", res);
+  
+        // 1. Direct array mapping fallback
+        if (Array.isArray(res)) {
+          setPolicyData(res);
+        } 
+        // 2. Extract specifically from privacyPolicy property key
+        else if (res && Array.isArray(res.privacyPolicy)) {
+          setPolicyData(res.privacyPolicy);
+        }
+        // 3. Extract from data envelope container
+        else if (res && res.data && Array.isArray(res.data.privacyPolicy)) {
+          setPolicyData(res.data.privacyPolicy);
+        } else {
+          console.warn("Received data structure did not match expectations.");
+        }
+  
+      } catch (err) {
+        console.error("Error fetching privacy policy:", err);
+        setError("Failed to load privacy policy data. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    fetchPolicy();
+  }, []);
+
   // Back to top scroll routine targeting bottom-right corner control toggle
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const policyData = [
-    {
-      title: "1. Information We Collect",
-      points: [
-        <><strong>Personal Data:</strong> Name, email, shipping/billing address, phone number, and payment details.</>,
-        <><strong>Automated Data:</strong> Cookies, IP address, browser type, and browsing behavior for analytics.</>,
-        <><strong>Order Details:</strong> Purchase history, preferences, and interactions with customer support.</>
-      ]
-    },
-    {
-      title: "2. How We Use Your Information",
-      points: [
-        "Process and fulfill your orders.",
-        "Improve our website, products, and services.",
-        "Send transactional emails (order confirmations, shipping updates).",
-        "Provide personalized offers (with your consent).",
-        "Comply with legal obligations."
-      ]
-    },
-    {
-      title: "3. Data Sharing & Protection",
-      points: [
-        <>We <span className="font-bold text-gray-900">never sell</span> your data to third parties.</>,
-        "Trusted partners (payment processors, shipping carriers) only receive necessary information.",
-        "Data is secured via encryption (SSL) and industry-standard safeguards."
-      ]
-    },
-    {
-      title: "4. Your Rights",
-      points: [
-        "Access, correct, or delete your personal data.",
-        "Opt out of marketing emails (unsubscribe link in every email).",
-        "Disable cookies via browser settings (may affect site functionality)."
-      ]
-    },
-    {
-      title: "5. Policy Updates",
-      points: [
-        "We may update this policy periodically. Changes will be posted here with the effective date.",
-        <><strong>Last Updated:</strong> 17/6/2024</>,
-        <><strong>Contact Us:</strong> For privacy-related questions, email <span className="font-bold text-gray-900">[privacy@p2j-mart.gmail.com]</span>.</>
-      ]
-    }
-  ];
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-8 pb-12 font-sans selection:bg-slate-200 relative">
@@ -65,27 +60,46 @@ const PrivacyPolicy = () => {
           At p2j-mart, we value your privacy and are committed to protecting your personal information. This policy explains how we collect, use, and safeguard your data when you visit our website or make a purchase.
         </p>
 
-        {/* Content Sections */}
-        <div className="space-y-8 mt-6">
-          {policyData.map((section, index) => (
-            <div key={index} className="border-b border-gray-50 pb-6 last:border-0 last:pb-0">
-              {/* Section Title */}
-              <h2 className="text-lg sm:text-xl font-bold text-[#0A3A60] mb-3">
-                {section.title}
-              </h2>
+        {/* Loading and Error Indicators */}
+        {isLoading && (
+          <div className="text-center py-12 text-gray-500 font-medium animate-pulse">
+            Loading privacy policy configuration...
+          </div>
+        )}
 
-              {/* Bullet Points */}
-              <ul className="space-y-2">
-                {section.points.map((point, pointIndex) => (
-                  <li key={pointIndex} className="flex items-start text-gray-600">
-                    <span className="text-[#00A3E0] font-bold mr-3 mt-1">•</span>
-                    <span className="text-xs sm:text-sm md:text-base leading-relaxed">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        {error && (
+          <div className="text-center py-12 text-red-500 font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* Content Sections */}
+        {!isLoading && !error && (
+          <div className="space-y-8 mt-6">
+            {policyData.length === 0 ? (
+              <p className="text-center text-gray-500 py-6">No privacy settings configured at this time.</p>
+            ) : (
+              policyData.map((section, index) => (
+                <div key={section._id || index} className="border-b border-gray-50 pb-6 last:border-0 last:pb-0">
+                  {/* Section Title */}
+                  <h2 className="text-lg sm:text-xl font-bold text-[#0A3A60] mb-3">
+                    {section.title}
+                  </h2>
+
+                  {/* Bullet Points */}
+                  <ul className="space-y-2">
+                    {section.points && section.points.map((point, pointIndex) => (
+                      <li key={pointIndex} className="flex items-start text-gray-600">
+                        <span className="text-[#00A3E0] font-bold mr-3 mt-1">•</span>
+                        <span className="text-xs sm:text-sm md:text-base leading-relaxed">{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
       </div>
 

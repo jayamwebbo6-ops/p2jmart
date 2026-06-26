@@ -1,25 +1,13 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { VariableSizeList as List } from 'react-window';
 import { Link } from 'react-router-dom';
-import { categories } from '../../utils/constants';
 import { useNavigate } from "react-router-dom";
 
-// Array of diverse product images to use for subcategories
-const subcategoryImages = [
-  'https://images.unsplash.com/photo-1546868871-7041f2a55e12?q=80&w=200&auto=format&fit=crop', // smartwatch
-  'https://images.unsplash.com/photo-1589492477829-5e65395b66ea?q=80&w=200&auto=format&fit=crop', // smart speaker
-  'https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?q=80&w=200&auto=format&fit=crop', // white headphones
-  'https://images.unsplash.com/photo-1599643478524-fb524451000f?q=80&w=200&auto=format&fit=crop', // jewelry
-  'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=200&auto=format&fit=crop', // gold necklace
-  'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=200&auto=format&fit=crop', // red headphones
-  'https://images.unsplash.com/photo-1583394838336-acd977736f90?q=80&w=200&auto=format&fit=crop', // earbuds
-  'https://images.unsplash.com/photo-1606293926075-69a00dbfde81?q=80&w=200&auto=format&fit=crop', // portable speaker
-  'https://images.unsplash.com/photo-1524805444758-089113d48a6d?q=80&w=200&auto=format&fit=crop', // sunglasses
-  'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?q=80&w=200&auto=format&fit=crop', // camera
-];
+import { getCategoriesAPI } from '../../api/categoryApi'; 
 
-const getSubcategoryImage = (catName, subName, idx) => {
-  // Deterministic selection so it stays consistent based on category and subcategory strings
+
+const getSubcategoryImage = (catName, subName, idx, subImage) => {
+  if (subImage) return subImage;
   const hash = catName.length + subName.length + (idx * 3);
   return subcategoryImages[hash % subcategoryImages.length];
 };
@@ -57,7 +45,7 @@ const CategoryRow = memo(({ category }) => {
   }, []);
 
   return (
-    <div className=" relative group">
+    <div className="relative group">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl md:text-2xl font-medium text-gray-800">{category.name}</h2>
         
@@ -88,24 +76,28 @@ const CategoryRow = memo(({ category }) => {
         className="flex overflow-x-auto gap-6 md:gap-12 pb-4 scrollbar-hide snap-x px-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {category.subcategories.map((sub, idx) => (
-          <Link
-  key={idx}
-  to="/subCategory"
-  className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44"
->
-            <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
-              <img 
-                src={getSubcategoryImage(category.name, sub, idx)} 
-                alt={sub}
-                className="w-full h-full object-contain p-2"
-              />
-
-              
-            </div>
-            <span className="text-sm md:text-base text-gray-600 font-normal text-center">{sub}</span>
-          </Link>
-        ))}
+        {category.subcategories.map((sub, idx) => {
+          // Extract variables supporting both nested objects and raw string mappings securely
+          const subName = sub.name || sub;
+          const subId = sub.id || sub._id || idx;
+          
+         return (
+  <button
+    key={subId}
+    onClick={() => navigate(`/sub-category/${subId}`)}
+    className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
+  >
+    <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
+      <img 
+        src={getSubcategoryImage(category.name, subName, idx, sub.image)} 
+        alt={subName}
+        className="w-full h-full object-contain p-2"
+      />
+    </div>
+    <span className="text-sm md:text-base text-gray-600 font-normal text-center w-full block">{subName}</span>
+  </button>
+);
+        })}
       </div>
     </div>
   );
@@ -127,7 +119,6 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
 
   return (
     <div ref={ref}>
-      {/* Use padding (pb-*) instead of margin (mb-*) so the observer can measure the gap! */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6 ">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
         <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
@@ -141,10 +132,31 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
 });
 
 const Products = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [headerHeight, setHeaderHeight] = useState(80); // Default guess
   const listRef = useRef(null);
+
+  // Sync Categories with Live Backend API Stream Array
+  useEffect(() => {
+    const fetchLiveCatalogData = async () => {
+      try {
+        const response = await getCategoriesAPI();
+        if (response && response.success && Array.isArray(response.data)) {
+          setCategories(response.data);
+        } else if (Array.isArray(response)) {
+          setCategories(response);
+        }
+      } catch (error) {
+        console.error("Database connection stream failures mapping product catalog grid rows:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLiveCatalogData();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -161,7 +173,6 @@ const Products = () => {
   const handleHeaderHeightChange = useCallback((height) => {
     setHeaderHeight((prev) => {
       if (prev !== height) {
-        // Reset the list cache so it uses the newly measured height
         setTimeout(() => {
           if (listRef.current) listRef.current.resetAfterIndex(0);
         }, 0);
@@ -174,7 +185,6 @@ const Products = () => {
   // Define dynamic sizes for items
   const getItemSize = useCallback((index) => {
     if (index === 0) return headerHeight;
-    // Mobile content is ~236px, Desktop is ~288px. Adding ~30-40px padding between categories.
     return windowWidth < 768 ? 270 : 330;
   }, [headerHeight, windowWidth]);
 
@@ -190,36 +200,46 @@ const Products = () => {
 
     return (
       <div style={style}>
-        <div className="">
+        <div className="pb-10">
           <CategoryRow category={categories[index - 1]} />
         </div>
       </div>
     );
-  }, []);
+  }, [categories, handleHeaderHeightChange]);
 
   return (
-    <div className="min-h-screen  flex flex-col">
-      {/* Note: Use standard tailwind styles to hide scrollbar if 'scrollbar-hide' plugin is not installed */}
+    <div className="min-h-screen flex flex-col">
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
+      <div className="max-w-7xl mx-auto w-full flex flex-col h-full px-4">
 
-        {/* Virtualized Categories List (Now includes Header) */}
+        {/* Virtualized Categories List Container */}
         <div className="flex-1 w-full">
-          <List
-            ref={listRef}
-            height={windowHeight - 80} // Approx viewport height minus padding
-            itemCount={categories.length + 1}
-            itemSize={getItemSize}
-            width="100%"
-            className="scrollbar-hide"
-            style={{ overflowX: 'hidden' }}
-          >
-            {Row}
-          </List>
+          {loading ? (
+            <div className="w-full py-20 flex items-center justify-center text-sm font-semibold text-gray-400">
+              Syncing marketplace structures...
+            </div>
+          ) : categories.length === 0 ? (
+            <div className="w-full py-20 flex flex-col items-center justify-center text-sm font-semibold text-gray-400">
+              <HeaderRow setHeaderHeight={handleHeaderHeightChange} />
+              <p className="mt-10">No categories found in the system registry.</p>
+            </div>
+          ) : (
+            <List
+              ref={listRef}
+              height={windowHeight - 80} 
+              itemCount={categories.length + 1}
+              itemSize={getItemSize}
+              width="100%"
+              className="scrollbar-hide"
+              style={{ overflowX: 'hidden' }}
+            >
+              {Row}
+            </List>
+          )}
         </div>
 
       </div>

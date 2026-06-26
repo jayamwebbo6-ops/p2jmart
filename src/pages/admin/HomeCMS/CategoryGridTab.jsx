@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link2, Type, FileText, Image as ImageIcon, Upload, ArrowRight, Trash2, Plus, Info } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Upload, Trash2, Plus } from 'lucide-react';
 
 // Theme configuration matching the exact palette tokens from the layout architecture
 const THEME = {
@@ -14,50 +14,21 @@ const THEME = {
   inputBg: 'bg-white',
 };
 
-const INITIAL_LAYOUT_CARDS = [
-  {
-    id: 1,
-    positionLabel: "SLIDE 1",
-    title: "Premium Boat Headphone",
-    description: "Taking your Viewing Experience to the next dimension with premium noise cancellation setups.",
-    buttonName: "Shop Now",
-    targetUrl: "/category/headphones",
-    imgUrl: ""
-  },
-  {
-    id: 2,
-    positionLabel: "SLIDE 2",
-    title: "Smartwatches Elite",
-    description: "Track your vitals daily with ultra crisp resolution wearable panels.",
-    buttonName: "Explore More",
-    targetUrl: "/category/smartwatches",
-    imgUrl: ""
-  }
-];
-
-const CategoryGridTab = () => {
-  const [cards, setCards] = useState(INITIAL_LAYOUT_CARDS);
-  
-  // Isolated state for managing the right-side standalone promotional ad banner from image_3c72c7.jpg
-  const [promoBanner, setPromoBanner] = useState({
-    imgUrl: "",
-    targetUrl: "/offers/mega-sale"
-  });
+const CategoryGridTab = ({ cards, setCards }) => {
+  const fileInputRefs = useRef({});
 
   const handleFieldChange = (id, field, value) => {
     setCards(cards.map(card => card.id === id ? { ...card, [field]: value } : card));
   };
 
   const handleAddNewCategory = () => {
-    const nextId = cards.length > 0 ? Math.max(...cards.map(c => c.id)) + 1 : 1;
     const newCard = {
-      id: nextId,
-      positionLabel: `SLIDE ${nextId}`,
+      id: `card-new-${Date.now()}`,
       title: "",
       description: "",
-      buttonName: "",
+      buttonText: "View Collection",
       targetUrl: "",
-      imgUrl: ""
+      image: ""
     };
     setCards([...cards, newCard]);
   };
@@ -68,36 +39,26 @@ const CategoryGridTab = () => {
 
   const handleImageUpload = (id, event) => {
     const file = event.target.files[0];
-    if (file) {
-      const temporaryUrl = URL.createObjectURL(file);
-      handleFieldChange(id, 'imgUrl', temporaryUrl);
-    }
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      handleFieldChange(id, 'image', reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleClearImage = (id) => {
-    handleFieldChange(id, 'imgUrl', '');
-  };
-
-  // Promo Banner Handler Methods
-  const handlePromoImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      const temporaryUrl = URL.createObjectURL(file);
-      setPromoBanner(prev => ({ ...prev, imgUrl: temporaryUrl }));
-    }
+    handleFieldChange(id, 'image', '');
   };
 
   return (
     <div className="bg-[#f8fafc] min-h-screen p-4 md:p-8 font-sans max-w-7xl mx-auto space-y-6">
-      
-
-
-      {/* DEDICATED MANAGEMENT SECTION: RIGHT SIDE BANNER AD (Ref: image_3c72c7.jpg Rightmost Panel) */}
-      
 
       {/* SUBHEADLINE CONTROL BAR CONTAINER FOR SLIDES */}
       <div className="flex justify-between items-center pt-2">
-       
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          Category Grid Cards ({cards.length})
+        </h3>
 
         <button
           type="button"
@@ -105,15 +66,20 @@ const CategoryGridTab = () => {
           className={`${THEME.primaryBg} ${THEME.primaryHover} text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-2 transition-all cursor-pointer`}
         >
           <Plus size={14} className="stroke-[3]" />
-          <span>Add New Slide</span>
+          <span>Add New Card</span>
         </button>
       </div>
 
       {/* HORIZONTAL CAROUSEL CONFIGURATION STACK */}
       <div className="space-y-5">
-        {cards.map((card) => (
+        {cards.map((card, index) => (
           <div key={card.id} className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-2xs relative group">
             
+            {/* Position badge */}
+            <div className="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded w-max text-[10px] font-bold text-slate-600 uppercase mb-4">
+              Card Slot #{index + 1}
+            </div>
+
             {/* Top row controls inside card container */}
             <div className="absolute top-4 right-4 z-10">
               <button
@@ -131,28 +97,30 @@ const CategoryGridTab = () => {
               {/* LEFT BLOCK: INPUT FORM PANEL GRID SYSTEM */}
               <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                 
-                {/* FIELD 1: SLIDE TITLE */}
+                {/* FIELD 1: CARD TITLE */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
                     Title (Main Heading)
                   </label>
                   <input 
                     type="text"
-                    placeholder="e.g., Boat Headphone"
-                  
+                    placeholder="e.g., Gift Boxes"
+                    value={card.title || ''}
+                    onChange={(e) => handleFieldChange(card.id, 'title', e.target.value)}
                     className={`w-full ${THEME.inputBg} border border-slate-200 focus:border-slate-400 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:outline-none transition-all`}
                   />
                 </div>
 
-                {/* FIELD 2: SLIDE SUB-DESCRIPTION */}
+                {/* FIELD 2: CARD DESCRIPTION */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
                     Sub-Description
                   </label>
                   <input 
                     type="text"
-                    placeholder="e.g., Taking your Viewing Experience to Next Level"
-                  
+                    placeholder="e.g., Curated collections of premium essentials"
+                    value={card.description || ''}
+                    onChange={(e) => handleFieldChange(card.id, 'description', e.target.value)}
                     className={`w-full ${THEME.inputBg} border border-slate-200 focus:border-slate-400 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:outline-none transition-all`}
                   />
                 </div>
@@ -164,8 +132,9 @@ const CategoryGridTab = () => {
                   </label>
                   <input 
                     type="text"
-                    placeholder="e.g., Shop Now"
-                   
+                    placeholder="e.g., View Collection"
+                    value={card.buttonText || ''}
+                    onChange={(e) => handleFieldChange(card.id, 'buttonText', e.target.value)}
                     className={`w-full ${THEME.inputBg} border border-slate-200 focus:border-slate-400 rounded-xl px-3.5 py-2.5 text-xs font-medium text-slate-800 focus:outline-none transition-all`}
                   />
                 </div>
@@ -177,28 +146,36 @@ const CategoryGridTab = () => {
                   </label>
                   <input 
                     type="text"
-                    placeholder="e.g., /category/headphones"
-                    
+                    placeholder="e.g., /category/gift-boxes"
+                    value={card.targetUrl || ''}
+                    onChange={(e) => handleFieldChange(card.id, 'targetUrl', e.target.value)}
                     className={`w-full ${THEME.inputBg} border border-slate-200 focus:border-slate-400 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-500 focus:outline-none transition-all`}
                   />
                 </div>
 
               </div>
 
-              {/* RIGHT BLOCK: HORIZONTAL ALIGNED IMAGE UPLOADER BAY */}
+              {/* RIGHT BLOCK: IMAGE UPLOADER BAY */}
               <div className="lg:col-span-4 space-y-1.5">
                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
                   Category Image Asset
                 </label>
 
-                <div className="w-full h-[108px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl overflow-hidden relative flex flex-col items-center justify-center group transition-colors hover:bg-slate-100/60">
-                  {card.imgUrl ? (
+                <div 
+                  onClick={() => fileInputRefs.current[`cat-${card.id}`]?.click()}
+                  className="w-full h-[108px] bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl overflow-hidden relative flex flex-col items-center justify-center group/img transition-colors hover:bg-slate-100/60 cursor-pointer"
+                >
+                  {card.image ? (
                     <>
-                      <img src={card.imgUrl} alt="Preview" className="w-full h-full object-cover" />
+                      <img src={card.image} alt="Preview" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center text-white opacity-0 group-hover/img:opacity-100 transition-opacity">
+                        <Upload size={16} className="mb-1" />
+                        <span className="text-[10px] font-bold uppercase">Change Image</span>
+                      </div>
                       <button 
                         type="button"
-                        onClick={() => handleClearImage(card.id)}
-                        className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 text-slate-600 hover:text-red-600 p-1.5 rounded-lg shadow-sm border border-slate-200/60 transition-colors cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); handleClearImage(card.id); }}
+                        className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 text-slate-600 hover:text-red-600 p-1.5 rounded-lg shadow-sm border border-slate-200/60 transition-colors cursor-pointer z-10"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -210,14 +187,14 @@ const CategoryGridTab = () => {
                     </div>
                   )}
 
-                  <label className="absolute inset-0 cursor-pointer opacity-0">
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => handleImageUpload(card.id, e)} 
-                      className="hidden" 
-                    />
-                  </label>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    ref={el => fileInputRefs.current[`cat-${card.id}`] = el}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => handleImageUpload(card.id, e)} 
+                    className="hidden" 
+                  />
                 </div>
               </div>
 
@@ -230,12 +207,12 @@ const CategoryGridTab = () => {
       {/* EMPTY STATE */}
       {cards.length === 0 && (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 shadow-3xs">
-          <p className="text-xs font-black text-slate-400 tracking-widest uppercase">No Active Dynamic Slides Found</p>
+          <p className="text-xs font-black text-slate-400 tracking-widest uppercase">No Active Category Grid Cards Found</p>
           <button 
             onClick={handleAddNewCategory} 
-            className={`mt-2 inline-flex items-center gap-1.5 text-xs font-bold ${THEME.secondaryText} hover:underline`}
+            className={`mt-2 inline-flex items-center gap-1.5 text-xs font-bold ${THEME.secondaryText} hover:underline cursor-pointer`}
           >
-            Click here to initialize slide array row elements
+            Click here to add the first category card
           </button>
         </div>
       )}

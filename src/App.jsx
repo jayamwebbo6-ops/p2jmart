@@ -1,15 +1,19 @@
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import Loader from './components/Loader';
 import ScrollToTop from './components/ScrollToTop';
 import { toast, ToastContainer } from './components/toast';
+import { isUserAuthenticated } from './api/userApi';
+import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart, clearCartState } from './redux/cartSlice';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import AccountLayout from './layouts/AccountLayout';
 import GSTSettingsPage from './pages/admin/GstSettingsPage';
-import TermsContion from './pages/user/TermsContion';
+import TermsContion from './pages/user/TermsConditions';
+import ProductReviews from './pages/admin/ProductReviews';
 
 // Lazy loading user pages
 const Home = lazy(() => import('./pages/user/Home'));
@@ -54,18 +58,36 @@ const HomeContentManager = lazy(() => import('./pages/admin/HomeCMS/HomeContentM
 function App() {
   const basename = import.meta.env.BASE_URL;
   
-  /* ==========================================================================
-      GLOBAL CART STATE MANAGEMENT WITH PERSISTENCE
-     ========================================================================== */
-  const [cart, setCart] = useState(() => {
-    const savedCart = localStorage.getItem("user_cart");
-    return savedCart ? JSON.parse(savedCart) : [];
-  });
+  const dispatch = useDispatch();
+  const cart = useSelector((state) => state.cart.items || []);
 
-  // Automatically save cart arrays to prevent dropping state during link updates
+  const [localCart, setLocalCart] = useState(cart);
+
   useEffect(() => {
-    localStorage.setItem("user_cart", JSON.stringify(cart));
+    setLocalCart(cart);
   }, [cart]);
+
+  /* ==========================================================================
+      LOAD AUTHENTICATED USER CART
+     ========================================================================== */
+  useEffect(() => {
+    if (isUserAuthenticated()) {
+      dispatch(fetchCart());
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    const onLoginStateChange = () => {
+      if (isUserAuthenticated()) {
+        dispatch(fetchCart());
+      } else {
+        dispatch(clearCartState());
+      }
+    };
+
+    window.addEventListener('userLoginStateChange', onLoginStateChange);
+    return () => window.removeEventListener('userLoginStateChange', onLoginStateChange);
+  }, [dispatch]);
 
   /* ==========================================================================
       GLOBAL WISHLIST STATE MANAGEMENT
@@ -99,29 +121,66 @@ function App() {
   /* ==========================================================================
       CORE CART OPERATIONAL HANDLERS
      ========================================================================== */
-  const addToCart = (product) => {
-    const exists = cart.find(item => item.id === product.id);
-    if (exists) {
-      toast.info(`"${product.title || 'Product'}" is already in your Cart.`);
+  const addToCart = async (product) => {
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before adding items to cart.');
       return;
     }
-    // Set explicit default value if runtime payload item object layout missing quantity definitions
-    const targetQty = product.quantity || 1;
-    setCart([...cart, { ...product, quantity: targetQty }]);
-    toast.success(`"${product.title || 'Product'}" added to Cart!`);
+
+    const productId = product.id || product._id || product.productId;
+    const payload = {
+      productId,
+      title: product.title || product.name || 'Product',
+      price: Number(product.price ?? 0),
+      quantity: product.quantity || 1,
+      image: product.image || (product.images && product.images[0]) || '',
+      selectedOptions: product.selectedOptions || {},
+      isComboProduct: Boolean(product.isComboProduct),
+      includedProducts: product.includedProducts || []
+    };
+
+    try {
+      await dispatch(addCartItem(payload)).unwrap();
+      toast.success(`"${payload.title}" added to Cart!`);
+    } catch (error) {
+      toast.error(error || 'Unable to add product to cart.');
+    }
   };
 
   const updateQuantity = (id, amount) => {
-    setCart(prev => prev.map(item => 
-      item.id === id ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item
-    ));
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before updating your cart.');
+      return;
+    }
+
+    const existingItem = cart.find((item) => item.id === id || item._id === id);
+    if (!existingItem) return;
+
+    const nextQty = Math.max(1, (existingItem.quantity || 1) + amount);
+    dispatch(updateCartItem({ itemId: existingItem.id || existingItem._id, payload: { quantity: nextQty } }));
   };
 
   const removeFromCart = (id) => {
-    const item = cart.find(item => item.id === id);
-    setCart(prev => prev.filter(item => item.id !== id));
-    if (item) {
-      toast.info(`"${item.title}" removed from Cart.`);
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before updating your cart.');
+      return;
+    }
+
+    if (!id) return;
+    dispatch(removeCartItem(id));
+  };
+
+  const clearCartItems = async () => {
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before updating your cart.');
+      return;
+    }
+
+    try {
+      await dispatch(clearCart()).unwrap();
+      toast.success('All cart items have been removed.');
+    } catch (error) {
+      toast.error(error || 'Unable to clear cart.');
     }
   };
 
@@ -132,7 +191,7 @@ function App() {
       <Suspense fallback={<Loader />}>
         <Routes>
           {/* User Facing Store Routes */}
-          <Route path="/" element={<UserLayout wishlist={wishlist} cart={cart} />}>
+          <Route path="/" element={<UserLayout wishlist={wishlist} cart={localCart} />}>
             
             <Route 
               index 
@@ -160,8 +219,20 @@ function App() {
                 />
               } 
             />
+            <Route 
+              path="sub-category/:subcategoryId/:id" 
+              element={
+                <ProductDetail 
+                  onAddToCart={addToCart} 
+                  addToWishlist={addToWishlist}
+                  wishlist={wishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
             
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/products/:id/reviews" element={<ProductReviews />} />
             <Route path="terms" element={<TermsContion/>} />
             <Route path="cancellation-return-policy" element={<CancellationReturnPolicy />} />
 
@@ -170,10 +241,11 @@ function App() {
               path="cart" 
               element={
                 <Cart 
-                  cart={cart} 
+                  cart={localCart} 
                   updateQuantity={updateQuantity} 
                   removeFromCart={removeFromCart} 
-                  setCart={setCart}
+                  clearCart={clearCartItems}
+                  setCart={setLocalCart}
                 />
               } 
             />
@@ -181,8 +253,8 @@ function App() {
               path="checkout" 
               element={
                 <Checkout 
-                  cart={cart} 
-                  setCart={setCart}
+                  cart={localCart} 
+                  setCart={setLocalCart}
                 />
               } 
             />            
@@ -190,7 +262,17 @@ function App() {
             <Route path="customized" element={<CustomizedProduct />} />
             <Route path="login" element={<UserLogin />} />
             
-            <Route path="customizedProductDetail/:productId" element={<CustomizedProductDetails />} />
+            <Route 
+              path="customizedProductDetail/:productId" 
+              element={
+                <CustomizedProductDetails 
+                  onAddToCart={addToCart} 
+                  addToWishlist={addToWishlist}
+                  wishlist={wishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
 
             <Route path="delivery-policy" element={<DeliveryPolicy />} />
             <Route path="returns-policy" element={<ReturnPolicy />} />
@@ -206,12 +288,24 @@ function App() {
             />
 
            <Route 
-              path="subCategory" 
+              path="sub-category" 
               element={
                 <Subcategory 
                   wishlist={wishlist}
                   addToWishlist={addToWishlist}
                   removeFromWishlist={removeFromWishlist}
+                  onAddToCart={addToCart}
+                />
+              } 
+            />
+            <Route 
+              path="sub-category/:subcategoryId" 
+              element={
+                <Subcategory 
+                  wishlist={wishlist}
+                  addToWishlist={addToWishlist}
+                  removeFromWishlist={removeFromWishlist}
+                  onAddToCart={addToCart}
                 />
               } 
             />

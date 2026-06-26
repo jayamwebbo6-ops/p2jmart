@@ -4,8 +4,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 // FIXED: Added passed structural dependency setCart to accept remote data transfers
-const Cart = ({ cart = [], updateQuantity, removeFromCart, setCart }) => {
+const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart }) => {
   const [productToDelete, setProductToDelete] = useState(null);
+  const [showClearModal, setShowClearModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,7 +43,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, setCart }) => {
 
   const handleConfirmRemove = () => {
     if (productToDelete) {
-      removeFromCart(productToDelete.id);
+      removeFromCart(productToDelete.id || productToDelete._id);
       setProductToDelete(null);
     }
   };
@@ -65,12 +66,24 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, setCart }) => {
       {/* Left Container: Items list */}
       <div className="flex-1 w-full flex flex-col gap-3">
         <div className="flex flex-col min-[240px]:flex-row min-[240px]:items-center justify-between border-b border-gray-100 pb-2 gap-1">
-          <h1 className="text-sm sm:text-lg md:text-xl font-bold text-[#003147]">Your Items ({cart.length})</h1>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-[#003147]">Your Items ({cart.length})</h1>
+            {cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowClearModal(true)}
+                className="text-[#9E2A2B] bg-red-50 border border-red-100 hover:bg-red-100 transition-colors rounded-full px-3 py-2 text-[11px] sm:text-xs font-semibold"
+              >
+                Clear Cart
+              </button>
+            )}
+          </div>
           <Link to="/" className="text-[11px] sm:text-sm font-semibold text-[#009EDB] hover:underline w-fit">Continue Shopping</Link>
         </div>
 
-        {cart.map((item) => (
-          <div key={item.id} className={`bg-white  rounded-xl p-2.5 sm:p-4 shadow-sm flex flex-col min-[240px]:flex-row gap-3 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/20' : 'border-gray-0'}`}>
+        <div className={cart.length > 3 ? 'max-h-[calc(100vh-200px)] overflow-y-auto pr-2' : ''}>
+          {cart.map((item) => (
+            <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col min-[240px]:flex-row gap-4 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
             
             {/* Image wrapper */}
             <div className="flex justify-center min-[240px]:block flex-shrink-0">
@@ -183,10 +196,10 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, setCart }) => {
 
           </div>
         ))}
+        </div>
       </div>
-
       {/* Right Side calculations layout summary section */}
-      <div className="w-full md:w-80 bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex flex-col gap-4">
+      <div className="w-full md:w-80 bg-white border border-gray-200 rounded-3xl p-5 shadow-sm flex flex-col gap-5">
         <h2 className="text-sm sm:text-base font-bold text-[#003147] border-b border-gray-50 pb-2">Order Summary</h2>
         
         {amountNeededForFreeShipping > 0 ? (
@@ -235,6 +248,18 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, setCart }) => {
         onConfirm={handleConfirmRemove}
         title="Remove Item"
         message={`Are you sure you want to remove "${productToDelete?.title}" from your shopping cart?`}
+      />
+      <ConfirmationModal 
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={() => {
+          clearCart();
+          setShowClearModal(false);
+        }}
+        title="Clear Cart"
+        message="Are you sure you want to remove all products from your cart?"
+        confirmText="Clear All"
+        cancelText="Keep Items"
       />
     </div>
   );

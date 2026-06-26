@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, ChevronDown, X, Trash2, ShieldAlert } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable'; // Imported your standard component
-import { toast, ToastContainer } from '../../components/Toast'; 
+import { toast, ToastContainer } from '../../components/toast';
 
 const INITIAL_REQUESTS = [
   {

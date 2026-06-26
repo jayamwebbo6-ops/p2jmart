@@ -1,6 +1,7 @@
 import React from 'react';
 import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { toast } from './toast';
 
 const ProductCard = ({ 
   product, 
@@ -16,12 +17,16 @@ const ProductCard = ({
   // 2. Centralized navigation handler
   const handleNavigation = (e) => {
     e.preventDefault();
+    const targetId = product.id || product._id;
     if (onClick) {
       // If a custom click handler is passed (like on the customization page), execute it
       onClick(product);
+    } else if (product.customizeProduct === 'Yes') {
+      // If the product is customized, navigate to the customized details page!
+      navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
     } else {
       // Otherwise, fallback to the standard e-commerce details route
-      navigate(`/product/${product.id}`, { state: { product } });
+      navigate(`/product/${targetId}`, { state: { product } });
     }
   };
 
@@ -106,7 +111,17 @@ const ProductCard = ({
         {product.price !== null && product.price !== undefined && (
           <div className="mt-auto pt-0.5">
             <button 
-              onClick={(e) => { e.stopPropagation(); onAddToCart?.(product); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                // If product requires customization, prompt user and navigate to detail page
+                if (product?.customizeProduct === 'Yes') {
+                  toast.info('Please provide customization (upload image or text) before adding to cart.');
+                  const targetId = product.id || product._id;
+                  navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
+                  return;
+                }
+                onAddToCart?.(product);
+              }}
               className="bg-[#003147] text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-[#009EDB] transition-colors cursor-pointer shadow-sm active:scale-95 max-w-full"
             >
               <ShoppingCart size={14} className="flex-shrink-0" />

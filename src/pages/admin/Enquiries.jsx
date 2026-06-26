@@ -4,6 +4,7 @@ import { toast } from '../../components/toast';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { DeleteBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
+import { getEnqueriesAPI, updateEnqueriesAPI, deleteEnqueriesAPI } from '../../api/enqueriesApi';
 
 const STATIC_ENQUIRIES = [
   {
@@ -41,14 +42,9 @@ const STATIC_ENQUIRIES = [
 const Enquiries = () => {
   const [enquiries, setEnquiries] = useState(() => {
     const saved = localStorage.getItem('p2j_mart_enquiries');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Set static data initially
-    localStorage.setItem('p2j_mart_enquiries', JSON.stringify(STATIC_ENQUIRIES));
-    return STATIC_ENQUIRIES;
+    return saved ? JSON.parse(saved) : [];
   });
-
+  const [loading, setLoading] = useState(false);
   const [activeEnquiryId, setActiveEnquiryId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -63,12 +59,30 @@ const Enquiries = () => {
     setConfirmOpen(true);
   };
 
-  // Persist enquiries and notify sidebar
-  const saveEnquiries = (updated) => {
-    setEnquiries(updated);
-    localStorage.setItem('p2j_mart_enquiries', JSON.stringify(updated));
-    window.dispatchEvent(new Event('enquiriesUpdated'));
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const res = await getEnqueriesAPI();
+      if (res && res.success && Array.isArray(res.data)) {
+        const mapped = res.data.map(item => ({
+          ...item,
+          id: item._id || item.id
+        }));
+        setEnquiries(mapped);
+        localStorage.setItem('p2j_mart_enquiries', JSON.stringify(mapped));
+        window.dispatchEvent(new Event('enquiriesUpdated'));
+      }
+    } catch (err) {
+      console.error("Error fetching enquiries:", err);
+      toast.error("Failed to load enquiries from database");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchEnquiries();
+  }, []);
 
   const activeEnquiry = enquiries.find(e => e.id === activeEnquiryId) || null;
 
@@ -81,20 +95,33 @@ const Enquiries = () => {
 
   // Mark active enquiry as read
   useEffect(() => {
-    if (activeEnquiry && !activeEnquiry.read) {
-      const updated = enquiries.map(e => 
-        e.id === activeEnquiry.id ? { ...e, read: true } : e
-      );
-      saveEnquiries(updated);
+    const target = enquiries.find(e => e.id === activeEnquiryId);
+    if (target && !target.read) {
+      const markAsRead = async () => {
+        try {
+          await updateEnqueriesAPI(activeEnquiryId, { read: true });
+          setEnquiries(prev => {
+            const updated = prev.map(e => 
+              e.id === activeEnquiryId ? { ...e, read: true } : e
+            );
+            localStorage.setItem('p2j_mart_enquiries', JSON.stringify(updated));
+            window.dispatchEvent(new Event('enquiriesUpdated'));
+            return updated;
+          });
+        } catch (err) {
+          console.error("Error marking enquiry as read:", err);
+        }
+      };
+      markAsRead();
     }
   }, [activeEnquiryId]);
 
   // Filtered list
   const filteredEnquiries = enquiries.filter(e => 
-    e.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.message.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    e.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (e.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (e.subject || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (e.message || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (e.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDeleteEnquiry = (id, e) => {
@@ -102,27 +129,44 @@ const Enquiries = () => {
     triggerConfirm(
       'Delete Enquiry',
       'Are you sure you want to permanently delete this enquiry? This action cannot be undone.',
-      () => {
-        const updated = enquiries.filter(item => item.id !== id);
-        saveEnquiries(updated);
-        toast.success('Enquiry deleted');
-        if (activeEnquiryId === id) {
-          setActiveEnquiryId(updated[0]?.id || '');
+      async () => {
+        try {
+          await deleteEnqueriesAPI(id);
+          const updated = enquiries.filter(item => item.id !== id);
+          setEnquiries(updated);
+          localStorage.setItem('p2j_mart_enquiries', JSON.stringify(updated));
+          window.dispatchEvent(new Event('enquiriesUpdated'));
+          toast.success('Enquiry deleted');
+          if (activeEnquiryId === id) {
+            setActiveEnquiryId(updated[0]?.id || '');
+          }
+        } catch (err) {
+          console.error("Error deleting enquiry:", err);
+          toast.error("Failed to delete enquiry");
         }
       }
     );
   };
 
-  const handleToggleReadStatus = (id, e) => {
+  const handleToggleReadStatus = async (id, e) => {
     e.stopPropagation();
     const target = enquiries.find(item => item.id === id);
     if (!target) return;
     
-    const updated = enquiries.map(item => 
-      item.id === id ? { ...item, read: !item.read } : item
-    );
-    saveEnquiries(updated);
-    toast.success(target.read ? 'Marked as unread' : 'Marked as read');
+    try {
+      const newReadStatus = !target.read;
+      await updateEnqueriesAPI(id, { read: newReadStatus });
+      const updated = enquiries.map(item => 
+        item.id === id ? { ...item, read: newReadStatus } : item
+      );
+      setEnquiries(updated);
+      localStorage.setItem('p2j_mart_enquiries', JSON.stringify(updated));
+      window.dispatchEvent(new Event('enquiriesUpdated'));
+      toast.success(newReadStatus ? 'Marked as read' : 'Marked as unread');
+    } catch (err) {
+      console.error("Error updating read status:", err);
+      toast.error("Failed to update status");
+    }
   };
 
   const formatDate = (dateStr) => {
@@ -161,57 +205,62 @@ const Enquiries = () => {
 
           {/* List items */}
           <div className="flex-grow overflow-y-auto divide-y divide-gray-100 custom-scrollbar">
-            {filteredEnquiries.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setActiveEnquiryId(item.id)}
-                className={`p-4 cursor-pointer transition-all flex flex-col gap-1 relative ${
-                  activeEnquiryId === item.id 
-                    ? 'bg-blue-50/50 border-l-4 border-[#001E3C]' 
-                    : 'hover:bg-gray-50/75 border-l-4 border-transparent'
-                }`}
-              >
-                {/* Unread indicator dot */}
-                {!item.read && (
-                  <span className="absolute right-4 top-4 w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse shadow-sm" />
-                )}
-
-                <div className="flex justify-between items-start pr-4">
-                  <span className={`text-xs ${!item.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
-                    {item.name}
-                  </span>
-                  <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                    <Clock size={10} />
-                    {formatDate(item.createdAt)}
-                  </span>
-                </div>
-
-                <span className={`text-xs truncate ${!item.read ? 'font-bold text-slate-900' : 'text-slate-650'}`}>
-                  {item.subject}
-                </span>
-
-                <p className="text-[11px] text-gray-400 line-clamp-2 mt-0.5">
-                  {item.message}
-                </p>
-
-                <div className="flex justify-end gap-2 mt-2">
-                  <button
-                    onClick={(e) => handleToggleReadStatus(item.id, e)}
-                    className="p-1 hover:bg-gray-150 rounded text-gray-400 hover:text-blue-600 transition-colors"
-                    title={item.read ? 'Mark as Unread' : 'Mark as Read'}
-                  >
-                    {item.read ? <Mail size={13} /> : <MailOpen size={13} />}
-                  </button>
-                  <DeleteBtn size={13} onClick={(e) => handleDeleteEnquiry(item.id, e)} title="Delete Message" />
-                </div>
+            {loading ? (
+              <div className="text-center py-20 text-xs text-gray-400 flex flex-col items-center justify-center gap-2">
+                <div className="w-8 h-8 border-2 border-gray-205 border-t-primary rounded-full animate-spin"></div>
+                <span>Loading enquiries...</span>
               </div>
-            ))}
-
-            {filteredEnquiries.length === 0 && (
+            ) : filteredEnquiries.length === 0 ? (
               <div className="text-center py-20 text-xs text-gray-400 flex flex-col items-center justify-center gap-2">
                 <Mail size={32} className="text-gray-300" />
                 <span>No enquiries found.</span>
               </div>
+            ) : (
+              filteredEnquiries.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => setActiveEnquiryId(item.id)}
+                  className={`p-4 cursor-pointer transition-all flex flex-col gap-1 relative ${
+                    activeEnquiryId === item.id 
+                      ? 'bg-blue-50/50 border-l-4 border-[#001E3C]' 
+                      : 'hover:bg-gray-50/75 border-l-4 border-transparent'
+                  }`}
+                >
+                  {/* Unread indicator dot */}
+                  {!item.read && (
+                    <span className="absolute right-4 top-4 w-2.5 h-2.5 bg-blue-600 rounded-full animate-pulse shadow-sm" />
+                  )}
+
+                  <div className="flex justify-between items-start pr-4">
+                    <span className={`text-xs ${!item.read ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      {item.name}
+                    </span>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                      <Clock size={10} />
+                      {formatDate(item.createdAt)}
+                    </span>
+                  </div>
+
+                  <span className={`text-xs truncate ${!item.read ? 'font-bold text-slate-900' : 'text-slate-650'}`}>
+                    {item.subject}
+                  </span>
+
+                  <p className="text-[11px] text-gray-400 line-clamp-2 mt-0.5">
+                    {item.message}
+                  </p>
+
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button
+                      onClick={(e) => handleToggleReadStatus(item.id, e)}
+                      className="p-1 hover:bg-gray-150 rounded text-gray-400 hover:text-blue-600 transition-colors"
+                      title={item.read ? 'Mark as Unread' : 'Mark as Read'}
+                    >
+                      {item.read ? <Mail size={13} /> : <MailOpen size={13} />}
+                    </button>
+                    <DeleteBtn size={13} onClick={(e) => handleDeleteEnquiry(item.id, e)} title="Delete Message" />
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

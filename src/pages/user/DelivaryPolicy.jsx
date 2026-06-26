@@ -1,66 +1,52 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+// Import your API service layer
+import { getHomeCMS } from '../../api/homeCms'; // Adjust this path to match your project structure
 
 const DeliveryPolicy = () => {
+  const [policyData, setPolicyData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch policy data from the backend CMS on component mount
+useEffect(() => {
+  const fetchPolicy = async () => {
+    try {
+      setIsLoading(true);
+      const res = await getHomeCMS();
+      
+      // Log this to your browser console to see exactly what the backend sends
+      console.log("CMS API Response:", res);
+
+      // 1. If the response is the direct array
+      if (Array.isArray(res)) {
+        setPolicyData(res);
+      } 
+      // 2. If the array is nested inside an object property (e.g., res.deliveryPolicy)
+      else if (res && Array.isArray(res.deliveryPolicy)) {
+        setPolicyData(res.deliveryPolicy);
+      }
+      // 3. If it's nested inside a standard data envelope (e.g., res.data.deliveryPolicy)
+      else if (res && res.data && Array.isArray(res.data.deliveryPolicy)) {
+        setPolicyData(res.data.deliveryPolicy);
+      } else {
+        console.warn("Received data structure did not match expectations.");
+      }
+
+    } catch (err) {
+      console.error("Error fetching delivery policy:", err);
+      setError("Failed to load delivery policy. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchPolicy();
+}, []);
+
   // Back to top scroll routine targeting bottom-right corner control toggle
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const policyData = [
-    {
-      title: "1. Return Conditions",
-      points: [
-        <><strong>Eligibility:</strong> We accept returns within 30 days of delivery for standard items.</>,
-        <><strong>Condition:</strong> The item must be unused, in its original packaging, and in the same condition as when you received it.</>,
-        <><strong>Customized Products:</strong> Products with custom embroidery, printing, or designs cannot be returned unless there is a manufacturing defect or printing error on our part.</>,
-        <><strong>Proof of Purchase:</strong> A receipt, order confirmation email, or invoice is required to process any return request.</>
-      ]
-    },
-    {
-      title: "2. Shipping Options & Costs",
-      points: [
-        <><strong>Standard Shipping:</strong> [X] business days – [Cost or "Free over $X"].</>,
-        <><strong>Express Shipping:</strong> [X] business days – [Additional Cost].</>,
-        <><strong>International Shipping:</strong> Available to [list countries] – Delivery times vary by location.</>,
-        <span className="italic text-gray-500">Shipping costs are calculated at checkout based on weight, destination, and selected method.</span>
-      ]
-    },
-    {
-      title: "3. Processing Time",
-      points: [
-        <>Orders are processed within <strong>[X] business days</strong> (excluding weekends/holidays).</>,
-        "You’ll receive a confirmation email with tracking details once your order ships."
-      ]
-    },
-    {
-      title: "4. Delivery Timelines",
-      points: [
-        <><strong>Domestic:</strong> [X-X] business days after processing.</>,
-        <><strong>International:</strong> [X-X] business days (customs delays may apply).</>
-      ]
-    },
-    {
-      title: "5. Tracking Your Order",
-      points: [
-        "Track your package via the link in your shipping confirmation email.",
-        <>Contact <span className="font-semibold text-gray-900">support@p2j-mart.com</span> if your tracking hasn’t updated in [X] days.</>
-      ]
-    },
-    {
-      title: "6. Undeliverable Orders",
-      points: [
-        "If a package is returned due to an incorrect address or failed delivery, we’ll contact you to reship (additional fees may apply)."
-      ]
-    },
-    {
-      title: "7. Returns & Missing Items",
-      points: [
-        <>Damaged/lost shipments? Email us within [X] days at <span className="font-semibold text-gray-900">support@p2j-mart.com</span>.</>,
-        <>See our <span className="text-primary hover:underline font-medium cursor-pointer">Return Policy</span> for full details.</>,
-        <><strong>Note:</strong> Shipping partners may require signatures for high-value orders.</>
-      ]
-    }
-  ];
 
   return (
     <div className="w-full min-h-screen bg-gray-50 pt-8 pb-12 font-sans selection:bg-slate-200 relative">
@@ -76,27 +62,49 @@ const DeliveryPolicy = () => {
           At p2j-mart, we want to ensure your orders are distributed safely, accurately, and as quickly as possible. This policy details our shipping options, processing estimates, tracking frameworks, and product return guidelines.
         </p>
 
-        {/* Content Sections */}
-        <div className="space-y-8 mt-6">
-          {policyData.map((section, index) => (
-            <div key={index} className="border-b border-gray-50 pb-6 last:border-0 last:pb-0">
-              {/* Section Title */}
-              <h2 className="text-lg sm:text-xl font-bold text-[#0A3A60] mb-3">
-                {section.title}
-              </h2>
+        {/* Loading and Error States */}
+        {isLoading && (
+          <div className="text-center py-12 text-gray-500 font-medium animate-pulse">
+            Loading shipping policies...
+          </div>
+        )}
 
-              {/* Bullet Points */}
-              <ul className="space-y-2">
-                {section.points.map((point, pointIndex) => (
-                  <li key={pointIndex} className="flex items-start text-gray-600">
-                    <span className="text-[#00A3E0] font-bold mr-3 mt-1">•</span>
-                    <span className="text-xs sm:text-sm md:text-base leading-relaxed">{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        {error && (
+          <div className="text-center py-12 text-red-500 font-medium">
+            {error}
+          </div>
+        )}
+
+        {/* Content Sections */}
+        {!isLoading && !error && (
+          <div className="space-y-8 mt-6">
+            {policyData.length === 0 ? (
+              <p className="text-center text-gray-500 py-6">No policy details available at this time.</p>
+            ) : (
+              policyData.map((section, index) => (
+                <div key={section._id || index} className="border-b border-gray-50 pb-6 last:border-0 last:pb-0">
+                  {/* Section Title */}
+                  <h2 className="text-lg sm:text-xl font-bold text-[#0A3A60] mb-3">
+                    {section.title}
+                  </h2>
+
+                  {/* Bullet Points */}
+                  <ul className="space-y-2">
+                    {section.points && section.points.map((point, pointIndex) => (
+                      <li key={pointIndex} className="flex items-start text-gray-600">
+                        <span className="text-[#00A3E0] font-bold mr-3 mt-1">•</span>
+                        <span className="text-xs sm:text-sm md:text-base leading-relaxed">
+                          {/* Handles both plain text and HTML if sent from the CMS */}
+                          {typeof point === 'string' ? point : point.text || JSON.stringify(point)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
       </div>
 

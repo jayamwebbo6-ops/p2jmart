@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingCart, ShoppingBag, Star, ChevronUp, Share2, Plus, Minus, Upload, Eye, Type, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useLocation, useParams, useNavigate, Link } from 'react-router-dom';
+import { Heart, ShoppingCart, ShoppingBag, Star, ChevronUp, Share2, Plus, Minus, Upload, Eye, Type, CheckCircle, Play, SkipBack, SkipForward } from 'lucide-react';
+import { toast } from '../../components/toast';
 
 // Swiper imports for carousels
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -9,8 +10,16 @@ import { Pagination } from 'swiper/modules';
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
+import { getProductByIdAPI } from '../../api/productApi';
 
-const CustomizedProductDetails = () => {
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const getImageURL = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
+  return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
+};
+
+const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { productId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,15 +32,132 @@ const CustomizedProductDetails = () => {
     customizeBtn: 'bg-slate-500 hover:bg-slate-600 text-white'
   };
 
-  const product = location.state?.product || {
-    id: productId || 1,
-    title: "SNAP ART Customized Photo and Song Spotify Frame, Personalized Frame with scannable code | Birthday | Valentine Day, Anniversary | for Mothers,",
-    price: 500,
-    originalPrice: 550,
-    discount: 9,
-    rating: 4.0,
-    reviews: 21,
-    image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80"
+  const incomingProduct = location.state?.product;
+  const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
+  const [loading, setLoading] = useState(!incomingProduct);
+
+  useEffect(() => {
+    if (incomingProduct) {
+      setLoadedProduct(incomingProduct);
+      setLoading(false);
+      return;
+    }
+
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const res = await getProductByIdAPI(productId);
+        if (res && res.success && res.data) {
+          setLoadedProduct(res.data);
+        } else if (res && res.data) {
+          setLoadedProduct(res.data);
+        } else if (res) {
+          setLoadedProduct(res);
+        }
+      } catch (err) {
+        console.error("Error fetching customized product details dynamically:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProduct();
+  }, [productId, incomingProduct]);
+
+  const product = useMemo(() => {
+    const raw = loadedProduct || {
+      id: productId || 1,
+      title: "SNAP ART Customized Photo and Song Spotify Frame",
+      price: 500,
+      originalPrice: 550,
+      rating: 4.0,
+      reviews: 21,
+      image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80",
+      customizeProduct: "Yes",
+      customizationType: "Both",
+      warranty: "1 year Warranty",
+      returnPolicy: "3 Days",
+      deliveryMode: "Home Delivery Available Across Regions",
+      variants: []
+    };
+    return {
+      id: raw._id?.$oid || raw._id || raw.id,
+      title: raw.title || raw.name || '',
+      rating: raw.rating ?? 5,
+      reviews: raw.reviews || 0,
+      image: raw.image || (raw.images?.[0] || ''),
+      images: raw.images || (raw.image ? [raw.image] : []),
+      customizeProduct: raw.customizeProduct || 'Yes',
+      customizationType: raw.customizationType || 'Both',
+      detailedDescription: raw.detailedDescription || raw.description || '',
+      warranty: raw.warranty || '',
+      returnPolicy: raw.returnPolicy || 'Select Return Days',
+      deliveryMode: raw.deliveryMode || '',
+      variants: Array.isArray(raw.variants) ? raw.variants : []
+    };
+  }, [loadedProduct, productId]);
+
+  // ── Variant selection state ──
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+
+  // Auto-select first in-stock variant (or first variant if all out of stock)
+  useEffect(() => {
+    if (product.variants.length > 0) {
+      const firstInStock = product.variants.find(v => v.stock > 0);
+      setSelectedVariantId((firstInStock || product.variants[0]).id);
+    }
+  }, [product.variants]);
+
+  const selectedVariant = useMemo(() => {
+    return product.variants.find(v => v.id === selectedVariantId) || product.variants[0] || null;
+  }, [product.variants, selectedVariantId]);
+
+  // Derive price / originalPrice / discount / stock / images from selected variant
+  const activePrice = selectedVariant?.price ?? 0;
+  const activeOriginalPrice = selectedVariant?.originalPrice ?? activePrice;
+  const activeDiscount = activeOriginalPrice > activePrice
+    ? Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)
+    : 0;
+  const activeStock = selectedVariant?.stock ?? 0;
+  const isOutOfStock = activeStock === 0;
+
+  // Collect unique attribute keys across all variants
+  const attributeKeys = useMemo(() => {
+    const keys = new Set();
+    product.variants.forEach(v => Object.keys(v.attributes || {}).forEach(k => keys.add(k)));
+    return [...keys];
+  }, [product.variants]);
+
+  // For each attribute key, get unique values
+  const attributeOptions = useMemo(() => {
+    const map = {};
+    attributeKeys.forEach(key => {
+      map[key] = [...new Set(product.variants.map(v => v.attributes?.[key]).filter(Boolean))];
+    });
+    return map;
+  }, [attributeKeys, product.variants]);
+
+  // Clicking an attribute value → find the best matching variant
+  const handleAttributeSelect = (key, value) => {
+    const current = selectedVariant?.attributes || {};
+    const desired = { ...current, [key]: value };
+    // Find exact match first
+    let match = product.variants.find(v =>
+      Object.entries(desired).every(([k, val]) => v.attributes?.[k] === val)
+    );
+    // Fallback: match just the clicked attribute
+    if (!match) {
+      match = product.variants.find(v => v.attributes?.[key] === value);
+    }
+    if (match) setSelectedVariantId(match.id);
+  };
+
+  // Is a specific attribute value available (has stock) with current selections?
+  const isAttrValueAvailable = (key, value) => {
+    const current = selectedVariant?.attributes || {};
+    const desired = { ...current, [key]: value };
+    return product.variants.some(v =>
+      Object.entries(desired).every(([k, val]) => v.attributes?.[k] === val) && v.stock > 0
+    );
   };
 
   const [quantity, setQuantity] = useState(1);
@@ -70,12 +196,27 @@ const CustomizedProductDetails = () => {
     };
   }, [customImageURL]);
 
-  const productGalleryThumbnails = [
-    customImageURL || product.image,
-    'https://images.unsplash.com/photo-1579783928621-7a13d66a6211?auto=format&fit=crop&w=800&h=800&q=80',
-    'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?auto=format&fit=crop&w=800&h=800&q=80',
-    'https://images.unsplash.com/photo-1549887534-1541e9326642?auto=format&fit=crop&w=800&h=800&q=80'
-  ];
+  const productGalleryThumbnails = useMemo(() => {
+    const list = [];
+    if (customImageURL) list.push(customImageURL);
+    // Prefer selected variant images
+    const variantImages = selectedVariant?.images?.length
+      ? selectedVariant.images
+      : selectedVariant?.image
+        ? [selectedVariant.image]
+        : [];
+    if (variantImages.length > 0) {
+      variantImages.forEach(img => { if (img) list.push(getImageURL(img)); });
+    } else {
+      // Fallback to product-level image
+      if (product.image) list.push(getImageURL(product.image));
+      (product.images || []).forEach(img => {
+        const url = getImageURL(img);
+        if (img && !list.includes(url)) list.push(url);
+      });
+    }
+    return list;
+  }, [customImageURL, selectedVariant, product.image, product.images]);
 
   const activePreviewImage = productGalleryThumbnails[activeImageIndex];
 
@@ -136,24 +277,95 @@ const CustomizedProductDetails = () => {
     });
   };
 
+  const isWishlisted = useMemo(() => {
+    return wishlist.some(item => item.id === product?.id);
+  }, [wishlist, product?.id]);
+
+  const handleWishlistToggle = () => {
+    if (!product) return;
+    if (isWishlisted) {
+      if (removeFromWishlist) removeFromWishlist(product.id);
+      toast.success("Removed from wishlist");
+    } else {
+      if (addToWishlist) addToWishlist(product);
+      toast.success("Added to wishlist!");
+    }
+  };
+
+  const validateCustomization = () => {
+    if (product.customizeProduct !== 'Yes') return true;
+
+    if (product.customizationType === 'Text' || product.customizationType === 'Both') {
+      if (!customUserText.trim()) {
+        toast.error("Please enter your custom text inscription.");
+        return false;
+      }
+    }
+    if (product.customizationType === 'Image' || product.customizationType === 'Both') {
+      if (!customImageURL) {
+        toast.error("Please upload your custom design or photo.");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleAddToCart = () => {
+    if (!product) return;
+    if (!validateCustomization()) return;
+
+    if (onAddToCart) {
+      onAddToCart({
+        ...product,
+        quantity: quantity,
+        customization: {
+          text: customUserText,
+          image: customImageURL
+        }
+      });
+    }
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (!validateCustomization()) return;
+
+    navigate('/checkout', {
+      state: {
+        directPurchase: true,
+        items: [
+          {
+            ...product,
+            quantity: quantity,
+            customization: {
+              text: customUserText,
+              image: customImageURL
+            }
+          }
+        ]
+      }
+    });
+  };
+
+
   return (
     <div className="w-full antialiased text-gray-800 selection:bg-gray-200 min-w-0 relative">
       
       {/* Breadcrumbs */}
-      <div className="w-full bg-gray-50/50 border-b border-gray-100 flex items-center justify-end text-xs text-gray-500 gap-1.5 py-2 px-4">
-        <span className="hover:text-blue-500 cursor-pointer" onClick={() => navigate('/')}>Home</span>
-        <span>&gt;</span>
-        <span className="hover:text-blue-500 cursor-pointer">Custom Pages</span>
-        <span>&gt;</span>
-        <span className="text-gray-700 font-medium">CustomProductDetail Page</span>
+      <div className="max-w-[2500px] mx-auto px-4 mt-8">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium flex-wrap">
+          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')}>Home</span>
+          <span className="text-gray-300">/</span>
+          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/customized')}>Customized Products</span>
+          <span className="text-gray-300">/</span>
+          <span className="text-gray-900 font-bold">{product.title}</span>
+        </div>
       </div>
 
       {/* Main Container Layout */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative px-4 mt-4">
-        
+      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative px-4 mt-4">        
         {/* Left Column Image Layout: Swiper when <= 638px, Grid Desk layout when larger */}
-        <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">
-          
+        <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">        
           {/* Mobile Swiper: Targets screens 638px and below exclusively */}
           <div className="block min-[639px]:hidden w-full pb-8">
             <Swiper
@@ -170,13 +382,7 @@ const CustomizedProductDetails = () => {
                   <img 
                     src={imgUrl} 
                     alt={`Product Slide ${idx}`} 
-                    style={idx === 0 ? {
-                      objectFit: imageFit,
-                      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
-                    } : {
-                      objectFit: 'cover'
-                    }}
-                    className="w-full h-full select-none" 
+                    className="w-full h-full object-cover select-none" 
                   />
                 </SwiperSlide>
               ))}
@@ -187,7 +393,7 @@ const CustomizedProductDetails = () => {
           <div className="hidden min-[639px]:flex flex-row gap-3 w-full">
             <div className="flex flex-col gap-2 flex-shrink-0 w-12 sm:w-16 md:w-20">
               {productGalleryThumbnails.map((thumbUrl, idx) => (
-                <div 
+                <button 
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
                   className={`aspect-square w-full rounded border overflow-hidden cursor-pointer bg-gray-50 transition-all ${
@@ -197,15 +403,9 @@ const CustomizedProductDetails = () => {
                   <img 
                     src={thumbUrl} 
                     alt="Gallery Thumb" 
-                    style={idx === 0 ? {
-                      objectFit: imageFit,
-                      transform: `scale(${imageScale}) translate(${imageX}px, ${imageY}px)`
-                    } : {
-                      objectFit: 'cover'
-                    }}
-                    className="w-full h-full" 
+                    className="w-full h-full object-cover" 
                   />
-                </div>
+                </button>
               ))}
             </div>
 
@@ -215,40 +415,50 @@ const CustomizedProductDetails = () => {
               onMouseLeave={handleMouseLeaveZoom}
               className="flex-grow aspect-square border border-gray-200 rounded-lg bg-gray-50 relative overflow-hidden flex items-center justify-center cursor-zoom-in"
             >
-              <img 
-                src={activePreviewImage} 
-                alt={product.title} 
-                style={{
-                  ...zoomStyle,
-                  objectFit: imageFit
-                }}
-                className="w-full h-full transition-transform duration-75 ease-out pointer-events-none select-none"
-              />
-              <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
-                <Eye size={16} />
-              </button>
+              <>
+                <img 
+                  src={activePreviewImage} 
+                  alt={product.title} 
+                  style={{
+                    ...zoomStyle,
+                    objectFit: imageFit
+                  }}
+                  className="w-full h-full transition-transform duration-75 ease-out pointer-events-none select-none"
+                />
+                <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
+                  <Eye size={16} />
+                </button>
+              </>
             </div>
           </div>
         </div>
 
         {/* Right Details Panel Dashboard */}
-        <div className="col-span-1 md:col-span-5 flex flex-col gap-5 w-full min-w-0 relative">
+        <div className="col-span-1 md:col-span-5 flex flex-col gap-2 w-full min-w-0 relative">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight leading-snug">
-              SNAP ART Customized Photo
+              {product.title}
             </h1>
             
             <div className="flex items-baseline gap-2 mt-3 flex-wrap">
-              {product.originalPrice && (
-                <span className="text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
-              )}
-              <span className={`text-2xl font-bold ${colors.primaryText}`}>₹{product.price}</span>
-          
-              {product.discount > 0 && (
-                <span className="text-sm font-semibold text-primary px-1.5 py-0.5 rounded">
-                  {product.discount}% Off
+              {activeOriginalPrice > activePrice && (
+                <span className="text-xs sm:text-sm text-gray-500">
+                  MRP <span className="line-through">₹{activeOriginalPrice.toLocaleString('en-IN')}</span>
                 </span>
               )}
+              <span className={`text-lg sm:text-xl font-bold ${colors.primaryText}`}>₹{activePrice.toLocaleString('en-IN')}</span>
+              {activeDiscount > 0 && (
+                <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                  {activeDiscount}% Off
+                </span>
+              )}
+            </div>
+            {/* Stock badge */}
+            <div className="mt-1">
+              {isOutOfStock
+                ? <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
+                : <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
+              }
             </div>
 
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -261,22 +471,103 @@ const CustomizedProductDetails = () => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 py-4">
-            <div className="flex items-center gap-2">
-              <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
-              <span>1 year Warranty</span>
+          {/* Variant Attribute Selectors */}
+          {product.variants.length > 0 && attributeKeys.length > 0 && (
+            <div className="flex flex-col gap-4 border-t border-gray-100 ">
+              {attributeKeys.map(key => {
+                const isColorKey = key.toLowerCase() === 'color';
+                return (
+                  <div key={key}>
+                    {/* Label row */}
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                      {key.charAt(0).toUpperCase() + key.slice(1)}:
+                      {selectedVariant?.attributes?.[key] && (
+                        <span className="ml-1 font-normal text-gray-500">
+                          {selectedVariant.attributes[key]}
+                        </span>
+                      )}
+                    </p>
+
+                    {isColorKey ? (
+                      /* ── Color circles ── */
+                      <div className="flex flex-wrap gap-3">
+                        {attributeOptions[key]?.map(val => {
+                          const isSelected = selectedVariant?.attributes?.[key] === val;
+                          const available = product.variants.some(
+                            v => v.attributes?.[key] === val
+                          );
+                          return (
+                            <button
+                              key={val}
+                              title={val}
+                              onClick={() => handleAttributeSelect(key, val)}
+                              disabled={!available}
+                              style={{ backgroundColor: val.toLowerCase() }}
+                              className={`w-9 h-9 rounded-full transition-all focus:outline-none ${
+                                isSelected
+                                  ? 'ring-2 ring-offset-2 ring-gray-800 scale-110 shadow-md'
+                                  : available
+                                    ? 'ring-1 ring-gray-300 hover:scale-110 hover:ring-gray-500'
+                                    : 'opacity-30 cursor-not-allowed'
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* ── Pill chips for size / other attributes ── */
+                      <div className="flex flex-wrap gap-2">
+                        {attributeOptions[key]?.map(val => {
+                          const isSelected = selectedVariant?.attributes?.[key] === val;
+                          const available = product.variants.some(
+                            v => v.attributes?.[key] === val
+                          );
+                          return (
+                            <button
+                              key={val}
+                              onClick={() => handleAttributeSelect(key, val)}
+                              disabled={!available}
+                              className={`px-4 py-1.5 text-xs font-semibold rounded-full border transition-all ${
+                                isSelected
+                                  ? 'border-[#001E3C] bg-[#001E3C] text-white shadow-sm'
+                                  : available
+                                    ? 'border-gray-300 text-gray-700 hover:border-gray-600 bg-white'
+                                    : 'border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed line-through'
+                              }`}
+                            >
+                              {val}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="bg-purple-50 text-purple-700 p-1 rounded-sm">🔄</span>
-              <span>3 Days Replacement Policy Window</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="bg-emerald-50 text-emerald-700 p-1 rounded-sm">📦</span>
-              <span>Home Delivery Available Across Regions</span>
-            </div>
+          )}
+
+          <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 ">
+            {product.warranty && (
+              <div className="flex items-center gap-2">
+                <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
+                <span>{product.warranty}</span>
+              </div>
+            )}
+            {product.returnPolicy && product.returnPolicy !== 'Select Return Days' && (
+              <div className="flex items-center gap-2">
+                <span className="bg-purple-50 text-purple-700 p-1 rounded-sm">🔄</span>
+                <span>
+                  {product.returnPolicy === 'No Return Policy' 
+                    ? 'No Return Policy' 
+                    : `${product.returnPolicy} Replacement Policy Window`}
+                </span>
+              </div>
+            )}
+        
           </div>
 
-          <div className="flex flex-wrap gap-3 items-center w-full border-b border-gray-100 pb-5">
+          <div className="pbflex flex-wrap gap-3 items-center w-full border-b border-gray-100 ">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm">
                 <button
@@ -296,8 +587,15 @@ const CustomizedProductDetails = () => {
                 </button>
               </div>
             
-              <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
-                <Heart size={16} className="text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors" />
+              <button 
+                onClick={handleWishlistToggle}
+                className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
+              >
+                <Heart 
+                  size={16} 
+                  fill={isWishlisted ? "#EF4444" : "none"} 
+                  className={isWishlisted ? "text-red-500" : "text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors"} 
+                />
               </button>
               <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
                 <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
@@ -306,121 +604,84 @@ const CustomizedProductDetails = () => {
           </div>
 
           <div className="flex flex-col md:flex-row gap-3 mt-auto">
-            <button className="flex-1 border-2 border-primary text-primary py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-primary/5 transition-colors shadow-sm">
+            <button 
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+              className={`flex-1 border-2 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-sm transition-colors ${
+                isOutOfStock
+                  ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                  : 'border-primary text-primary hover:bg-primary/5'
+              }`}
+            >
               <ShoppingCart size={18} /> Add to Cart
             </button>
-            <button className="flex-1 bg-primary text-white py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 hover:opacity-90 transition-opacity shadow-md">
-              <ShoppingBag size={18} /> Buy Now
-            </button>
-          </div>
-
-          <div className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-3 mt-2">
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 tracking-wide">Customize This Product</h3>
-              <p className="text-[11px] text-gray-400 mt-0.5">Upload Custom Image Layout Specifications</p>
-            </div>
-
-            <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center border border-gray-300 rounded bg-white overflow-hidden text-xs">
-              <label className="bg-gray-100 hover:bg-gray-200 border-r border-gray-300 text-gray-700 px-4 py-2.5 font-semibold text-center cursor-pointer select-none transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <Upload size={12} /> Choose File
-                <input type="file" accept="image/*" onChange={handleFileChangeAction} className="hidden" />
-              </label>
-              <div className="px-3 py-2 text-gray-500 truncate flex-grow bg-white min-w-0">
-                {selectedImageFile ? selectedImageFile.name : "No file chosen"}
-              </div>
-            </div>
-
-            {/* Scale, Fit, and Position Controls */}
-            <div className="border-t border-gray-200/80 pt-3 flex flex-col gap-3">
-
-              {/* Scale slider: Increase / Decrease Size */}
-              <div className="flex flex-col gap-1 text-xs">
-                <div className="flex justify-between font-semibold text-gray-700">
-                  <span>Image Size:</span>
-                  <span>{Math.round(imageScale * 100)}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0.5" 
-                  max="2.5" 
-                  step="0.05" 
-                  value={imageScale}
-                  onChange={(e) => setImageScale(parseFloat(e.target.value))}
-                  className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              {/* Offset adjustment controls */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-gray-700">Move Horizontally:</span>
-                  <input 
-                    type="range" 
-                    min="-100" 
-                    max="100" 
-                    value={imageX}
-                    onChange={(e) => setImageX(parseInt(e.target.value))}
-                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-semibold text-gray-700">Move Vertically:</span>
-                  <input 
-                    type="range" 
-                    min="-100" 
-                    max="100" 
-                    value={imageY}
-                    onChange={(e) => setImageY(parseInt(e.target.value))}
-                    className="w-full accent-[#003147] h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
-
-              {/* Reset button */}
-              <button
-                onClick={() => {
-                  setImageFit('contain');
-                  setImageScale(1.0);
-                  setImageX(0);
-                  setImageY(0);
-                }}
-                className="text-[11px] text-gray-500 hover:text-red-500 font-medium w-fit self-end mt-1"
-              >
-                Reset Image Adjustments
-              </button>
-            </div>
-            
-            <p className="text-[10px] text-gray-400">Max file size constraints: 5MB (JPG, PNG, GIF)</p>
-
             <button 
-              onClick={() => setShowTextInputPanel(!showTextInputPanel)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded transition-all shadow-sm active:scale-[0.99] mt-1"
+              onClick={handleBuyNow}
+              disabled={isOutOfStock}
+              className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-md transition-opacity ${
+                isOutOfStock
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary text-white hover:opacity-90'
+              }`}
             >
-              {showTextInputPanel ? "Hide Customization Console" : "Preview Customization Matrix"}
+              <ShoppingBag size={18} /> {isOutOfStock ? 'Unavailable' : 'Buy Now'}
             </button>
           </div>
 
-          {showTextInputPanel && (
-            <div className="w-full border border-emerald-200 rounded-lg p-4 bg-emerald-50/20 flex flex-col gap-3 transition-all duration-300">
-              <div className="flex items-center gap-1.5 text-emerald-800">
-                <Type size={15} />
-                <h4 className="text-xs font-bold uppercase tracking-wide">Custom Frame Text Inscription</h4>
+          {product.customizeProduct === 'Yes' && (
+            <div className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-4 mt-2">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 tracking-wide">Customize This Product</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">
+                  {product.customizationType === 'Both' && "Provide custom text and/or image specifications"}
+                  {product.customizationType === 'Image' && "Upload custom image layout specifications"}
+                  {product.customizationType === 'Text' && "Provide custom text inscription details"}
+                </p>
               </div>
-              <textarea
-                value={customUserText}
-                onChange={(e) => setCustomUserText(e.target.value)}
-                placeholder="Enter customized names, songs, dedications, dates, or custom Spotify text tracks..."
-                rows={3}
-                className="w-full p-2.5 text-xs text-gray-800 border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder-gray-400"
-              />
-              <div className="flex items-center justify-between text-[10px] text-gray-400">
-                <span>Maximum Character Capacity: 250</span>
-                {customUserText.trim().length > 0 && (
-                  <span className="text-emerald-600 font-semibold flex items-center gap-0.5 animate-pulse">
-                    <CheckCircle size={11} /> Saved to Configuration
+
+              {/* Show Image upload controls if type is Image or Both */}
+              {(product.customizationType === 'Image' || product.customizationType === 'Both') && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
+                    <Upload size={12} /> Custom Design/Photo:
                   </span>
-                )}
-              </div>
+                  <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center border border-gray-300 rounded bg-white overflow-hidden text-xs shadow-sm">
+                    <label className="bg-gray-100 hover:bg-gray-200 border-r border-gray-300 text-gray-700 px-4 py-2.5 font-semibold text-center cursor-pointer select-none transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap">
+                      Choose File
+                      <input type="file" accept="image/*" onChange={handleFileChangeAction} className="hidden" />
+                    </label>
+                    <div className="px-3 py-2 text-gray-500 truncate flex-grow bg-white min-w-0">
+                      {selectedImageFile ? selectedImageFile.name : "No file chosen"}
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-gray-400">Max file size constraints: 5MB (JPG, PNG, GIF)</p>
+                </div>
+              )}
+
+              {/* Show Text area controls if type is Text or Both */}
+              {(product.customizationType === 'Text' || product.customizationType === 'Both') && (
+                <div className="w-full flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5 text-gray-700">
+                    <Type size={14} />
+                    <h4 className="text-xs font-bold uppercase tracking-wide">Custom Text Inscription</h4>
+                  </div>
+                  <textarea
+                    value={customUserText}
+                    onChange={(e) => setCustomUserText(e.target.value)}
+                    placeholder="Enter customized names, songs, dedications, dates, or custom Spotify text tracks..."
+                    rows={3}
+                    className="w-full p-2.5 text-xs text-gray-800 border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 resize-none placeholder-gray-400 shadow-sm"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span>Maximum Character Capacity: 250</span>
+                    {customUserText.trim().length > 0 && (
+                      <span className="text-emerald-600 font-semibold flex items-center gap-0.5 animate-pulse">
+                        <CheckCircle size={11} /> Saved to Configuration
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -438,7 +699,7 @@ const CustomizedProductDetails = () => {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
             <span className="font-bold text-gray-900 text-sm sm:col-span-1">Description:</span>
             <span className="sm:col-span-3 text-gray-600 text-xs font-medium">
-              {product.title} Perfect design payload for birthday celebrations, valentine memory books, wedding anniversary milestones, or customized gift tokens for family and friends.
+              {product.detailedDescription || `${product.title} Perfect design payload for birthday celebrations, valentine memory books, wedding anniversary milestones, or customized gift tokens for family and friends.`}
             </span>
           </div>
         </div>
