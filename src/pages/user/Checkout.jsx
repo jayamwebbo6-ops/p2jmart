@@ -13,8 +13,14 @@ import {
   CreditCard,
   X
 } from 'lucide-react';
-import { initialAddresses } from '../../utils/mockAddresses';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { toast } from '../../components/toast';
+import { 
+  getMyAddressesAPI, 
+  createAddressAPI, 
+  deleteAddressAPI 
+} from '../../api/addressApi';
+import { getAllShippingAPI } from '../../api/shippingApi';
 
 const Checkout = ({ cart = [], setCart }) => {
   const navigate = useNavigate();
@@ -27,43 +33,17 @@ const Checkout = ({ cart = [], setCart }) => {
   // Step state: 1 = Address, 2 = Payment/Order Summary, 3 = Order Success
   const [step, setStep] = useState(1);
   
-  // Simulated dynamic multi-stage modal payment state: 'idle' | 'gateway_modal' | 'bank_redirect'
+  // Simulated dynamic payment state
   const [paymentStage, setPaymentStage] = useState('idle');
   const [orderRef, setOrderRef] = useState('');
 
-  // Addresses local state
-  const [addresses, setAddresses] = useState(() => {
-    const list = [...initialAddresses];
-    const hasZubair = list.some(a => a.fullName.toLowerCase().includes('zubair'));
-    if (!hasZubair) {
-      list.push({
-        id: 'zubair-address',
-        fullName: 'zubair zubair',
-        phoneNumber: '8610071893',
-        streetAddress: 'tenkasi',
-        apartment: '',
-        city: 'Thenkasi',
-        state: 'tamilnadu',
-        pincode: '121258',
-        isDefault: true
-      });
-    } else {
-      list[0] = {
-        ...list[0],
-        fullName: 'zubair zubair',
-        streetAddress: 'tenkasi',
-        city: 'Thenkasi',
-        state: 'tamilnadu',
-        pincode: '121258',
-        phoneNumber: '8610071893'
-      };
-    }
-    return list;
-  });
-
-  const [selectedAddressId, setSelectedAddressId] = useState(addresses[0]?.id || '');
+  // Addresses state from DB
+  const [addresses, setAddresses] = useState([]);
+  const [shippingStates, setShippingStates] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // New Address Form State
   const [newAddress, setNewAddress] = useState({
@@ -73,6 +53,7 @@ const Checkout = ({ cart = [], setCart }) => {
     apartment: '',
     city: '',
     state: '',
+    stateId: '',
     pincode: '',
     isDefault: false
   });
@@ -80,13 +61,47 @@ const Checkout = ({ cart = [], setCart }) => {
   // Saved placed order details for Success Screen
   const [placedOrder, setPlacedOrder] = useState(null);
 
-  // Math Calculations (sync with Cart.jsx)
+  // Math Calculations
   const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const shippingFee = subtotal > 1000 || subtotal === 0 ? 0 : 100;
   const total = subtotal + shippingFee;
 
   // Selected address object
-  const selectedAddress = addresses.find(addr => addr.id === selectedAddressId);
+  const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
+
+  // Load addresses and shipping states from database
+  const loadCheckoutData = async () => {
+    setLoading(true);
+    try {
+      const [addressRes, shippingRes] = await Promise.all([
+        getMyAddressesAPI(),
+        getAllShippingAPI()
+      ]);
+
+      if (addressRes && addressRes.success) {
+        setAddresses(addressRes.data);
+        const defAddr = addressRes.data.find(a => a.isDefault);
+        if (defAddr) {
+          setSelectedAddressId(defAddr._id);
+        } else if (addressRes.data.length > 0) {
+          setSelectedAddressId(addressRes.data[0]._id);
+        }
+      }
+      
+      if (shippingRes && shippingRes.success) {
+        setShippingStates(shippingRes.data);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to load shipping or address book info');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCheckoutData();
+  }, []);
 
   // Redirect if checkout items are empty and we are not in success step
   useEffect(() => {
@@ -103,32 +118,56 @@ const Checkout = ({ cart = [], setCart }) => {
     }));
   };
 
-  const handleAddAddress = (e) => {
-    e.preventDefault();
-    const newId = Date.now().toString();
-    const addedAddress = {
-      ...newAddress,
-      id: newId
-    };
+  const handleStateChange = (e) => {
+    const selectedStateId = e.target.value;
+    const selectedStateObj = shippingStates.find(s => s._id === selectedStateId);
+    setNewAddress(prev => ({
+      ...prev,
+      stateId: selectedStateId,
+      state: selectedStateObj ? selectedStateObj.stateName : ''
+    }));
+  };
 
-    if (newAddress.isDefault) {
-      setAddresses(prev => prev.map(addr => ({ ...addr, isDefault: false })).concat(addedAddress));
-    } else {
-      setAddresses(prev => [...prev, addedAddress]);
+  const handleAddAddress = async (e) => {
+    e.preventDefault();
+    if (!newAddress.fullName || !newAddress.phoneNumber || !newAddress.streetAddress || !newAddress.city || !newAddress.state || !newAddress.stateId || !newAddress.pincode) {
+      toast.error('Please fill in all required fields.');
+      return;
     }
 
-    setSelectedAddressId(newId);
-    setIsAddModalOpen(false);
-    setNewAddress({
-      fullName: '',
-      phoneNumber: '',
-      streetAddress: '',
-      apartment: '',
-      city: '',
-      state: '',
-      pincode: '',
-      isDefault: false
-    });
+    setLoading(true);
+    try {
+      const res = await createAddressAPI(newAddress);
+      if (res && res.success) {
+        toast.success(res.message || 'Address added successfully');
+        setAddresses(prev => {
+          if (res.data.isDefault) {
+            return prev.map(a => ({ ...a, isDefault: false })).concat(res.data);
+          }
+          return [...prev, res.data];
+        });
+        setSelectedAddressId(res.data._id);
+        setIsAddModalOpen(false);
+        setNewAddress({
+          fullName: '',
+          phoneNumber: '',
+          streetAddress: '',
+          apartment: '',
+          city: '',
+          state: '',
+          stateId: '',
+          pincode: '',
+          isDefault: false
+        });
+      } else {
+        toast.error(res?.message || 'Failed to add address');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error saving address');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteAddress = (id, e) => {
@@ -136,43 +175,54 @@ const Checkout = ({ cart = [], setCart }) => {
     setAddressToDelete(id);
   };
 
-  const confirmDeleteAddress = () => {
+  const confirmDeleteAddress = async () => {
     if (addressToDelete) {
-      setAddresses(prev => prev.filter(addr => addr.id !== addressToDelete));
-      if (selectedAddressId === addressToDelete) {
-        const remaining = addresses.filter(addr => addr.id !== addressToDelete);
-        if (remaining.length > 0) {
-          setSelectedAddressId(remaining[0].id);
+      setLoading(true);
+      try {
+        const res = await deleteAddressAPI(addressToDelete);
+        if (res && res.success) {
+          toast.success(res.message || 'Address deleted successfully');
+          setAddresses(prev => prev.filter(addr => addr._id !== addressToDelete));
+          if (selectedAddressId === addressToDelete) {
+            const remaining = addresses.filter(addr => addr._id !== addressToDelete);
+            if (remaining.length > 0) {
+              setSelectedAddressId(remaining[0]._id);
+            } else {
+              setSelectedAddressId('');
+            }
+          }
         } else {
-          setSelectedAddressId('');
+          toast.error(res?.message || 'Failed to delete address');
         }
+      } catch (err) {
+        console.error(err);
+        toast.error('Server error deleting address');
+      } finally {
+        setAddressToDelete(null);
+        setLoading(false);
       }
-      setAddressToDelete(null);
     }
   };
 
   const handleUseSelectedAddress = () => {
     if (!selectedAddressId) {
-      alert("Please select a shipping address.");
+      toast.error("Please select a shipping address.");
       return;
     }
     setStep(2);
   };
 
-  // 1. Kick off simulated payment popup overlay sequence
   const handlePlaceOrder = () => {
     if (!selectedAddress) {
-      alert("Please select a shipping address.");
+      toast.error("Please select a shipping address.");
       setStep(1);
       return;
     }
-    // Generate a random mock order reference ID
     const generatedRef = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
     setOrderRef(generatedRef);
     setPaymentStage('gateway_modal');
   };
 
-  // 2. Finalizes state management and triggers application success steps
   const finalizeSuccessfulPayment = () => {
     setPlacedOrder({
       orderId: orderRef,
@@ -191,7 +241,6 @@ const Checkout = ({ cart = [], setCart }) => {
     setStep(3);
   };
 
-  // Automatically finish payment if simulation reaches bank_redirect phase
   useEffect(() => {
     if (paymentStage === 'bank_redirect') {
       const timer = setTimeout(() => {
@@ -256,7 +305,7 @@ const Checkout = ({ cart = [], setCart }) => {
               Continue Shopping
             </Link>
             <Link 
-              to="/my-account/orders" 
+              to="/my-account" 
               className="border border-primary text-primary hover:bg-gray-50 font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-95 text-center text-sm flex items-center justify-center gap-2"
             >
               View Order History
@@ -326,68 +375,73 @@ const Checkout = ({ cart = [], setCart }) => {
             <div className="h-px bg-gray-100 w-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {addresses.map((address) => {
-              const isSelected = selectedAddressId === address.id;
-              return (
-                <div 
-                  key={address.id}
-                  onClick={() => setSelectedAddressId(address.id)}
-                  className={`border rounded-2xl p-4 sm:p-5 flex flex-col justify-between bg-white relative cursor-pointer transition-all duration-300 select-none ${
-                    isSelected 
-                      ? 'border-primary border-2 shadow-[0_0_15px_rgba(0,49,71,0.06)]' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="pt-0.5 flex-shrink-0">
-                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                        isSelected ? 'border-primary' : 'border-gray-300'
-                      }`}>
-                        {isSelected && (
-                          <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
-                        )}
+          {loading && addresses.length === 0 ? (
+            <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
+              <div className="w-8 h-8 border-4 border-slate-200 border-t-[#002B49] rounded-full animate-spin"></div>
+              <span className="text-xs font-semibold uppercase tracking-wider">Loading Addresses...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {addresses.map((address) => {
+                const isSelected = selectedAddressId === address._id;
+                return (
+                  <div 
+                    key={address._id}
+                    onClick={() => setSelectedAddressId(address._id)}
+                    className={`border rounded-2xl p-4 sm:p-5 flex flex-col justify-between bg-white relative cursor-pointer transition-all duration-300 select-none ${
+                      isSelected 
+                        ? 'border-primary border-2 shadow-[0_0_15px_rgba(0,49,71,0.06)]' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="pt-0.5 flex-shrink-0">
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                          isSelected ? 'border-primary' : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-left font-sans">
+                        <h4 className="font-extrabold text-sm sm:text-base text-gray-900 leading-tight mb-2 uppercase tracking-wide">
+                          {address.fullName}
+                        </h4>
+                        <div className="text-[11px] sm:text-[13px] text-gray-500 space-y-1">
+                          <p className="capitalize">{address.streetAddress}</p>
+                          {address.apartment && <p>{address.apartment}</p>}
+                          <p className="capitalize">{address.city}, {address.state} - {address.pincode}</p>
+                          <p className="pt-2 text-black font-bold tracking-wide">PH: {address.phoneNumber}</p>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="text-left font-sans">
-                      <h4 className="font-extrabold text-sm sm:text-base text-gray-900 leading-tight mb-2 uppercase tracking-wide">
-                        {address.fullName}
-                      </h4>
-                      <div className="text-[11px] sm:text-[13px] text-gray-500 space-y-1">
-                        <p className="capitalize">{address.streetAddress}</p>
-                        {address.apartment && <p>{address.apartment}</p>}
-                        <p className="capitalize">{address.city}, {address.state} - {address.pincode}</p>
-                        <p className="pt-2 text-black font-bold tracking-wide">PH: {address.phoneNumber}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {addresses.length > 1 && (
                     <div className="flex justify-end mt-4 pt-3 border-t border-gray-50">
                       <button
-                        onClick={(e) => handleDeleteAddress(address.id, e)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded-full transition-colors"
+                        onClick={(e) => handleDeleteAddress(address._id, e)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50 rounded-full transition-colors bg-transparent border-0 cursor-pointer"
                         title="Delete Address"
                       >
                         <Trash2 size={13} />
                       </button>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })}
 
-            <div 
-              onClick={() => setIsAddModalOpen(true)}
-              className="border-2 border-dashed border-gray-200 hover:border-primary rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-white cursor-pointer transition-all duration-300 min-h-[160px] group"
-            >
-              <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-blue-50/50 group-hover:text-primary flex items-center justify-center text-gray-400 transition-colors mb-3">
-                <Plus size={20} strokeWidth={2.5} />
+              <div 
+                onClick={() => setIsAddModalOpen(true)}
+                className="border-2 border-dashed border-gray-200 hover:border-primary rounded-2xl p-6 flex flex-col items-center justify-center text-center bg-gray-50/50 hover:bg-white cursor-pointer transition-all duration-300 min-h-[160px] group"
+              >
+                <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-blue-50/50 group-hover:text-primary flex items-center justify-center text-gray-400 transition-colors mb-3">
+                  <Plus size={20} strokeWidth={2.5} />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-gray-500 group-hover:text-gray-800 transition-colors">Add New Address</span>
               </div>
-              <span className="text-xs sm:text-sm font-bold text-gray-500 group-hover:text-gray-800 transition-colors">Add New Address</span>
             </div>
-          </div>
+          )}
 
           <div className="mt-4 flex justify-center">
             <button 
@@ -428,7 +482,7 @@ const Checkout = ({ cart = [], setCart }) => {
               </div>
               <button 
                 onClick={() => setStep(1)}
-                className="text-xs font-bold text-secondary hover:underline"
+                className="text-xs font-bold text-secondary hover:underline bg-transparent border-0 cursor-pointer"
               >
                 Change Address
               </button>
@@ -438,12 +492,12 @@ const Checkout = ({ cart = [], setCart }) => {
           <div className="flex flex-col gap-3">
             {checkoutItems.map((item) => (
               <div 
-                key={item.id} 
+                key={item.id || item._id} 
                 className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 relative">
-                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                    <img src={item.image || (item.images && item.images[0])} alt={item.title} className="w-full h-full object-cover" />
                     <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
                   </div>
                   
@@ -528,7 +582,7 @@ const Checkout = ({ cart = [], setCart }) => {
               <h3 className="text-lg sm:text-xl font-black text-primary">Add Shipping Address</h3>
               <button 
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors bg-transparent border-0 cursor-pointer"
               >
                 <X size={20} />
               </button>
@@ -602,15 +656,24 @@ const Checkout = ({ cart = [], setCart }) => {
                 </div>
                 <div className="col-span-1">
                   <label className="block text-xs font-bold text-gray-500 mb-1">State</label>
-                  <input
-                    type="text"
-                    name="state"
+                  <select
+                    name="stateId"
                     required
-                    placeholder="State"
-                    value={newAddress.state}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs sm:text-sm bg-gray-50/50"
-                  />
+                    value={newAddress.stateId}
+                    onChange={handleStateChange}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs sm:text-sm bg-white"
+                  >
+                    <option value="">Select State</option>
+                    {shippingStates.length === 0 ? (
+                      <option value="" disabled>No states available</option>
+                    ) : (
+                      shippingStates.map((s) => (
+                        <option key={s._id} value={s._id}>
+                          {s.stateName}
+                        </option>
+                      ))
+                    )}
+                  </select>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-xs font-bold text-gray-500 mb-1">PIN Code</label>
@@ -643,7 +706,8 @@ const Checkout = ({ cart = [], setCart }) => {
               <div className="flex space-x-4 pt-4 border-t border-gray-100 mt-6">
                 <button
                   type="submit"
-                  className="bg-primary hover:bg-secondary text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md text-xs sm:text-sm"
+                  disabled={loading}
+                  className="bg-primary hover:bg-secondary text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-md text-xs sm:text-sm disabled:opacity-60"
                 >
                   Save Address
                 </button>

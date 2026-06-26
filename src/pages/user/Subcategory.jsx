@@ -113,7 +113,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
-const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, isCustomizedPage = false }) => {
+const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { subcategoryId: paramSubcategoryId } = useParams();
@@ -362,10 +362,10 @@ const fetchSubcategoryCatalog = async () => {
   );
 
   return (
-    <div className="w-full pt-8 max-w-7xl mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-4">
+    <div className="w-full pt-4 max-w-7xl mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-4">
       
       {/* Page Breadcrumbs */}
-      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-5 flex-wrap">
+      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-2 flex-wrap">
         <Link to="/" className="hover:text-primary transition-colors">Home</Link>
         <span className="text-gray-300">/</span>
         {isCustomizedPage ? (
@@ -384,14 +384,14 @@ const fetchSubcategoryCatalog = async () => {
       </div>
 
       {/* Page Header */}
-      <div className="pb-5 border-b border-gray-100">
+      <div className="pb-3 border-b border-gray-100">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
           {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
         </h1>
       </div>
 
       {/* Control Toolbar Interface */}
-      <div className="w-full flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center mb-6">
+      <div className="w-full flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center mb-4">
         <div className="flex items-center gap-2 flex-grow sm:flex-grow-0 max-w-xs relative">
           <select
             value={sortOption}
@@ -446,6 +446,7 @@ const fetchSubcategoryCatalog = async () => {
                     isWishlisted={wishlist.some(item => item.id === productId)}
                     onWishlist={addToWishlist}
                     onRemoveWishlist={removeFromWishlist}
+                    onAddToCart={onAddToCart}
                     onClick={() => {
                       if (product.customizeProduct === 'Yes') {
                         navigate(`/customizedProductDetail/${productId}`, { state: { product } });

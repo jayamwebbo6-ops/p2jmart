@@ -43,7 +43,7 @@ const CategoryPage = () => {
   if (categoryData.length === 0) return null;
 
   return (
-    <div className="w-full max-w-none px-4 sm:px-6 md:px-0 bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
+    <div className="w-full max-w-none  bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
       
       <main className="w-full py-2">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">

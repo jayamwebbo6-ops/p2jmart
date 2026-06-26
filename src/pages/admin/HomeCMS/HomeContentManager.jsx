@@ -16,7 +16,7 @@ import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
 import { getHomeCMS, updateHomeCMS } from '../../../api/homeCms';
 
-// Import Your Split Sub-Components
+// Import Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
 import CategoryGridTab from './CategoryGridTab';
 import CategoryTab from './CategoryTab';
@@ -83,12 +83,22 @@ const HomeContentManager = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [trendingProducts, setTrendingProducts] = useState([]);
   const [exclusiveProducts, setExclusiveProducts] = useState([]);
-  const [categories, setCategories] = useState([
-    { id: 1, name: "Gifts", image: null },
-    { id: 2, name: "Frames", image: null },
-    { id: 3, name: "Customized Plaque", image: null }
-  ]);
   
+  // Contact & Policy Dynamic States
+  const [contactSetting, setContactSetting] = useState({
+    phones: '',
+    email: '',
+    address: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    youtube: ''
+  });
+  const [privacyPolicy, setPrivacyPolicy] = useState([]);
+  const [cancellationReturnPolicy, setCancellationReturnPolicy] = useState([]);
+  const [deliveryPolicy, setDeliveryPolicy] = useState([]);
+  const [termsConditions, setTermsConditions] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('Saved changes successfully!');
@@ -130,6 +140,21 @@ const HomeContentManager = () => {
           setFeaturedProducts(cmsData.featuredProducts || []);
           setTrendingProducts(cmsData.trendingProducts || []);
           setExclusiveProducts(cmsData.exclusiveProducts || []);
+          
+          // Populate dynamic policies and contact settings
+          setContactSetting(cmsData.contactSetting || {
+            phones: '',
+            email: '',
+            address: '',
+            facebook: '',
+            twitter: '',
+            instagram: '',
+            youtube: ''
+          });
+          setPrivacyPolicy(cmsData.privacyPolicy || []);
+          setCancellationReturnPolicy(cmsData.cancellationReturnPolicy || []);
+          setDeliveryPolicy(cmsData.deliveryPolicy || []);
+          setTermsConditions(cmsData.termsConditions || []);
         }
       } catch (err) {
         console.error('Fetch Home CMS error:', err);
@@ -144,10 +169,11 @@ const HomeContentManager = () => {
     fetchCMS();
   }, []);
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = async (customPayload = {}) => {
     try {
       setIsSaving(true);
-      const data = await updateHomeCMS({
+      // Merge parent states with any state overrides provided on action invocation
+      const payload = {
         heroSlider: slides,
         offerBanners: offerBanners,
         categoryGrid: categoryGrid,
@@ -155,8 +181,16 @@ const HomeContentManager = () => {
         promoBanner: promoBanner,
         featuredProducts,
         trendingProducts,
-        exclusiveProducts
-      });
+        exclusiveProducts,
+        contactSetting,
+        privacyPolicy,
+        cancellationReturnPolicy,
+        deliveryPolicy,
+        termsConditions,
+        ...customPayload
+      };
+
+      const data = await updateHomeCMS(payload);
       if (data && data.success) {
         const cmsData = data.data;
         setSlides(
@@ -187,6 +221,13 @@ const HomeContentManager = () => {
         setFeaturedProducts(cmsData.featuredProducts || []);
         setTrendingProducts(cmsData.trendingProducts || []);
         setExclusiveProducts(cmsData.exclusiveProducts || []);
+        
+        setContactSetting(cmsData.contactSetting || {});
+        setPrivacyPolicy(cmsData.privacyPolicy || []);
+        setCancellationReturnPolicy(cmsData.cancellationReturnPolicy || []);
+        setDeliveryPolicy(cmsData.deliveryPolicy || []);
+        setTermsConditions(cmsData.termsConditions || []);
+
         setToastMessage('Saved changes successfully!');
         setToastType('success');
         setShowToast(true);
@@ -220,7 +261,7 @@ const HomeContentManager = () => {
         title="Home Content Manager"
         subtitle="Customize your storefront experience. Manage banners, asset layouts, and metadata profiles."
       >
-        <SaveBtn onClick={handleSaveChanges} type="button" disabled={isSaving || isLoading}>
+        <SaveBtn onClick={() => handleSaveChanges()} type="button" disabled={isSaving || isLoading}>
           {isSaving ? 'Saving...' : 'Save Changes'}
         </SaveBtn>
       </PageHeader>
@@ -247,8 +288,7 @@ const HomeContentManager = () => {
               { id: 'privacyPolicy', label: 'Privacy Policy', icon: Shield },
               { id: 'cancellationReturnPolicy', label: 'Cancellation & Returns', icon: RotateCcw },
               { id: 'deliveryPolicy', label: 'Delivery Policy', icon: Truck },
-              { id: 'termsConditions', label: 'Terms Conditions', icon:SquareCode,  }
-              
+              { id: 'termsConditions', label: 'Terms Conditions', icon: SquareCode }
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -306,40 +346,64 @@ const HomeContentManager = () => {
                   setSections={setCategorySections} 
                 />
               )}
+
+              {activeTab === 'multiColumnShowcase' && (
+                <MultiShowCaseTab
+                  featuredProducts={featuredProducts}
+                  setFeaturedProducts={setFeaturedProducts}
+                  trendingProducts={trendingProducts}
+                  setTrendingProducts={setTrendingProducts}
+                  exclusiveProducts={exclusiveProducts}
+                  setExclusiveProducts={setExclusiveProducts}
+                />
+              )}
+
+              {activeTab === 'contactSetting' && (
+                <ContactSetting
+                  formData={contactSetting}
+                  setFormData={setContactSetting}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+
+              {activeTab === 'privacyPolicy' && (
+                <PrivacyPolicyManager
+                  sections={privacyPolicy}
+                  setSections={setPrivacyPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+
+              {activeTab === 'cancellationReturnPolicy' && (
+                <CancellationReturnPolicyManager
+                  sections={cancellationReturnPolicy}
+                  setSections={setCancellationReturnPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+              
+              {activeTab === 'deliveryPolicy' && (
+                <DeliveryPolicyManager
+                  sections={deliveryPolicy}
+                  setSections={setDeliveryPolicy}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
+
+              {activeTab === 'termsConditions' && (
+                <TermsCondition
+                  sections={termsConditions}
+                  setSections={setTermsConditions}
+                  onSave={handleSaveChanges}
+                  isSaving={isSaving}
+                />
+              )}
             </>
           )}
-
-          {activeTab === 'multiColumnShowcase' && (
-            <MultiShowCaseTab
-              featuredProducts={featuredProducts}
-              setFeaturedProducts={setFeaturedProducts}
-              trendingProducts={trendingProducts}
-              setTrendingProducts={setTrendingProducts}
-              exclusiveProducts={exclusiveProducts}
-              setExclusiveProducts={setExclusiveProducts}
-            />
-          )}
-
-          {activeTab === 'contactSetting' && (
-            <ContactSetting/>
-          )}
-
-          {activeTab === 'privacyPolicy' && (
-            <PrivacyPolicyManager />
-          )}
-
-          {activeTab === 'cancellationReturnPolicy' && (
-            <CancellationReturnPolicyManager />
-          )}
-          
-          {activeTab === 'deliveryPolicy' && (
-            <DeliveryPolicyManager/>
-          )}
-
-           {activeTab === 'termsConditions' && (
-            <TermsCondition/>
-          )}
- 
 
         </div>
       </div>

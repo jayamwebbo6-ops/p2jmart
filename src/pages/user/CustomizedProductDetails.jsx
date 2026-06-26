@@ -12,6 +12,13 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { getProductByIdAPI } from '../../api/productApi';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const getImageURL = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
+  return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
+};
+
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { productId } = useParams();
   const location = useLocation();
@@ -59,31 +66,99 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   const product = useMemo(() => {
     const raw = loadedProduct || {
       id: productId || 1,
-      title: "SNAP ART Customized Photo and Song Spotify Frame, Personalized Frame with scannable code | Birthday | Valentine Day, Anniversary | for Mothers,",
+      title: "SNAP ART Customized Photo and Song Spotify Frame",
       price: 500,
       originalPrice: 550,
-      discount: 9,
       rating: 4.0,
       reviews: 21,
       image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80",
       customizeProduct: "Yes",
-      customizationType: "Both"
+      customizationType: "Both",
+      warranty: "1 year Warranty",
+      returnPolicy: "3 Days",
+      deliveryMode: "Home Delivery Available Across Regions",
+      variants: []
     };
     return {
-      id: raw._id || raw.id,
+      id: raw._id?.$oid || raw._id || raw.id,
       title: raw.title || raw.name || '',
-      price: raw.price || 0,
-      originalPrice: raw.originalPrice || Math.round((raw.price || 0) * 1.2),
-      discount: raw.discount || 0,
       rating: raw.rating ?? 5,
       reviews: raw.reviews || 0,
-      image: raw.image || (raw.images?.[0] || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&h=800&q=80'),
+      image: raw.image || (raw.images?.[0] || ''),
       images: raw.images || (raw.image ? [raw.image] : []),
       customizeProduct: raw.customizeProduct || 'Yes',
       customizationType: raw.customizationType || 'Both',
-      detailedDescription: raw.detailedDescription || raw.description || ''
+      detailedDescription: raw.detailedDescription || raw.description || '',
+      warranty: raw.warranty || '',
+      returnPolicy: raw.returnPolicy || 'Select Return Days',
+      deliveryMode: raw.deliveryMode || '',
+      variants: Array.isArray(raw.variants) ? raw.variants : []
     };
   }, [loadedProduct, productId]);
+
+  // ── Variant selection state ──
+  const [selectedVariantId, setSelectedVariantId] = useState(null);
+
+  // Auto-select first in-stock variant (or first variant if all out of stock)
+  useEffect(() => {
+    if (product.variants.length > 0) {
+      const firstInStock = product.variants.find(v => v.stock > 0);
+      setSelectedVariantId((firstInStock || product.variants[0]).id);
+    }
+  }, [product.variants]);
+
+  const selectedVariant = useMemo(() => {
+    return product.variants.find(v => v.id === selectedVariantId) || product.variants[0] || null;
+  }, [product.variants, selectedVariantId]);
+
+  // Derive price / originalPrice / discount / stock / images from selected variant
+  const activePrice = selectedVariant?.price ?? 0;
+  const activeOriginalPrice = selectedVariant?.originalPrice ?? activePrice;
+  const activeDiscount = activeOriginalPrice > activePrice
+    ? Math.round(((activeOriginalPrice - activePrice) / activeOriginalPrice) * 100)
+    : 0;
+  const activeStock = selectedVariant?.stock ?? 0;
+  const isOutOfStock = activeStock === 0;
+
+  // Collect unique attribute keys across all variants
+  const attributeKeys = useMemo(() => {
+    const keys = new Set();
+    product.variants.forEach(v => Object.keys(v.attributes || {}).forEach(k => keys.add(k)));
+    return [...keys];
+  }, [product.variants]);
+
+  // For each attribute key, get unique values
+  const attributeOptions = useMemo(() => {
+    const map = {};
+    attributeKeys.forEach(key => {
+      map[key] = [...new Set(product.variants.map(v => v.attributes?.[key]).filter(Boolean))];
+    });
+    return map;
+  }, [attributeKeys, product.variants]);
+
+  // Clicking an attribute value → find the best matching variant
+  const handleAttributeSelect = (key, value) => {
+    const current = selectedVariant?.attributes || {};
+    const desired = { ...current, [key]: value };
+    // Find exact match first
+    let match = product.variants.find(v =>
+      Object.entries(desired).every(([k, val]) => v.attributes?.[k] === val)
+    );
+    // Fallback: match just the clicked attribute
+    if (!match) {
+      match = product.variants.find(v => v.attributes?.[key] === value);
+    }
+    if (match) setSelectedVariantId(match.id);
+  };
+
+  // Is a specific attribute value available (has stock) with current selections?
+  const isAttrValueAvailable = (key, value) => {
+    const current = selectedVariant?.attributes || {};
+    const desired = { ...current, [key]: value };
+    return product.variants.some(v =>
+      Object.entries(desired).every(([k, val]) => v.attributes?.[k] === val) && v.stock > 0
+    );
+  };
 
   const [quantity, setQuantity] = useState(1);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
@@ -123,21 +198,25 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
 
   const productGalleryThumbnails = useMemo(() => {
     const list = [];
-    if (customImageURL) {
-      list.push(customImageURL);
-    }
-    if (product.image) {
-      list.push(product.image);
-    }
-    if (product.images && product.images.length > 0) {
-      product.images.forEach(img => {
-        if (img && !list.includes(img)) {
-          list.push(img);
-        }
+    if (customImageURL) list.push(customImageURL);
+    // Prefer selected variant images
+    const variantImages = selectedVariant?.images?.length
+      ? selectedVariant.images
+      : selectedVariant?.image
+        ? [selectedVariant.image]
+        : [];
+    if (variantImages.length > 0) {
+      variantImages.forEach(img => { if (img) list.push(getImageURL(img)); });
+    } else {
+      // Fallback to product-level image
+      if (product.image) list.push(getImageURL(product.image));
+      (product.images || []).forEach(img => {
+        const url = getImageURL(img);
+        if (img && !list.includes(url)) list.push(url);
       });
     }
     return list;
-  }, [customImageURL, product.image, product.images]);
+  }, [customImageURL, selectedVariant, product.image, product.images]);
 
   const activePreviewImage = productGalleryThumbnails[activeImageIndex];
 
@@ -244,7 +323,6 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
           image: customImageURL
         }
       });
-      toast.success("Customized product added to cart!");
     }
   };
 
@@ -278,7 +356,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium flex-wrap">
           <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')}>Home</span>
           <span className="text-gray-300">/</span>
-          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/shop')}>Shop</span>
+          <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/customized')}>Customized Products</span>
           <span className="text-gray-300">/</span>
           <span className="text-gray-900 font-bold">{product.title}</span>
         </div>
@@ -356,23 +434,31 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         </div>
 
         {/* Right Details Panel Dashboard */}
-        <div className="col-span-1 md:col-span-5 flex flex-col gap-5 w-full min-w-0 relative">
+        <div className="col-span-1 md:col-span-5 flex flex-col gap-2 w-full min-w-0 relative">
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight leading-snug">
               {product.title}
             </h1>
             
             <div className="flex items-baseline gap-2 mt-3 flex-wrap">
-              {product.originalPrice && (
-                <span className="text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
-              )}
-              <span className={`text-2xl font-bold ${colors.primaryText}`}>₹{product.price}</span>
-          
-              {product.discount > 0 && (
-                <span className="text-sm font-semibold text-primary px-1.5 py-0.5 rounded">
-                  {product.discount}% Off
+              {activeOriginalPrice > activePrice && (
+                <span className="text-xs sm:text-sm text-gray-500">
+                  MRP <span className="line-through">₹{activeOriginalPrice.toLocaleString('en-IN')}</span>
                 </span>
               )}
+              <span className={`text-lg sm:text-xl font-bold ${colors.primaryText}`}>₹{activePrice.toLocaleString('en-IN')}</span>
+              {activeDiscount > 0 && (
+                <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                  {activeDiscount}% Off
+                </span>
+              )}
+            </div>
+            {/* Stock badge */}
+            <div className="mt-1">
+              {isOutOfStock
+                ? <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
+                : <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
+              }
             </div>
 
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -385,22 +471,103 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
             </div>
           </div>
 
-          <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 py-4">
-            <div className="flex items-center gap-2">
-              <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
-              <span>1 year Warranty</span>
+          {/* Variant Attribute Selectors */}
+          {product.variants.length > 0 && attributeKeys.length > 0 && (
+            <div className="flex flex-col gap-4 border-t border-gray-100 ">
+              {attributeKeys.map(key => {
+                const isColorKey = key.toLowerCase() === 'color';
+                return (
+                  <div key={key}>
+                    {/* Label row */}
+                    <p className="text-sm font-semibold text-gray-700 mb-2">
+                      {key.charAt(0).toUpperCase() + key.slice(1)}:
+                      {selectedVariant?.attributes?.[key] && (
+                        <span className="ml-1 font-normal text-gray-500">
+                          {selectedVariant.attributes[key]}
+                        </span>
+                      )}
+                    </p>
+
+                    {isColorKey ? (
+                      /* ── Color circles ── */
+                      <div className="flex flex-wrap gap-3">
+                        {attributeOptions[key]?.map(val => {
+                          const isSelected = selectedVariant?.attributes?.[key] === val;
+                          const available = product.variants.some(
+                            v => v.attributes?.[key] === val
+                          );
+                          return (
+                            <button
+                              key={val}
+                              title={val}
+                              onClick={() => handleAttributeSelect(key, val)}
+                              disabled={!available}
+                              style={{ backgroundColor: val.toLowerCase() }}
+                              className={`w-9 h-9 rounded-full transition-all focus:outline-none ${
+                                isSelected
+                                  ? 'ring-2 ring-offset-2 ring-gray-800 scale-110 shadow-md'
+                                  : available
+                                    ? 'ring-1 ring-gray-300 hover:scale-110 hover:ring-gray-500'
+                                    : 'opacity-30 cursor-not-allowed'
+                              }`}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      /* ── Pill chips for size / other attributes ── */
+                      <div className="flex flex-wrap gap-2">
+                        {attributeOptions[key]?.map(val => {
+                          const isSelected = selectedVariant?.attributes?.[key] === val;
+                          const available = product.variants.some(
+                            v => v.attributes?.[key] === val
+                          );
+                          return (
+                            <button
+                              key={val}
+                              onClick={() => handleAttributeSelect(key, val)}
+                              disabled={!available}
+                              className={`px-4 py-1.5 text-xs font-semibold rounded-full border transition-all ${
+                                isSelected
+                                  ? 'border-[#001E3C] bg-[#001E3C] text-white shadow-sm'
+                                  : available
+                                    ? 'border-gray-300 text-gray-700 hover:border-gray-600 bg-white'
+                                    : 'border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed line-through'
+                              }`}
+                            >
+                              {val}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="bg-purple-50 text-purple-700 p-1 rounded-sm">🔄</span>
-              <span>3 Days Replacement Policy Window</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="bg-emerald-50 text-emerald-700 p-1 rounded-sm">📦</span>
-              <span>Home Delivery Available Across Regions</span>
-            </div>
+          )}
+
+          <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 ">
+            {product.warranty && (
+              <div className="flex items-center gap-2">
+                <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
+                <span>{product.warranty}</span>
+              </div>
+            )}
+            {product.returnPolicy && product.returnPolicy !== 'Select Return Days' && (
+              <div className="flex items-center gap-2">
+                <span className="bg-purple-50 text-purple-700 p-1 rounded-sm">🔄</span>
+                <span>
+                  {product.returnPolicy === 'No Return Policy' 
+                    ? 'No Return Policy' 
+                    : `${product.returnPolicy} Replacement Policy Window`}
+                </span>
+              </div>
+            )}
+        
           </div>
 
-          <div className="flex flex-wrap gap-3 items-center w-full border-b border-gray-100 pb-5">
+          <div className="pbflex flex-wrap gap-3 items-center w-full border-b border-gray-100 ">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm">
                 <button
@@ -439,15 +606,25 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
           <div className="flex flex-col md:flex-row gap-3 mt-auto">
             <button 
               onClick={handleAddToCart}
-              className="flex-1 border-2 border-primary text-primary py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 hover:bg-primary/5 transition-colors shadow-sm"
+              disabled={isOutOfStock}
+              className={`flex-1 border-2 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-sm transition-colors ${
+                isOutOfStock
+                  ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                  : 'border-primary text-primary hover:bg-primary/5'
+              }`}
             >
               <ShoppingCart size={18} /> Add to Cart
             </button>
             <button 
               onClick={handleBuyNow}
-              className="flex-1 bg-primary text-white py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 hover:opacity-90 transition-opacity shadow-md"
+              disabled={isOutOfStock}
+              className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-md transition-opacity ${
+                isOutOfStock
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary text-white hover:opacity-90'
+              }`}
             >
-              <ShoppingBag size={18} /> Buy Now
+              <ShoppingBag size={18} /> {isOutOfStock ? 'Unavailable' : 'Buy Now'}
             </button>
           </div>
 
@@ -522,7 +699,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-start">
             <span className="font-bold text-gray-900 text-sm sm:col-span-1">Description:</span>
             <span className="sm:col-span-3 text-gray-600 text-xs font-medium">
-              {product.title} Perfect design payload for birthday celebrations, valentine memory books, wedding anniversary milestones, or customized gift tokens for family and friends.
+              {product.detailedDescription || `${product.title} Perfect design payload for birthday celebrations, valentine memory books, wedding anniversary milestones, or customized gift tokens for family and friends.`}
             </span>
           </div>
         </div>

@@ -117,7 +117,10 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
         
       inStock: loadedProduct.inStock !== undefined 
         ? loadedProduct.inStock 
-        : (loadedProduct.variants?.some(v => v.stock > 0) ?? true)
+        : (loadedProduct.variants?.some(v => v.stock > 0) ?? true),
+      warranty: loadedProduct.warranty || '',
+      returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
+      deliveryMode: loadedProduct.deliveryMode || ''
     };
   }, [loadedProduct]);
 
@@ -224,7 +227,6 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
           size: selectedSize
         }
       });
-      toast.success("Product added to cart!");
     }
   };
 
@@ -376,7 +378,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   }
 
   return (
-    <div className="w-full font-sans mt-8">
+    <div className="w-full font-sans mt-5">
       <div className="w-full">
         {/* Breadcrumbs */}
         <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-6 flex-wrap">
@@ -475,7 +477,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
           </div>
 
           {/* Right: Info */}
-          <div className="w-full min-w-0 flex flex-col gap-4">
+          <div className="w-full min-w-0 flex flex-col gap-3">
             {product.brand && <span className="text-blue-600 font-bold text-xs sm:text-sm">{product.brand}</span>}
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
             
@@ -501,13 +503,17 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
             </div>
 
             {/* Pricing Section */}
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-wrap items-baseline gap-2">
               {product.originalPrice > product.price && (
-                <span className="text-sm sm:text-base lg:text-lg text-gray-400 line-through mb-1 font-medium">₹{product.originalPrice}</span>
+                <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                  MRP <span className="line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
+                </span>
               )}
-              <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">₹{product.price}</span>
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight">₹{product.price.toLocaleString('en-IN')}</span>
               {product.discount > 0 && (
-                <span className="text-base sm:text-lg lg:text-xl text-primary font-light mb-1 ml-2 tracking-wide">-{product.discount}%</span>
+                <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                  {product.discount}% Off
+                </span>
               )}
             </div>
 
@@ -574,6 +580,26 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
               <span className={product.inStock ? "text-green-600 font-bold text-sm tracking-wide" : "text-red-500 font-bold text-sm tracking-wide"}>
                 {product.inStock ? "In Stock" : "Out of Stock"}
               </span>
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 ">
+              {product.warranty && (
+                <div className="flex items-center gap-2">
+                  <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
+                  <span>{product.warranty}</span>
+                </div>
+              )}
+              {product.returnPolicy && product.returnPolicy !== 'Select Return Days' && (
+                <div className="flex items-center gap-2">
+                  <span className="bg-purple-50 text-purple-700 p-1 rounded-sm">🔄</span>
+                  <span>
+                    {product.returnPolicy === 'No Return Policy' 
+                      ? 'No Return Policy' 
+                      : `${product.returnPolicy} Replacement Policy Window`}
+                  </span>
+                </div>
+              )}
+              
             </div>
 
             {/* Quantity Controls */}

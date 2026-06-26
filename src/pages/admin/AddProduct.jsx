@@ -20,9 +20,9 @@ import {
 } from 'lucide-react';
 import { toast } from '../../components/toast';
 import { EditBtn, DeleteBtn, AddBtn, SaveBtn, CancelBtn, UpdateBtn, PrevBtn, NextBtn } from '../../components/AdminButtons';
-import { getCategoriesAPI } from '../../../public/api/categoryApi';
-import { getAttributesAPI } from '../../../public/api/attributeApi';
-import { getProductsAPI, createProductAPI, updateProductAPI } from '../../../public/api/productApi';
+import { getCategoriesAPI } from '../../api/categoryApi';
+import { getAttributesAPI } from '../../api/attributeApi';
+import { getProductsAPI, createProductAPI, updateProductAPI } from '../../api/productApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { compressAndConvertToWebP } from '../../utils/helpers';
 
@@ -982,10 +982,25 @@ const AddProduct = () => {
                         );
                       })}
 
-                      {/* Variant Price */}
+                    
+                      {/* Variant Original Price */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Price (₹) *
+                          MRP Price (₹)
+                        </label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 600"
+                          value={variantInput.originalPrice}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                        />
+                      </div>
+
+                        {/* Variant Price */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                         Original Price (₹) *
                         </label>
                         <input 
                           type="number"
@@ -996,19 +1011,6 @@ const AddProduct = () => {
                         />
                       </div>
 
-                      {/* Variant Original Price */}
-                      <div className="md:col-span-3 flex flex-col gap-1.5">
-                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Original Price (₹)
-                        </label>
-                        <input 
-                          type="number"
-                          placeholder="e.g. 600"
-                          value={variantInput.originalPrice}
-                          onChange={(e) => setVariantInput(prev => ({ ...prev, originalPrice: e.target.value }))}
-                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
-                        />
-                      </div>
 
                       {/* Variant Stock */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">

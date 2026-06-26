@@ -42,7 +42,7 @@ const UserLayout = ({ wishlist = [], cart = [] }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <Header wishlist={wishlist} cart={cart} />
-      <main className="px-3 md:px-5 lg:px-7 flex-1 pb-7">
+      <main className="px-2 md:px-3 lg:px-5 flex-1 pb-5">
         <Outlet />
       </main>
       <Footer />

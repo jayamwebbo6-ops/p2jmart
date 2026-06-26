@@ -1,20 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaExternalLinkAlt, FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaCloudUploadAlt } from 'react-icons/fa';
 
-const ContactSocialSettings = () => {
-  const [formData, setFormData] = useState({
-    phones: '+91 925537662, 936675427',
-    email: 'p2gmart@gmail.com',
-    address: 'Plot No 1, 3rd Street, tambaram, Urapakkam, Chennai - 603 210',
-    facebook: '#',
-    twitter: '#',
-    instagram: '#',
-    youtube: '#'
-  });
+const ContactSocialSettings = ({ formData, setFormData, onSave, isSaving }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    alert('Settings configuration data saved cleanly!');
+    onSave({ contactSetting: formData });
   };
 
   return (
@@ -33,7 +24,7 @@ const ContactSocialSettings = () => {
             <label className="text-[11px] font-black uppercase text-slate-500 tracking-wider block">Display Phone Number</label>
             <input 
               type="text" 
-              value={formData.phones}
+              value={formData.phones || ''}
               onChange={(e) => setFormData({...formData, phones: e.target.value})}
               className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none transition-all"
             />
@@ -45,7 +36,7 @@ const ContactSocialSettings = () => {
             <label className="text-[11px] font-black uppercase text-slate-500 tracking-wider block">Contact / Support Email</label>
             <input 
               type="email" 
-              value={formData.email}
+              value={formData.email || ''}
               onChange={(e) => setFormData({...formData, email: e.target.value})}
               className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-3 text-sm font-semibold text-slate-800 focus:outline-none transition-all"
             />
@@ -57,7 +48,7 @@ const ContactSocialSettings = () => {
             <label className="text-[11px] font-black uppercase text-slate-500 tracking-wider block">Store / Contact Address</label>
             <textarea 
               rows={3}
-              value={formData.address}
+              value={formData.address || ''}
               onChange={(e) => setFormData({...formData, address: e.target.value})}
               className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl p-4 text-sm font-semibold text-slate-800 focus:outline-none resize-none leading-relaxed transition-all"
             />
@@ -81,7 +72,7 @@ const ContactSocialSettings = () => {
               </div>
               <input 
                 type="text" 
-                value={formData.facebook}
+                value={formData.facebook || ''}
                 onChange={(e) => setFormData({...formData, facebook: e.target.value})}
                 className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none transition-all"
               />
@@ -94,7 +85,7 @@ const ContactSocialSettings = () => {
               </div>
               <input 
                 type="text" 
-                value={formData.twitter}
+                value={formData.twitter || ''}
                 onChange={(e) => setFormData({...formData, twitter: e.target.value})}
                 className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none transition-all"
               />
@@ -107,7 +98,7 @@ const ContactSocialSettings = () => {
               </div>
               <input 
                 type="text" 
-                value={formData.instagram}
+                value={formData.instagram || ''}
                 onChange={(e) => setFormData({...formData, instagram: e.target.value})}
                 className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none transition-all"
               />
@@ -120,7 +111,7 @@ const ContactSocialSettings = () => {
               </div>
               <input 
                 type="text" 
-                value={formData.youtube}
+                value={formData.youtube || ''}
                 onChange={(e) => setFormData({...formData, youtube: e.target.value})}
                 className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none transition-all"
               />
@@ -131,10 +122,11 @@ const ContactSocialSettings = () => {
           <div className="pt-4 border-t border-slate-100 flex justify-end">
             <button 
               type="submit" 
-              className="bg-primary hover:bg-secondary text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-2"
+              disabled={isSaving}
+              className="bg-primary hover:bg-secondary text-white font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl shadow-xs active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50"
             >
               <FaCloudUploadAlt size={14} />
-              <span>Save System Config</span>
+              <span>{isSaving ? 'Saving...' : 'Save System Config'}</span>
             </button>
           </div>
         </div>

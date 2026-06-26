@@ -12,9 +12,20 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
   // Use the clean products array passed down from Home.jsx
   const activeProducts = products;
 
-  // Handle centralized routing to safely feed the parent Category details into SubCategoryPage
+  // Handle centralized routing to safely feed the parent Category details into SubCategoryPage or custom redirect URL
   const handleNavigation = (e) => {
     e.preventDefault();
+    const bannerLink = categorySectionData?.bannerLink;
+
+    if (bannerLink) {
+      if (bannerLink.startsWith('http://') || bannerLink.startsWith('https://')) {
+        window.location.href = bannerLink;
+      } else {
+        navigate(bannerLink);
+      }
+      return;
+    }
+
     if (!categoryId) return;
     
     navigate(`/sub-category/${categoryId}`, {
@@ -30,7 +41,7 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
   return (
     <div className="w-full mt-2">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-6">
+      <div className="flex justify-between items-center border-b border-gray-200 pb-3">
         <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
         <button 
           onClick={handleNavigation}
@@ -42,12 +53,12 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
       </div>
       
       {/* Grid Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+      <div className="flex flex-col lg:flex-row gap-4 items-stretch">
         
         {/* Products Grid Context */}
         <div className="flex-1">
           {activeProducts && activeProducts.length > 0 ? (
-            <div className="grid grid-cols-1 min-[350px]:grid-cols-2 min-[768px]:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 min-[350px]:grid-cols-2 min-[768px]:grid-cols-4 gap-3">
               {activeProducts.map(product => {
                 const productId = product._id || product.id;
                 const isSaved = wishlist.some(item => item.id === productId || item._id === productId);
@@ -80,9 +91,6 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
             onClick={handleNavigation}
             className="w-full h-full min-h-[350px] rounded-lg p-6 flex flex-col items-center text-center relative overflow-hidden group shadow-sm border border-gray-200/60 cursor-pointer bg-gray-100"
           >
-            {/* Scrim Overlay for dynamic font contrast rendering */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/25 to-black/5 z-10" />
-
             {/* REAL BACKEND BANNER IMAGE */}
             {bannerImage ? (
               <img 
@@ -95,32 +103,9 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
             )}
 
             {/* Dynamic Content Interface */}
-            <div className="relative z-20 w-full flex flex-col h-full justify-between items-center text-white">
-              <div className="flex flex-col items-center mt-2">
-                <h3 className="text-white text-3xl mb-1 tracking-wide drop-shadow-md font-bold">
-                  {title || "Collection"}
-                </h3>
-                <p className="text-gray-100 mb-5 text-xs font-medium tracking-widest drop-shadow-xs">
-                  EXPLORE PREMIUM DESIGNS
-                </p>
-              </div>
-
-             <button 
-               onClick={(e) => {
-                 e.stopPropagation();
-                 const link = categorySectionData?.bannerLink;
-                 if (link) {
-                   if (link.startsWith('http://') || link.startsWith('https://')) {
-                     window.location.href = link;
-                   } else {
-                     navigate(link);
-                   }
-                 }
-               }} 
-               className="mt-auto bg-white text-gray-900 font-bold text-[11px] tracking-wider py-2.5 px-6 shadow-md rounded-xs group-hover:bg-primary group-hover:text-white transition-all uppercase cursor-pointer"
-             >
-               SHOP NOW
-             </button>
+            <div className="w-full flex flex-col h-full justify-between items-center ">
+       
+             
             </div>
           </div>
         </div>

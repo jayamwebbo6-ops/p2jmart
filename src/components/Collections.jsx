@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Send } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getHomeCMS } from '../api/homeCms'; ; 
-import { getProductsAPI } from '../api/homeCms'; // Ensure this matches your real master products collection api utility path
+import { getHomeCMS } from '../api/homeCms';
+import { getProductsAPI } from '../api/productApi';
 
 const Collections = () => {
   const [sections, setSections] = useState([]);
@@ -127,22 +127,11 @@ const Collections = () => {
               >
                 <div>
                   {/* Section Title Header Header */}
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-medium text-gray-800">
+                  <div className="flex items-center justify-center mb-4">
+                    <h2 className="text-xl font-medium text-gray-800 ">
                       {section.title}
                     </h2> 
 
-                    <Link 
-                      to={`/subCategory?catId=${routeId}`}
-                      state={{ 
-                        categoryId: routeId,
-                        subcategoryName: section.title,
-                        categoryName: section.title 
-                      }}
-                      className="text-blue-600 text-sm hover:underline font-medium"
-                    >
-                      View All →
-                    </Link>
                   </div>
 
                   {/* Product Grid Mapping */}

@@ -124,7 +124,7 @@ const AccountLayout = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden p-4 md:p-6 border border-gray-50">
+        <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden border border-gray-50">
           <Outlet />
         </div>
 
