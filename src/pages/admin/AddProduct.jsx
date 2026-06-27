@@ -304,6 +304,7 @@ const AddProduct = () => {
     price: '',
     originalPrice: '',
     stock: '',
+    weight: '',
     image: ''
   });
 
@@ -354,6 +355,7 @@ const AddProduct = () => {
       price: variant.price.toString(),
       originalPrice: variant.originalPrice ? variant.originalPrice.toString() : '',
       stock: variant.stock.toString(),
+      weight: variant.weight ? variant.weight.toString() : '',
       image: variant.image || ''
     });
     setShowVariantForm(true);
@@ -374,6 +376,7 @@ const AddProduct = () => {
               price: parseFloat(variantInput.price),
               originalPrice: variantInput.originalPrice ? parseFloat(variantInput.originalPrice) : null,
               stock: parseInt(variantInput.stock) || 0,
+              weight: parseFloat(variantInput.weight) || 0,
               image: variantInput.image || v.image
             }
           : v
@@ -387,6 +390,7 @@ const AddProduct = () => {
       price: '',
       originalPrice: '',
       stock: '',
+      weight: '',
       image: ''
     });
     toast.success("Variant updated successfully!");
@@ -400,6 +404,7 @@ const AddProduct = () => {
       price: '',
       originalPrice: '',
       stock: '',
+      weight: '',
       image: ''
     });
   };
@@ -483,6 +488,7 @@ const AddProduct = () => {
       price: parseFloat(variantInput.price),
       originalPrice: variantInput.originalPrice ? parseFloat(variantInput.originalPrice) : null,
       stock: parseInt(variantInput.stock) || 0,
+      weight: parseFloat(variantInput.weight) || 0,
       images: variantInput.image ? [variantInput.image] : []
     };
     
@@ -497,6 +503,7 @@ const AddProduct = () => {
       price: '',
       originalPrice: '',
       stock: '',
+      weight: '',
       image: ''
     });
     toast.success("Variant added successfully!");
@@ -1026,6 +1033,21 @@ const AddProduct = () => {
                         />
                       </div>
 
+                      {/* Variant Weight */}
+                      <div className="md:col-span-3 flex flex-col gap-1.5">
+                        <label className="text-[10px] font-black text-slate-455 tracking-wider">
+                          Weight (kg)
+                        </label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          placeholder="e.g. 0.5"
+                          value={variantInput.weight}
+                          onChange={(e) => setVariantInput(prev => ({ ...prev, weight: e.target.value }))}
+                          className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
+                        />
+                      </div>
+
                       {/* Actions Buttons */}
                       <div className="md:col-span-3 flex gap-2">
                         {editingVariantId ? (
@@ -1062,6 +1084,7 @@ const AddProduct = () => {
                             <th className="py-3 px-4 font-semibold">Price (₹)</th>
                             <th className="py-3 px-4 font-semibold">Original Price (₹)</th>
                             <th className="py-3 px-4 font-semibold">Quantity</th>
+                            <th className="py-3 px-4 font-semibold">Weight (kg)</th>
                             <th className="py-3 px-4 text-right pr-6 font-semibold">Actions</th>
                           </tr>
                         </thead>
@@ -1092,7 +1115,7 @@ const AddProduct = () => {
                                     <td key={attr.id} className="py-4 px-4 capitalize">
                                       <div className="flex items-center gap-2">
                                         <span 
-                                          className="w-3.5 h-3.5 rounded-full border border-gray-250 inline-block shrink-0" 
+                                          className="w-3.5 h-3.5 rounded-full border border-gray-255 inline-block shrink-0" 
                                           style={{ backgroundColor: colorHex }}
                                           title={val}
                                         />
@@ -1115,6 +1138,9 @@ const AddProduct = () => {
                               </td>
                               <td className="py-4 px-4 text-slate-600">
                                 {v.stock}
+                              </td>
+                              <td className="py-4 px-4 text-slate-600">
+                                {v.weight !== undefined ? `${v.weight} kg` : '0 kg'}
                               </td>
                               <td className="py-4 px-4 text-right pr-6">
                                 <div className="flex items-center justify-end gap-2">

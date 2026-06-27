@@ -5,7 +5,7 @@ import ProductCard from "../../components/ProductCard";
 import ConfirmationModal from "../../components/ConfirmationModal"; // Adjust path as per your directory structure
 
 // Accept the shared state and handlers directly from App.jsx props
-const Wishlist = ({ wishlist = [], removeFromWishlist }) => {
+const Wishlist = ({ wishlist = [], removeFromWishlist, addToCart }) => {
   // State to handle modal open/close state and track which item to delete
   const [productToDelete, setProductToDelete] = useState(null);
 
@@ -74,6 +74,7 @@ const Wishlist = ({ wishlist = [], removeFromWishlist }) => {
               variant="wishlist"
               isWishlisted={true}
               onRemoveWishlist={handleOpenConfirmation} // Catch action to open modal overlay first
+              onAddToCart={addToCart}
             />
           ))}
         </div>

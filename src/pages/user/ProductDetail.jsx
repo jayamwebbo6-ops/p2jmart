@@ -21,6 +21,11 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const [selectedSize, setSelectedSize] = useState('Default');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
+
+  useEffect(() => {
+    setMainImageLoaded(false);
+  }, [activeImageIndex]);
 
   // Base backend URL helper function to cleanly resolve image streams
   const formatImageUrl = (imagePath) => {
@@ -28,7 +33,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath;
     }
-    const BACKEND_URL = "http://localhost:5000";
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
     return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
   };
 
@@ -191,6 +196,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
       : (loadedProduct.category || 'Catalog'),
     price: activeVariant ? activeVariant.price : (loadedProduct.price || 0),
     originalPrice: activeVariant ? activeVariant.originalPrice : (loadedProduct.originalPrice || 0),
+    weight: activeVariant ? (activeVariant.weight || 0) : (loadedProduct.weight || 0),
     discount: loadedProduct.discount || 0,
     rating: loadedProduct.rating ?? 5,
     reviews: loadedProduct.reviews || 0,
@@ -198,6 +204,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     colors,
     sizes,
     inStock: activeVariant ? activeVariant.stock > 0 : (loadedProduct.inStock ?? true),
+    isActive: loadedProduct.isActive !== false,
     warranty: loadedProduct.warranty || '',
     returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
     deliveryMode: loadedProduct.deliveryMode || ''
@@ -296,10 +303,10 @@ useEffect(() => {
     if (!product) return;
     if (isWishlisted) {
       if (removeFromWishlist) removeFromWishlist(product.id);
-      toast.success("Removed from wishlist");
+     
     } else {
       if (addToWishlist) addToWishlist(product);
-      toast.success("Added to wishlist!");
+     
     }
   };
 
@@ -555,13 +562,24 @@ useEffect(() => {
                 className="flex-1 aspect-square relative overflow-hidden rounded-lg border border-gray-200 cursor-zoom-in bg-gray-50 flex items-center justify-center"
               >
                 {product.images.length > 0 ? (
-                  <img
-                    src={formatImageUrl(product.images[activeImageIndex] || product.images[0])}
-                    alt={product.title}
-                    style={zoomStyle}
-                    className="w-full h-full object-cover transition-transform duration-75 ease-out pointer-events-none select-none"
-                    onError={(e) => { e.target.src = "https://via.placeholder.com/500?text=No+Image+Available"; }}
-                  />
+                  <>
+                    {!mainImageLoaded && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-gray-150 via-gray-200 to-gray-150 animate-pulse flex items-center justify-center z-5">
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading...</span>
+                      </div>
+                    )}
+                    <img
+                      src={formatImageUrl(product.images[activeImageIndex] || product.images[0])}
+                      alt={product.title}
+                      style={zoomStyle}
+                      onLoad={() => setMainImageLoaded(true)}
+                      className={`w-full h-full object-cover transition-all duration-300 ease-out pointer-events-none select-none ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                      onError={(e) => {
+                        setMainImageLoaded(true);
+                        e.target.src = "https://via.placeholder.com/500?text=No+Image+Available";
+                      }}
+                    />
+                  </>
                 ) : (
                   <div className="text-gray-400 text-sm">No Image Available</div>
                 )}
@@ -672,9 +690,16 @@ useEffect(() => {
             )}
 
             <div>
-              <span className={product.inStock ? "text-green-600 font-bold text-sm tracking-wide" : "text-red-500 font-bold text-sm tracking-wide"}>
-                {product.inStock ? "In Stock" : "Out of Stock"}
-              </span>
+              {product.isActive === false ? (
+                <div className="bg-rose-50 text-rose-700 px-3 py-2 rounded-md border border-rose-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
+                  Product Inactive / Temporarily Unavailable
+                </div>
+              ) : (
+                <span className={product.inStock ? "text-green-600 font-bold text-sm tracking-wide" : "text-red-500 font-bold text-sm tracking-wide"}>
+                  {product.inStock ? "In Stock" : "Out of Stock"}
+                </span>
+              )}
             </div>
 
             <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 py-3">
@@ -698,9 +723,10 @@ useEffect(() => {
 
             {/* Quantity Controls */}
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm">
+              <div className={`flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm ${product.isActive === false ? 'opacity-50 pointer-events-none' : ''}`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={product.isActive === false}
                   className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
                 >
                   -
@@ -710,6 +736,7 @@ useEffect(() => {
                 </div>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
+                  disabled={product.isActive === false}
                   className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
                 >
                   +
@@ -726,27 +753,37 @@ useEffect(() => {
                   className={isWishlisted ? "text-red-500" : "text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors"} 
                 />
               </button>
-             <button 
-      onClick={handleShare}
-      className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
-    >
-      <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
-    </button>
+              <button 
+                onClick={handleShare}
+                className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
+              >
+                <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
+              </button>
             </div>
 
             {/* Action Buttons */}
             <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
               <button 
                 onClick={handleAddToCart}
-                className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm"
+                disabled={product.isActive === false || !product.inStock}
+                className={`w-full border-2 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-colors shadow-sm ${
+                  product.isActive === false || !product.inStock
+                    ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                    : 'border-primary text-primary hover:bg-primary/5'
+                }`}
               >
                 <ShoppingCart size={15} /> Add to Cart
               </button>
               <button 
                 onClick={handleBuyNow}
-                className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm"
+                disabled={product.isActive === false || !product.inStock}
+                className={`w-full py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-opacity shadow-sm ${
+                  product.isActive === false || !product.inStock
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary text-white hover:opacity-90'
+                }`}
               >
-                <ShoppingBag size={15} /> Buy Now
+                <ShoppingBag size={15} /> {product.isActive === false ? 'Inactive' : !product.inStock ? 'Out of Stock' : 'Buy Now'}
               </button>
             </div>
           </div>

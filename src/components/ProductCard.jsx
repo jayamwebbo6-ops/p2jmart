@@ -3,7 +3,7 @@ import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from './toast';
 
-const BACKEND_BASE_URL = "http://localhost:5000"; 
+const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api"; 
 
 const ProductCard = ({ 
   product, 
@@ -15,6 +15,18 @@ const ProductCard = ({
   onClick
 }) => {
   const navigate = useNavigate();
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [brokenImages, setBrokenImages] = useState(new Set());
+
+
+
+  useEffect(() => {
+    setBrokenImages(new Set());
+    setImageLoaded(false);
+    setCurrentImgIndex(0);
+  }, [product.id, product._id]);
 
   const images = useMemo(() => {
     let list = [];
@@ -30,8 +42,20 @@ const ProductCard = ({
       list.push(product.image);
     }
 
-    // 2. Add all variant images safely
-    if (product.variants && Array.isArray(product.variants)) {
+    // 2. Always push the first variant's image as a fallback primary/secondary option if available
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      const firstVar = product.variants[0];
+      if (firstVar) {
+        if (Array.isArray(firstVar.images) && firstVar.images.length > 0) {
+          list.push(firstVar.images[0]);
+        } else if (firstVar.image) {
+          list.push(firstVar.image);
+        }
+      }
+    }
+
+    // 3. Add other variant images safely ONLY on hover
+    if (isHovered && product.variants && Array.isArray(product.variants)) {
       product.variants.forEach((v) => {
         if (Array.isArray(v.images)) {
           list.push(...v.images);
@@ -41,8 +65,8 @@ const ProductCard = ({
       });
     }
 
-    // 3. Clean up paths and attach the backend server base URL
-    return [...new Set(list)]
+    // 4. Clean up paths, attach the backend server base URL, and filter out broken URLs
+    const resolved = [...new Set(list)]
       .map(imgSrc => {
         if (!imgSrc || typeof imgSrc !== 'string' || imgSrc.trim() === "" || imgSrc.includes('undefined')) {
           return null;
@@ -55,11 +79,13 @@ const ProductCard = ({
         const cleanSrc = imgSrc.startsWith('/') ? imgSrc.slice(1) : imgSrc;
         return `${BACKEND_BASE_URL}/${cleanSrc}`;
       })
-      .filter(Boolean);
-  }, [product]);
+      .filter(Boolean)
+      .filter(url => !brokenImages.has(url));
 
-  const [currentImgIndex, setCurrentImgIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
+    // Limit to at most 3 images to avoid heavy/distracting hover loops
+    return resolved.slice(0, 3);
+  }, [product, isHovered, brokenImages]);
+
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -99,20 +125,30 @@ const ProductCard = ({
       {/* Image Container */}
       <div className="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
         {images.length > 0 && images[currentImgIndex] ? (
-          <img 
-            src={images[currentImgIndex]} 
-            alt={product.title} 
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              // If index 0 still fails dynamically for any reason, skip it and go straight to the next valid variant image
-              if (currentImgIndex === 0 && images.length > 1) {
-                setCurrentImgIndex(1);
-              } else {
-                e.target.onerror = null;
-                e.target.src = "https://placehold.co/600x600/FAFAFA/A3A3A3?text=Image+Unavailable"; 
-              }
-            }}
-          />
+          <>
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-gradient-to-r from-gray-150 via-gray-200 to-gray-150 animate-pulse flex items-center justify-center z-5">
+                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Loading...</span>
+              </div>
+            )}
+            <img 
+              src={images[currentImgIndex]} 
+              alt={product.title} 
+              onLoad={() => setImageLoaded(true)}
+              className={`w-full h-full object-contain group-hover:scale-105 transition-all duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onError={(e) => {
+                setImageLoaded(true);
+                const failedUrl = images[currentImgIndex];
+                if (failedUrl) {
+                  setBrokenImages(prev => {
+                    const next = new Set(prev);
+                    next.add(failedUrl);
+                    return next;
+                  });
+                }
+              }}
+            />
+          </>
         ) : (
           <div className="w-full h-full bg-[#FAFAFA] flex flex-col items-center justify-center text-gray-400 font-sans text-center">
             <span className="text-sm font-medium">📷 Image Unavailable</span>

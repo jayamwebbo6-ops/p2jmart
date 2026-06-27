@@ -29,3 +29,9 @@ export const deleteProductAPI = async (id) => {
   const response = await api.delete(`/products/${id}`);
   return response.data;
 };
+
+// Toggle product status (active/inactive)
+export const toggleProductStatusAPI = async (id) => {
+  const response = await api.patch(`/products/${id}/toggle-status`);
+  return response.data;
+};
