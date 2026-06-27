@@ -15,6 +15,9 @@ const THEME = {
   mutedText: 'text-[#64748b]',
 };
 
+// Replace this with your actual Backend Server URL (e.g., http://localhost:5000)
+const IMAGE_BASE_URL = "http://localhost:5000"; 
+
 const MultiColumnShowcaseTab = ({
   featuredProducts = [],
   setFeaturedProducts,
@@ -146,6 +149,13 @@ const MultiColumnShowcaseTab = ({
       .filter(Boolean);
   }, [exclusiveProducts, allProducts]);
 
+  // Helper function to build correct Image URLs dynamically
+  const getProductDisplayImage = (item) => {
+    const rawImagePath = item.variants?.[0]?.image || item.image;
+    if (!rawImagePath) return "";
+    return rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath}`;
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
@@ -188,15 +198,15 @@ const MultiColumnShowcaseTab = ({
               {columnFeatured.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
                 const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
-                const prodImage = item.image || (item.variants?.[0]?.image) || '';
+                const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
                     <div>
                       <div className="w-full h-20 rounded-lg overflow-hidden bg-white mb-2 border border-slate-200/60 flex items-center justify-center">
                         {prodImage ? (
-                          <img src={prodImage} alt={item.title} className="w-full h-full object-cover" />
+                          <img src={prodImage} alt={item.title} className="w-full h-full object-contain p-1" onError={(e) => { e.target.src = ""; }} />
                         ) : (
-                          <ImageIcon size={20} className="text-slate-350" />
+                          <ImageIcon size={20} className="text-slate-300" />
                         )}
                       </div>
                       <p className={`text-[11px] font-black ${THEME.primaryText} leading-tight break-words line-clamp-2`}>{item.title}</p>
@@ -238,15 +248,15 @@ const MultiColumnShowcaseTab = ({
               {columnTrending.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
                 const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
-                const prodImage = item.image || (item.variants?.[0]?.image) || '';
+                const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
                     <div>
                       <div className="w-full h-20 rounded-lg overflow-hidden bg-white mb-2 border border-slate-200/60 flex items-center justify-center">
                         {prodImage ? (
-                          <img src={prodImage} alt={item.title} className="w-full h-full object-cover" />
+                          <img src={prodImage} alt={item.title} className="w-full h-full object-contain p-1" onError={(e) => { e.target.src = ""; }} />
                         ) : (
-                          <ImageIcon size={20} className="text-slate-350" />
+                          <ImageIcon size={20} className="text-slate-300" />
                         )}
                       </div>
                       <p className={`text-[11px] font-black ${THEME.primaryText} leading-tight break-words line-clamp-2`}>{item.title}</p>
@@ -288,15 +298,15 @@ const MultiColumnShowcaseTab = ({
               {columnExclusive.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
                 const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
-                const prodImage = item.image || (item.variants?.[0]?.image) || '';
+                const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
                     <div>
                       <div className="w-full h-20 rounded-lg overflow-hidden bg-white mb-2 border border-slate-200/60 flex items-center justify-center">
                         {prodImage ? (
-                          <img src={prodImage} alt={item.title} className="w-full h-full object-cover" />
+                          <img src={prodImage} alt={item.title} className="w-full h-full object-contain p-1" onError={(e) => { e.target.src = ""; }} />
                         ) : (
-                          <ImageIcon size={20} className="text-slate-350" />
+                          <ImageIcon size={20} className="text-slate-300" />
                         )}
                       </div>
                       <p className={`text-[11px] font-black ${THEME.primaryText} leading-tight break-words line-clamp-2`}>{item.title}</p>
@@ -435,7 +445,7 @@ const MultiColumnShowcaseTab = ({
                 
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
                 const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
-                const prodImage = item.image || (item.variants?.[0]?.image) || '';
+                const prodImage = getProductDisplayImage(item);
                 const catObj = item.category || {};
                 const catLabel = typeof catObj === 'object' ? (catObj.name || '') : catObj;
 
@@ -452,7 +462,7 @@ const MultiColumnShowcaseTab = ({
                     <div className="flex gap-3 items-start">
                       <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-50 flex-shrink-0 border border-slate-100 flex items-center justify-center">
                         {prodImage ? (
-                          <img src={prodImage} alt={item.title} className="w-full h-full object-cover" />
+                          <img src={prodImage} alt={item.title} className="w-full h-full object-contain p-0.5" onError={(e) => { e.target.src = ""; }} />
                         ) : (
                           <ImageIcon size={20} className="text-slate-350" />
                         )}

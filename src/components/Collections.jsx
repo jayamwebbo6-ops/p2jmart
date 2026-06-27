@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import { getHomeCMS } from '../api/homeCms';
 import { getProductsAPI } from '../api/productApi';
 
+// Replace this with your actual Backend Server URL (e.g., http://localhost:5000 or an env variable)
+const IMAGE_BASE_URL = "http://localhost:5000"; 
+
 const Collections = () => {
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,7 +16,6 @@ const Collections = () => {
       try {
         setLoading(true);
         
-        // Fetch CMS configurations and product items concurrently
         const [cmsRes, productsRes] = await Promise.all([
           getHomeCMS(),
           getProductsAPI()
@@ -29,12 +31,10 @@ const Collections = () => {
         }
 
         if (cmsData && masterProducts.length > 0) {
-          // Extract matching raw identification string keys safely
           const featuredIds = cmsData.featuredProducts || [];
           const trendingIds = cmsData.trendingProducts || [];
           const exclusiveIds = cmsData.exclusiveProducts || [];
 
-          // Map string IDs to full product catalog documents
           const populateProducts = (ids) => {
             return ids
               .map(id => masterProducts.find(p => (p._id === id || p._id?.$oid === id || p.id === id)))
@@ -67,7 +67,8 @@ const Collections = () => {
     };
 
     fetchCollectionsAndProducts();
-  }, []);
+  }// eslint-disable-next-line react-hooks/exhaustive-deps
+  , []);
 
   if (loading) {
     return (
@@ -81,7 +82,6 @@ const Collections = () => {
     );
   }
 
-  // Prevent white screen crashes if data payloads load empty
   if (sections.length === 0 || sections.every(s => s.products.length === 0)) return null;
 
   return (
@@ -118,58 +118,64 @@ const Collections = () => {
           {sections.map((section) => {
             if (section.products.length === 0) return null;
 
-            const routeId = section.products[0]?._id?.$oid || section.products[0]?._id || section.fallbackId;
-
             return (
               <div
                 key={section.title}
                 className="bg-white border border-gray-200 p-3 flex flex-col justify-between shadow-xs"
               >
                 <div>
-                  {/* Section Title Header Header */}
                   <div className="flex items-center justify-center mb-4">
                     <h2 className="text-xl font-medium text-gray-800 ">
                       {section.title}
                     </h2> 
-
                   </div>
 
                   {/* Product Grid Mapping */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {section.products.slice(0, 4).map((product) => {
-                      const productId = product._id?.$oid || product._id || product.id;
-                      
-                      return (
-                        <Link
-                          key={productId}
-                          to={`/product/${productId}`}
-                          className="border border-gray-200 rounded-xs p-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
-                        >
-                          <div className="aspect-square bg-gray-50/50 rounded overflow-hidden flex items-center justify-center">
-                            <img
-                              src={product.image || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80"}
-                              alt={product.title || "Product Image"}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-300"
-                            />
-                          </div>
+                  {/* Product Grid Mapping */}
+<div className="grid grid-cols-2 gap-3">
+  {section.products.slice(0, 4).map((product) => {
+    const productId = product._id?.$oid || product._id || product.id;
+    
+    // 1. Prioritize the first available variant's image, fall back to root image
+    const rawImagePath = product.variants?.[0]?.image || product.image;
 
-                          <div className="mt-2 flex items-start justify-between gap-1.5 w-full">
-                            {/* REAL CONVENTION: product.name changed to product.title */}
-                            <h3 className="text-xs text-gray-700 line-clamp-2 font-medium group-hover:text-primary transition-colors flex-1">
-                              {product.title}
-                            </h3>
+    // 2. Format the absolute asset link pointing to your backend server
+    const displayImage = rawImagePath
+      ? (rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath}`)
+      : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
 
-                            {/* REAL CONVENTION: Handles both raw strings and numbers dynamically */}
-                            <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
-                              {typeof product.discount === 'number' ? `${product.discount}% OFF` : product.discount || "Sale"}
-                            </span>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
+    return (
+      <Link
+        key={productId}
+        to={`/product/${productId}`}
+        className="border border-gray-200 rounded-xs p-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
+      >
+        <div className="aspect-square bg-gray-50/50 rounded overflow-hidden flex items-center justify-center">
+          <img
+            src={displayImage}
+            alt={product.title || "Product Image"}
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-300"
+            onError={(e) => {
+              e.target.src = "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
+            }}
+          />
+        </div>
+
+        <div className="mt-2 flex items-start justify-between gap-1.5 w-full">
+          <h3 className="text-xs text-gray-700 line-clamp-2 font-medium group-hover:text-primary transition-colors flex-1">
+            {product.title}
+          </h3>
+
+          <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
+            {typeof product.discount === 'number' ? `${product.discount}% OFF` : product.discount || "Sale"}
+          </span>
+        </div>
+      </Link>
+    );
+  })}
+</div>
                 </div>
               </div>
             );
