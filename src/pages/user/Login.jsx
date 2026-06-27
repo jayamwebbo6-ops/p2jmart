@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { googleLoginAPI, isUserAuthenticated } from '../../api/userApi';
 import { toast } from '../../components/toast';
+import { googleLoginAPI, isUserAuthenticated, sendOtpAPI, verifyOtpAPI } from '../../api/userApi';
 
 // Integrated Loader sub-component
 const Loader = () => {
   return (
     <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex justify-center items-center z-[9999]">
       <div className="flex flex-col items-center">
-        {/* Simple modern spinner */}
         <div className="w-12 h-12 border-4 border-gray-200 border-t-primary rounded-full animate-spin"></div>
         <p className="mt-4 text-primary font-medium text-sm tracking-widest uppercase animate-pulse">Loading...</p>
       </div>
@@ -33,23 +32,19 @@ export default function AuthFlow() {
   const [isLoading, setIsLoading] = useState(false);
   const googleBtnRef = useRef(null);
   
-  // Dummy OTP broken into 4 characters matching the box layout theme
-  const [otpBoxes, setOtpBoxes] = useState(['5', '6', '9', '6']);
+  // Updated: Changed from 4 boxes to 6 boxes empty by default to match backend code
+  const [otpBoxes, setOtpBoxes] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
 
   useEffect(() => {
-    // 1. Define Callback function for Google response
     const handleCredentialResponse = async (response) => {
       setIsLoading(true);
       try {
         const result = await googleLoginAPI(response.credential);
         if (result && result.success) {
-          // Fire event
           window.dispatchEvent(new Event('userLoginStateChange'));
-          
           toast.success('Logged in successfully!');
 
-          // If profile is not filled (no phone number), navigate to profile page to fill details
           if (!result.data.phone) {
             toast.info('Please complete your profile details.');
             navigate('/my-account/profile');
@@ -67,7 +62,6 @@ export default function AuthFlow() {
       }
     };
 
-    // 2. Load Google client script programmatically
     const script = document.createElement('script');
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
@@ -88,38 +82,47 @@ export default function AuthFlow() {
       }
     };
     document.body.appendChild(script);
-  }, []);
+  }, [navigate]);
 
-  const handleSendCode = (e) => {
-    e.preventDefault();
-    if (!email) {
-      alert("Please enter an email address");
-      return;
-    }
-    
-    // Trigger loader state
-    setIsLoading(true);
-    
-    // Simulate API delay, then advance step
-    setTimeout(() => {
-      setIsLoading(false);
+  // Real Integration: Connect to your /send-otp route
+  const handleSendCode = async (e) => {
+  if (e) e.preventDefault();
+  if (!email) {
+    toast.error("Please enter an email address");
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    const result = await sendOtpAPI(email.toLowerCase());
+
+    if (result.success) {
+      toast.success(result.message || 'Verification code sent!');
+      setOtpBoxes(['', '', '', '', '', '']);
       setStep('otp-verify');
-    }, 500);
-  };
+    } else {
+      toast.error(result.message || 'Failed to send verification code.');
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.message || 'Failed to send OTP.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleOtpBoxChange = (value, index) => {
     const newOtpBoxes = [...otpBoxes];
-    newOtpBoxes[index] = value.slice(-1); // Only take the last character typed
+    newOtpBoxes[index] = value.slice(-1).replace(/[^0-9]/g, ''); // Numeric inputs only
     setOtpBoxes(newOtpBoxes);
 
     // Auto-focus next box if a character was added
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (e, index) => {
-    // Move to previous box on backspace if current is empty
     if (e.key === 'Backspace' && !otpBoxes[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
     }
@@ -127,72 +130,74 @@ export default function AuthFlow() {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    // Grab text from clipboard and strip non-digits or extra spaces
     const pasteData = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
     
     if (pasteData.length > 0) {
       const newOtpBoxes = [...otpBoxes];
-      
-      // Loop through and fill the boxes depending on length of paste data up to 4 digits
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 6; i++) {
         if (pasteData[i]) {
           newOtpBoxes[i] = pasteData[i];
         }
       }
       setOtpBoxes(newOtpBoxes);
-      
-      // Focus the appropriate field safely
-      const targetFocusIndex = Math.min(pasteData.length - 1, 3);
+      const targetFocusIndex = Math.min(pasteData.length - 1, 5);
       inputRefs.current[targetFocusIndex]?.focus();
     }
   };
 
-  const handleVerifyOtp = (e) => {
-    e.preventDefault();
-    const finalOtp = otpBoxes.join('');
-    if (finalOtp.length < 4) {
-      alert("Please complete the verification code");
-      return;
+  // Real Integration: Connect to your /verify-otp route
+  const handleVerifyOtp = async (e) => {
+  e.preventDefault();
+  const finalOtp = otpBoxes.join('');
+  if (finalOtp.length < 6) {
+    toast.error("Please enter the complete 6-digit verification code");
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    const result = await verifyOtpAPI(email.toLowerCase(), finalOtp);
+
+    if (result.success) {
+      window.dispatchEvent(new Event('userLoginStateChange'));
+      toast.success('Logged in successfully!');
+
+      if (!result.data.phone) {
+        toast.info('Please complete your profile details.');
+        navigate('/my-account/profile');
+      } else {
+        navigate('/');
+      }
+    } else {
+      toast.error(result.message || 'Invalid or expired OTP code');
     }
-
-    // Trigger loader state
-    setIsLoading(true);
-
-    // Simulate verification check before routing
-    setTimeout(() => {
-      setIsLoading(false);
-      alert('Redirecting to "home page after successful Login"');
-      window.location.href = '/';
-    }, 500);
-  };
+  } catch (err) {
+    console.error(err);
+    toast.error(err.response?.data?.message || 'Verification failed.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="mt-13 mb-5 bg-primary-100 flex flex-col justify-center items-center relative font-sans text-gray-800 selection:bg-red-200">
-      
-      {/* Global Application Loader Layer overlay */}
       {isLoading && <Loader />}
 
-      {/* Container Card with Layout matching image_a3c929.png */}
       <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden flex flex-col transition-all duration-300">
-        
-        {/* Top Header Panel Segment using semantic theme keyword configuration */}
         <div className="text-white text-center flex flex-col items-center justify-center pt-13">
           <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome Back</h1>
           <p className="text-primary text-sm font-medium">Sign in to your account</p>
         </div>
 
-        {/* Content Body Layout structured using uniform gap scales instead of arbitrary padding values */}
         <div className="flex flex-col items-center w-full my-10 mx-auto max-w-[80%]">
           
-          {/* STEP 1: Identification Route Core Options */}
+          {/* STEP 1: Identification Options */}
           {step === 'methods' && (
             <div className="w-full flex flex-col gap-4 my-2">
-              {/* Google Integration Trigger Container */}
               <div className="w-full flex justify-center py-1">
                 <div ref={googleBtnRef}></div>
               </div>
 
-              {/* Email Gateway Selection Trigger */}
               <button 
                 type="button"
                 onClick={() => setStep('email-input')}
@@ -240,7 +245,7 @@ export default function AuthFlow() {
             </form>
           )}
 
-          {/* STEP 3: Multi-box Code Block Validation Layout */}
+          {/* STEP 3: Multi-box Code Block Validation Layout (6 boxes) */}
           {step === 'otp-verify' && (
             <form onSubmit={handleVerifyOtp} className="w-full flex flex-col gap-4">
               <button 
@@ -257,8 +262,8 @@ export default function AuthFlow() {
                   <label>Verification Code</label>
                 </div>
 
-                {/* Grid block mapping individual character placeholders */}
-                <div className="flex justify-center gap-3">
+                {/* Grid block mapping 6 responsive individual boxes */}
+                <div className="flex justify-center gap-1.5 sm:gap-2">
                   {otpBoxes.map((boxValue, idx) => (
                     <input
                       key={idx}
@@ -269,15 +274,14 @@ export default function AuthFlow() {
                       onChange={(e) => handleOtpBoxChange(e.target.value, idx)}
                       onKeyDown={(e) => handleKeyDown(e, idx)}
                       onPaste={handlePaste}
-                      className="w-14 h-14 text-center text-xl font-bold border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-inner"
+                      className="w-10 h-12 sm:w-12 sm:h-12 text-center text-lg font-bold border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-inner"
                     />
                   ))}
                 </div>
               </div>
 
-              {/* Informative description listing delivery status tracking targets */}
               <p className="text-gray-400 text-[11px] sm:text-xs text-center mb-2">
-                Sent to <span className="font-medium text-gray-600 break-all">{email || "jayamweb.designer2@gmail.com"}</span>
+                Sent to <span className="font-medium text-gray-600 break-all">{email}</span>
               </p>
 
               <button 
@@ -288,12 +292,11 @@ export default function AuthFlow() {
               </button>
 
               <div className="text-center text-xs text-gray-500 font-medium">
-                Didn't receive? <button type="button" onClick={() => setOtpBoxes(['5', '6', '9', '6'])} className="text-primary font-bold hover:underline bg-transparent border-0 cursor-pointer">Resend OTP</button>
+                Didn't receive? <button type="button" onClick={() => handleSendCode(null)} className="text-primary font-bold hover:underline bg-transparent border-0 cursor-pointer">Resend OTP</button>
               </div>
             </form>
           )}
 
-          {/* Standard Form Consent Footers */}
           <div className="w-full h-px bg-gray-100 my-6"></div>
           <p className="text-[11px] sm:text-xs text-center text-gray-400 leading-relaxed max-w-[280px]">
             By continuing, you agree to our{' '}
@@ -303,7 +306,6 @@ export default function AuthFlow() {
         </div>
       </div>
 
-      {/* Recreated Windows Setup Accent Label Layer */}
       <div className="absolute bottom-4 right-4 text-right text-gray-400/50 pointer-events-none select-none text-[13px] leading-tight font-light hidden md:block">
         Activate Windows<br />
         <span className="text-[11px]">Go to Settings to activate Windows.</span>

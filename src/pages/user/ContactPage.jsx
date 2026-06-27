@@ -3,6 +3,8 @@ import { MapPin, Mail, Phone } from "lucide-react";
 import { createEnqueriesAPI } from "../../api/enqueriesApi";
 import { toast } from "../../components/toast";
 import { getHomeCMS } from '../../api/homeCms'; 
+import { submitContactFormAPI } from "../../api/userApi";
+
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +14,8 @@ export default function ContactPage() {
     subject: "",
     message: "",
   });
+
+  
 
   const [contactData, setContactData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,8 +132,7 @@ export default function ContactPage() {
     try {
       setLoading(true);
 
-      const response = await createEnqueriesAPI(formData);
-
+      const response = await submitContactFormAPI(formData);
       toast.success(response.message || "Enquiry submitted successfully.");
 
       setFormData({

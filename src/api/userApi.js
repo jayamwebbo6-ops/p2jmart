@@ -11,11 +11,9 @@ const userApi = axios.create({
 userApi.interceptors.request.use(
   (config) => {
     const token = getCookie('p2jmart_token');
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => Promise.reject(error)
@@ -35,6 +33,35 @@ export const googleLoginAPI = async (idToken) => {
 
   return response.data;
 };
+
+// ==========================================
+// NEW: Email OTP Login API Calls
+// ==========================================
+
+// Send OTP Request
+export const sendOtpAPI = async (email) => {
+  // Matches your base routing path structure: /api/user/send-otp
+  const response = await userApi.post('/user/send-otp', { email });
+  return response.data;
+};
+
+// Verify OTP Request
+export const verifyOtpAPI = async (email, otp) => {
+  const response = await userApi.post('/user/verify-otp', { email, otp });
+
+  if (response.data?.success) {
+    // Save authentication state identically to Google Login
+    setCookie('p2jmart_token', response.data.token, 7);
+    localStorage.setItem(
+      'p2j_user_profile',
+      JSON.stringify(response.data.data)
+    );
+  }
+
+  return response.data;
+};
+
+// ==========================================
 
 // Fetch User Profile
 export const getUserProfile = async () => {
@@ -56,6 +83,15 @@ export const updateUserProfile = async (profileData) => {
 
   return response.data;
 };
+
+
+
+
+export const submitContactFormAPI = async (contactData) => {
+  const response = await userApi.post('/contact-us', contactData);
+  return response.data;
+};
+
 
 // Check if user is authenticated
 export const isUserAuthenticated = () => {
