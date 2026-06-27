@@ -17,6 +17,37 @@ import { getProductsAPI } from '../api/productApi';
 import { getCategoriesAPI } from '../api/categoryApi';
 import { getHomeCMS } from '../api/homeCms'; 
 
+// ---- IMAGE HELPERS ----
+// If your backend serves uploaded images from a base URL (e.g. your API server),
+// set it here so relative paths like "uploads/products/xyz.webp" resolve correctly.
+// If images already render fine elsewhere in your app, check how they do it
+// (e.g. axios baseURL, .env variable) and mirror that here.
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || '';
+
+const resolveImageUrl = (path) => {
+  if (!path) return 'placeholder.jpg';
+  // Already a full URL (http/https) or a data URI — use as-is
+  if (/^(https?:)?\/\//.test(path) || path.startsWith('data:')) return path;
+  // Otherwise prefix with base URL (avoiding double slashes)
+  return `${IMAGE_BASE_URL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+};
+
+// Pulls the best available image for a product card:
+// 1. First variant's images[0]
+// 2. First variant's single "image" field
+// 3. Top-level product.image
+// 4. Top-level product.images[0]
+// 5. Placeholder fallback
+const getProductImage = (product) => {
+  const raw =
+    product?.variants?.[0]?.images?.[0] ||
+    product?.variants?.[0]?.image ||
+    product?.image ||
+    (product?.images && product.images[0]) ||
+    null;
+  return resolveImageUrl(raw);
+};
+
 const Header = memo(({ wishlist = [], cart = [] }) => {
 
   const [HeaderIconData, setHeaderIconData] = useState(null);
@@ -270,10 +301,15 @@ const handleItemClick = (product) => {
             <div className="space-y-2">
               {recentlyViewed.map(product => {
                 const pId = product.id || product._id;
-                const imgUrl = product.image || (product.images && product.images[0]) || 'placeholder.jpg';
+                const imgUrl = getProductImage(product);
                 return (
                   <div key={pId} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                    <img src={imgUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
+                    <img
+                      src={imgUrl}
+                      alt={product.title || product.name || ''}
+                      onError={(e) => { e.currentTarget.src = 'placeholder.jpg'; }}
+                      className="w-10 h-10 object-cover rounded-lg border border-gray-100"
+                    />
                     <span className="text-xs sm:text-sm font-semibold text-gray-700 truncate">{product.title || product.name}</span>
                   </div>
                 );
@@ -294,10 +330,15 @@ const handleItemClick = (product) => {
             <div className="space-y-2">
               {realProducts.slice(0, 5).map(product => {
                 const pId = product.id || product._id;
-                const imgUrl = product.image || (product.images && product.images[0]) || 'placeholder.jpg';
+                const imgUrl = getProductImage(product);
                 return (
                   <div key={pId} onClick={() => handleItemClick(product)} className="flex items-center gap-3 p-1.5 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-                    <img src={imgUrl} alt="" className="w-10 h-10 object-cover rounded-lg border border-gray-100" />
+                    <img
+                      src={imgUrl}
+                      alt={product.title || product.name || ''}
+                      onError={(e) => { e.currentTarget.src = 'placeholder.jpg'; }}
+                      className="w-10 h-10 object-cover rounded-lg border border-gray-100"
+                    />
                     <span className="text-xs font-semibold text-gray-800 line-clamp-1">{product.title || product.name}</span>
                   </div>
                 );
