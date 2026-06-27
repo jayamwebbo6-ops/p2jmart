@@ -36,7 +36,7 @@ import {
   deleteSubcategoryAPI 
 } from '../../api/categoryApi';
 import { getAttributesAPI } from '../../api/attributeApi';
-import { getProductsAPI, deleteProductAPI } from '../../api/productApi';
+import { getProductsAPI, deleteProductAPI, toggleProductStatusAPI } from '../../api/productApi';
 
 // Initial pre-populated catalog tree data matching user theme
 
@@ -143,7 +143,7 @@ const Products = () => {
         // 3. Fetch products dynamically from server
         let fetchedProducts = [];
         try {
-          const prodRes = await getProductsAPI();
+          const prodRes = await getProductsAPI({ includeInactive: 'true' });
           if (prodRes && prodRes.success) {
             fetchedProducts = prodRes.data;
           }
@@ -502,6 +502,34 @@ const Products = () => {
     );
   };
 
+  const handleToggleProductStatus = async (prodId, currentStatus) => {
+    try {
+      const res = await toggleProductStatusAPI(prodId);
+      if (res && res.success) {
+        toast.success(res.message || 'Product status updated');
+        // Update catalog state
+        setCatalog(prevCatalog => 
+          prevCatalog.map(cat => ({
+            ...cat,
+            subcategories: cat.subcategories.map(sub => ({
+              ...sub,
+              products: sub.products.map(p => 
+                (p.id === prodId || p._id === prodId)
+                  ? { ...p, isActive: !p.isActive } 
+                  : p
+              )
+            }))
+          }))
+        );
+      } else {
+        toast.error(res.message || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Error updating product status');
+    }
+  };
+
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
       {/* Page Header */}
@@ -750,7 +778,7 @@ const Products = () => {
                     {/* Variants */}
                     <td className="py-4 px-4">
                       {prod.variants && prod.variants.length > 0 ? (
-                        <div className="flex flex-col gap-2 min-w-[140px] max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
+                        <div className="flex flex-col gap-2 min-w-[150px] max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
                           {prod.variants.map((v, index) => {
                             const colorVal = v.attributes?.color || '';
                             const sizeVal = v.attributes?.size || '';
@@ -779,9 +807,22 @@ const Products = () => {
                                 <div className="text-[9px] text-gray-400 font-bold mt-1.5">
                                   Price: <span className="text-purple-600 font-extrabold">₹{Number(v.price).toLocaleString()}</span>
                                 </div>
-                                <div className="text-[9px] text-gray-400 font-bold mt-0.5">
-                                  Inv: <span className="text-pink-600 font-extrabold">{v.stock} units</span>
+                                <div className="text-[9px] text-gray-405 font-bold mt-0.5 flex flex-wrap items-center gap-1">
+                                  <span>Inv:</span>
+                                  <span className={v.stock === 0 ? "text-rose-600 font-extrabold" : v.stock < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
+                                    {v.stock} units
+                                  </span>
+                                  {v.stock === 0 ? (
+                                    <span className="bg-rose-50 text-rose-600 px-1 py-0.2 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
+                                  ) : v.stock < 5 ? (
+                                    <span className="bg-amber-50 text-amber-600 px-1 py-0.2 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
+                                  ) : null}
                                 </div>
+                                {v.weight !== undefined && v.weight > 0 && (
+                                  <div className="text-[9px] text-gray-450 font-bold mt-0.5">
+                                    Weight: <span className="text-slate-700 font-bold">{v.weight} kg</span>
+                                  </div>
+                                )}
                               </div>
                             );
                           })}
@@ -804,8 +845,16 @@ const Products = () => {
                           <div className="text-[9px] text-gray-400 font-bold mt-1.5">
                             Price: <span className="text-purple-600 font-extrabold">₹{Number(prod.price).toLocaleString()}</span>
                           </div>
-                          <div className="text-[9px] text-gray-400 font-bold mt-0.5">
-                            Inv: <span className="text-pink-600 font-extrabold">{prod.stock !== undefined ? prod.stock : 10} units</span>
+                          <div className="text-[9px] text-gray-405 font-bold mt-0.5 flex flex-wrap items-center gap-1">
+                            <span>Inv:</span>
+                            <span className={(prod.stock !== undefined ? prod.stock : 10) === 0 ? "text-rose-600 font-extrabold" : (prod.stock !== undefined ? prod.stock : 10) < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
+                              {prod.stock !== undefined ? prod.stock : 10} units
+                            </span>
+                            {(prod.stock !== undefined ? prod.stock : 10) === 0 ? (
+                              <span className="bg-rose-50 text-rose-600 px-1 py-0.2 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
+                            ) : (prod.stock !== undefined ? prod.stock : 10) < 5 ? (
+                              <span className="bg-amber-50 text-amber-600 px-1 py-0.2 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
+                            ) : null}
                           </div>
                         </div>
                       )}
@@ -828,13 +877,16 @@ const Products = () => {
                           ? prod.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
                           : (prod.stock !== undefined ? parseInt(prod.stock) : 10);
                         const isOutOfStock = totalQty === 0;
+                        const isLowStock = totalQty > 0 && totalQty < 5;
                         return (
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
                             isOutOfStock 
                               ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                              : isLowStock
+                                ? 'bg-amber-50 text-amber-700 border-amber-205'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-250'
                           }`}>
-                            {isOutOfStock ? 'OUT OF STOCK' : 'IN STOCK'}
+                            {isOutOfStock ? 'OUT OF STOCK' : isLowStock ? 'LOW STOCK' : 'IN STOCK'}
                           </span>
                         );
                       })()}
@@ -842,19 +894,26 @@ const Products = () => {
 
                     {/* Status */}
                     <td className="py-4 px-4 text-center">
-                      {(() => {
-                        const statusVal = prod.status || 'Active';
-                        const isActive = statusVal.toLowerCase() === 'active';
-                        return (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
-                            isActive
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {statusVal}
-                          </span>
-                        );
-                      })()}
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleProductStatus(prod.id || prod._id, prod.isActive)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            prod.isActive !== false ? 'bg-[#001E3C]' : 'bg-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                              prod.isActive !== false ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                        <span className={`text-[10px] font-black uppercase tracking-wider select-none ${
+                          prod.isActive !== false ? 'text-[#001E3C]' : 'text-slate-400'
+                        }`}>
+                          {prod.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Reviews */}

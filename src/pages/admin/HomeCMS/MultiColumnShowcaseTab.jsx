@@ -15,8 +15,7 @@ const THEME = {
   mutedText: 'text-[#64748b]',
 };
 
-// Replace this with your actual Backend Server URL (e.g., http://localhost:5000)
-const IMAGE_BASE_URL = "http://localhost:5000"; 
+const IMAGE_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api"; 
 
 const MultiColumnShowcaseTab = ({
   featuredProducts = [],
@@ -153,7 +152,7 @@ const MultiColumnShowcaseTab = ({
   const getProductDisplayImage = (item) => {
     const rawImagePath = item.variants?.[0]?.image || item.image;
     if (!rawImagePath) return "";
-    return rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath}`;
+    return rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath.replace(/^\//, '')}`;
   };
 
   if (loading) {

@@ -41,3 +41,9 @@ export const deleteSubcategoryAPI = async (id) => {
   const response = await api.delete(`/categories/sub/${id}`);
   return response.data;
 };
+
+// Get subcategory details
+export const getSubcategoryDetailsAPI = async (id) => {
+  const response = await api.get(`/categories/sub/${id}/details`);
+  return response.data;
+};

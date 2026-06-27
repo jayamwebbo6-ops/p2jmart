@@ -205,7 +205,8 @@ const CategoryTab = ({ sections = [], setSections }) => {
     }
 
     // 3. Construct the clean URL that matches your exact Express app.use('/api/uploads') mount configuration
-    return `http://localhost:5000/api/uploads/${structuralPath}`;
+    const base = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
+    return `${base.replace(/\/$/, '')}/uploads/${structuralPath}`;
   };
 
 

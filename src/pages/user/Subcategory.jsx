@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Link, useParams } from "react-router-dom";
 import ProductCard from "../../components/ProductCard"; 
 import OfferSlider from "../../components/OfferSlider";
 import { getProductsAPI } from "../../api/productApi";
-import { getCategoriesAPI } from "../../api/categoryApi";
+import { getCategoriesAPI, getSubcategoryDetailsAPI } from "../../api/categoryApi";
 
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
@@ -231,18 +231,10 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     
     const fetchNames = async () => {
       try {
-        const catRes = await getCategoriesAPI();
-        if (catRes && catRes.success && Array.isArray(catRes.data)) {
-          for (const cat of catRes.data) {
-            const matchedSub = (cat.subcategories || []).find(
-              sub => (sub._id || sub.id) === subcategoryId
-            );
-            if (matchedSub) {
-              setCategoryName(cat.name);
-              setSubcategoryName(matchedSub.name || matchedSub);
-              break;
-            }
-          }
+        const res = await getSubcategoryDetailsAPI(subcategoryId);
+        if (res && res.success && res.data) {
+          setCategoryName(res.data.categoryName);
+          setSubcategoryName(res.data.subcategoryName);
         }
       } catch (err) {
         console.error("Error looking up subcategory details:", err);

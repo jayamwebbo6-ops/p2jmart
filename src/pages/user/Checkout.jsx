@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { 
   MapPin, 
   Plus, 
@@ -21,10 +22,14 @@ import {
   deleteAddressAPI 
 } from '../../api/addressApi';
 import { getAllShippingAPI } from '../../api/shippingApi';
+import { getAllGstAPI } from '../../api/gstApi';
+import { createOrderAPI } from '../../api/orderApi';
+import { fetchCart } from '../../redux/cartSlice';
 
 const Checkout = ({ cart = [], setCart }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useDispatch();
 
   const directPurchaseItems = location.state?.items || null;
   const isDirectPurchase = !!location.state?.directPurchase;
@@ -40,6 +45,7 @@ const Checkout = ({ cart = [], setCart }) => {
   // Addresses state from DB
   const [addresses, setAddresses] = useState([]);
   const [shippingStates, setShippingStates] = useState([]);
+  const [gstSettings, setGstSettings] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
@@ -61,21 +67,47 @@ const Checkout = ({ cart = [], setCart }) => {
   // Saved placed order details for Success Screen
   const [placedOrder, setPlacedOrder] = useState(null);
 
-  // Math Calculations
-  const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shippingFee = subtotal > 1000 || subtotal === 0 ? 0 : 100;
-  const total = subtotal + shippingFee;
-
   // Selected address object
   const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
 
-  // Load addresses and shipping states from database
+  // Math Calculations
+  const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+  // Dynamic Shipping calculation
+  const shippingFee = (() => {
+    if (!selectedAddress || !shippingStates.length || checkoutItems.length === 0) return 0;
+    const rule = shippingStates.find(s => s.stateName.trim().toLowerCase() === selectedAddress.state.trim().toLowerCase());
+    if (!rule) {
+      return subtotal > 1000 ? 0 : 100;
+    }
+    const totalWeight = checkoutItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
+    if (totalWeight <= rule.baseWeight) {
+      return rule.baseCost;
+    } else {
+      const extraWeight = totalWeight - rule.baseWeight;
+      const extraUnits = Math.ceil(extraWeight / rule.additionalWeight);
+      return rule.baseCost + (extraUnits * rule.additionalCost);
+    }
+  })();
+
+  // Dynamic GST tax calculation
+  const gstAmount = checkoutItems.reduce((acc, item) => {
+    const catName = item.category || 'Catalog';
+    const rule = gstSettings.find(g => g.productCategoryName.trim().toLowerCase() === catName.trim().toLowerCase());
+    const rate = rule && rule.gstStatus === 'active' ? rule.percentage : 0;
+    return acc + ((item.price * item.quantity) * (rate / 100));
+  }, 0);
+
+  const total = subtotal + gstAmount + shippingFee;
+
+  // Load addresses, shipping states, and GST configurations from database
   const loadCheckoutData = async () => {
     setLoading(true);
     try {
-      const [addressRes, shippingRes] = await Promise.all([
+      const [addressRes, shippingRes, gstRes] = await Promise.all([
         getMyAddressesAPI(),
-        getAllShippingAPI()
+        getAllShippingAPI(),
+        getAllGstAPI()
       ]);
 
       if (addressRes && addressRes.success) {
@@ -91,9 +123,13 @@ const Checkout = ({ cart = [], setCart }) => {
       if (shippingRes && shippingRes.success) {
         setShippingStates(shippingRes.data);
       }
+
+      if (gstRes && gstRes.success) {
+        setGstSettings(gstRes.data);
+      }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to load shipping or address book info');
+      toast.error('Failed to load checkout settings');
     } finally {
       setLoading(false);
     }
@@ -223,22 +259,60 @@ const Checkout = ({ cart = [], setCart }) => {
     setPaymentStage('gateway_modal');
   };
 
-  const finalizeSuccessfulPayment = () => {
-    setPlacedOrder({
-      orderId: orderRef,
-      items: [...checkoutItems],
-      subtotal,
-      shippingFee,
-      total,
-      address: { ...selectedAddress },
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    });
+  const finalizeSuccessfulPayment = async () => {
+    setLoading(true);
+    try {
+      const orderPayload = {
+        items: checkoutItems.map(item => ({
+          productId: item.productId || item.id || item._id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || (item.images && item.images[0]) || '',
+          selectedOptions: item.customization 
+            ? { ...item.selectedOptions, customization: item.customization }
+            : (item.selectedOptions || {}),
+          isComboProduct: !!item.isComboProduct,
+          includedProducts: item.includedProducts || [],
+          weight: item.weight || 0
+        })),
+        shippingAddress: {
+          fullName: selectedAddress.fullName,
+          phoneNumber: selectedAddress.phoneNumber,
+          streetAddress: selectedAddress.streetAddress,
+          apartment: selectedAddress.apartment || '',
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode
+        },
+        paymentMethod: 'UPI/Card (Simulated)',
+        paymentStatus: 'paid',
+        subtotal: Number(subtotal),
+        gst: Number(gstAmount),
+        shippingFee: Number(shippingFee),
+        total: Number(total),
+        isDirectPurchase: isDirectPurchase
+      };
 
-    if (!isDirectPurchase) {
-      setCart([]);
+      const res = await createOrderAPI(orderPayload);
+      if (res && res.success) {
+        toast.success(res.message || 'Order placed successfully');
+        setPlacedOrder(res.data);
+        if (!isDirectPurchase) {
+          dispatch(fetchCart());
+          setCart([]);
+        }
+        setStep(3);
+      } else {
+        toast.error(res.message || 'Failed to place order');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error creating order');
+    } finally {
+      setPaymentStage('idle');
+      setLoading(false);
     }
-    setPaymentStage('idle');
-    setStep(3);
   };
 
   useEffect(() => {
@@ -276,15 +350,17 @@ const Checkout = ({ cart = [], setCart }) => {
               </div>
               <div>
                 <p className="text-gray-400 font-medium">Date Placed</p>
-                <p className="font-bold text-gray-900">{placedOrder.date}</p>
+                <p className="font-bold text-gray-900">
+                  {new Date(placedOrder.placedDate || placedOrder.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
               </div>
               <div className="md:col-span-2">
                 <p className="text-gray-400 font-medium">Shipping Address</p>
                 <div className="font-semibold text-gray-800 mt-1">
-                  <p className="font-bold text-black capitalize">{placedOrder.address.fullName}</p>
-                  <p className="text-gray-600">{placedOrder.address.streetAddress}{placedOrder.address.apartment ? `, ${placedOrder.address.apartment}` : ''}</p>
-                  <p className="text-gray-600">{placedOrder.address.city}, {placedOrder.address.state} - {placedOrder.address.pincode}</p>
-                  <p className="text-gray-800 mt-1 font-bold">PH: {placedOrder.address.phoneNumber}</p>
+                  <p className="font-bold text-black capitalize">{placedOrder.shippingAddress?.fullName}</p>
+                  <p className="text-gray-600">{placedOrder.shippingAddress?.streetAddress}{placedOrder.shippingAddress?.apartment ? `, ${placedOrder.shippingAddress.apartment}` : ''}</p>
+                  <p className="text-gray-600">{placedOrder.shippingAddress?.city}, {placedOrder.shippingAddress?.state} - {placedOrder.shippingAddress?.pincode}</p>
+                  <p className="text-gray-800 mt-1 font-bold">PH: {placedOrder.shippingAddress?.phoneNumber}</p>
                 </div>
               </div>
               <div className="md:col-span-2 border-t border-gray-200 pt-3 flex justify-between items-center">
@@ -525,6 +601,11 @@ const Checkout = ({ cart = [], setCart }) => {
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
               <span>Subtotal</span>
               <span className="text-gray-900 font-bold">₹{subtotal.toFixed(2)}</span>
+            </div>
+
+            <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
+              <span>GST Tax</span>
+              <span className="text-gray-900 font-bold">₹{gstAmount.toFixed(2)}</span>
             </div>
             
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">

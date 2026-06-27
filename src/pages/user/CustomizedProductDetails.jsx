@@ -12,7 +12,7 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import { getProductByIdAPI } from '../../api/productApi';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
 const getImageURL = (path) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
@@ -79,6 +79,10 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       deliveryMode: "Home Delivery Available Across Regions",
       variants: []
     };
+    const firstVar = Array.isArray(raw.variants) ? raw.variants[0] : null;
+    const defaultWeight = firstVar ? (firstVar.weight || 0) : (raw.weight || 0);
+    const defaultPrice = firstVar ? (firstVar.price || 0) : (raw.price || 0);
+    const defaultOriginalPrice = firstVar ? (firstVar.originalPrice || 0) : (raw.originalPrice || 0);
     return {
       id: raw._id?.$oid || raw._id || raw.id,
       title: raw.title || raw.name || '',
@@ -92,6 +96,13 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       warranty: raw.warranty || '',
       returnPolicy: raw.returnPolicy || 'Select Return Days',
       deliveryMode: raw.deliveryMode || '',
+      isActive: raw.isActive !== false,
+      price: defaultPrice,
+      originalPrice: defaultOriginalPrice,
+      weight: defaultWeight,
+      category: typeof raw.category === 'object' && raw.category?.name
+        ? raw.category.name 
+        : (raw.category || 'Catalog'),
       variants: Array.isArray(raw.variants) ? raw.variants : []
     };
   }, [loadedProduct, productId]);
@@ -164,6 +175,12 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [customImageURL, setCustomImageURL] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [mainImageLoaded, setMainImageLoaded] = useState(false);
+
+  useEffect(() => {
+    setMainImageLoaded(false);
+  }, [activePreviewImage]);
+
   const [swiperRef, setSwiperRef] = useState(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showTextInputPanel, setShowTextInputPanel] = useState(false);
@@ -317,6 +334,9 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     if (onAddToCart) {
       onAddToCart({
         ...product,
+        price: activePrice || product.price,
+        originalPrice: activeOriginalPrice || product.originalPrice,
+        weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
         quantity: quantity,
         customization: {
           text: customUserText,
@@ -336,6 +356,9 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         items: [
           {
             ...product,
+            price: activePrice || product.price,
+            originalPrice: activeOriginalPrice || product.originalPrice,
+            weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
             quantity: quantity,
             customization: {
               text: customUserText,
@@ -416,6 +439,11 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               className="flex-grow aspect-square border border-gray-200 rounded-lg bg-gray-50 relative overflow-hidden flex items-center justify-center cursor-zoom-in"
             >
               <>
+                {!mainImageLoaded && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-150 via-gray-200 to-gray-150 animate-pulse flex items-center justify-center z-5">
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading...</span>
+                  </div>
+                )}
                 <img 
                   src={activePreviewImage} 
                   alt={product.title} 
@@ -423,7 +451,8 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                     ...zoomStyle,
                     objectFit: imageFit
                   }}
-                  className="w-full h-full transition-transform duration-75 ease-out pointer-events-none select-none"
+                  onLoad={() => setMainImageLoaded(true)}
+                  className={`w-full h-full transition-all duration-300 ease-out pointer-events-none select-none ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
                 <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
                   <Eye size={16} />
@@ -455,10 +484,16 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
             </div>
             {/* Stock badge */}
             <div className="mt-1">
-              {isOutOfStock
-                ? <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
-                : <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
-              }
+              {product.isActive === false ? (
+                <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 uppercase tracking-wider flex items-center gap-1.5 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                  Product Inactive / Unavailable
+                </span>
+              ) : isOutOfStock ? (
+                <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
+              )}
             </div>
 
             <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -569,9 +604,10 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
 
           <div className="pbflex flex-wrap gap-3 items-center w-full border-b border-gray-100 ">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm">
+              <div className={`flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm ${product.isActive === false ? 'opacity-50 pointer-events-none' : ''}`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={product.isActive === false}
                   className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
                 >
                   -
@@ -581,6 +617,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                 </div>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
+                  disabled={product.isActive === false}
                   className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
                 >
                   +
@@ -606,9 +643,9 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
           <div className="flex flex-col md:flex-row gap-3 mt-auto">
             <button 
               onClick={handleAddToCart}
-              disabled={isOutOfStock}
+              disabled={product.isActive === false || isOutOfStock}
               className={`flex-1 border-2 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-sm transition-colors ${
-                isOutOfStock
+                product.isActive === false || isOutOfStock
                   ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
                   : 'border-primary text-primary hover:bg-primary/5'
               }`}
@@ -617,14 +654,14 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
             </button>
             <button 
               onClick={handleBuyNow}
-              disabled={isOutOfStock}
+              disabled={product.isActive === false || isOutOfStock}
               className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-md transition-opacity ${
-                isOutOfStock
+                product.isActive === false || isOutOfStock
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-primary text-white hover:opacity-90'
               }`}
             >
-              <ShoppingBag size={18} /> {isOutOfStock ? 'Unavailable' : 'Buy Now'}
+              <ShoppingBag size={18} /> {product.isActive === false ? 'Inactive' : isOutOfStock ? 'Unavailable' : 'Buy Now'}
             </button>
           </div>
 

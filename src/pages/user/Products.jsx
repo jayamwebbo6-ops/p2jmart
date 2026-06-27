@@ -14,7 +14,7 @@ const subcategoryImages = [
 
 const getSubcategoryImage = (catName, subName, idx, subImage) => {
   if (subImage) {
-    const BACKEND_URL = "http://localhost:5000";
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
     // If the image is already a fully qualified URL, return it directly
     if (subImage.startsWith('http://') || subImage.startsWith('https://')) {
       return subImage;

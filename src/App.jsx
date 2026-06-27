@@ -6,6 +6,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { toast, ToastContainer } from './components/toast';
 import { isUserAuthenticated } from './api/userApi';
 import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart, clearCartState } from './redux/cartSlice';
+import { fetchWishlist, addWishlistItem, removeWishlistItem, clearWishlistState } from './redux/wishlistSlice';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
@@ -69,12 +70,15 @@ function App() {
     setLocalCart(cart);
   }, [cart]);
 
+  const wishlist = useSelector((state) => state.wishlist.items || []);
+
   /* ==========================================================================
-      LOAD AUTHENTICATED USER CART
+      LOAD AUTHENTICATED USER CART & WISHLIST
      ========================================================================== */
   useEffect(() => {
     if (isUserAuthenticated()) {
       dispatch(fetchCart());
+      dispatch(fetchWishlist());
     }
   }, [dispatch]);
 
@@ -82,8 +86,10 @@ function App() {
     const onLoginStateChange = () => {
       if (isUserAuthenticated()) {
         dispatch(fetchCart());
+        dispatch(fetchWishlist());
       } else {
         dispatch(clearCartState());
+        dispatch(clearWishlistState());
       }
     };
 
@@ -92,31 +98,36 @@ function App() {
   }, [dispatch]);
 
   /* ==========================================================================
-      GLOBAL WISHLIST STATE MANAGEMENT
+      GLOBAL WISHLIST STATE MANAGEMENT (DYNAMIC BACKEND INTEGRATED)
      ========================================================================== */
-  const [wishlist, setWishlist] = useState(() => {
-    const saved = localStorage.getItem("user_wishlist");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const addToWishlist = async (product) => {
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before adding items to wishlist.');
+      return;
+    }
+    const productId = product.id || product._id || product.productId;
+    if (!productId) return;
 
-  useEffect(() => {
-    localStorage.setItem("user_wishlist", JSON.stringify(wishlist));
-  }, [wishlist]);
-
-  const addToWishlist = (product) => {
-    if (!wishlist.some((item) => item.id === product.id)) {
-      setWishlist([...wishlist, product]);
+    try {
+      await dispatch(addWishlistItem(productId)).unwrap();
       toast.success(`"${product.title || 'Product'}" added to Wishlist!`);
-    } else {
-      toast.info(`"${product.title || 'Product'}" is already in your Wishlist.`);
+    } catch (error) {
+      toast.error(error || 'Unable to add item to wishlist.');
     }
   };
 
-  const removeFromWishlist = (productId) => {
-    const item = wishlist.find((item) => item.id === productId);
-    setWishlist(wishlist.filter((item) => item.id !== productId));
-    if (item) {
-      toast.info(`"${item.title}" removed from Wishlist.`);
+  const removeFromWishlist = async (productId) => {
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before removing items from wishlist.');
+      return;
+    }
+    if (!productId) return;
+
+    try {
+      await dispatch(removeWishlistItem(productId)).unwrap();
+      toast.info('Item removed from Wishlist.');
+    } catch (error) {
+      toast.error(error || 'Unable to remove item from wishlist.');
     }
   };
 
@@ -138,7 +149,9 @@ function App() {
       image: product.image || (product.images && product.images[0]) || '',
       selectedOptions: product.selectedOptions || {},
       isComboProduct: Boolean(product.isComboProduct),
-      includedProducts: product.includedProducts || []
+      includedProducts: product.includedProducts || [],
+      weight: Number(product.weight || 0),
+      category: product.category || 'Catalog'
     };
 
     try {
@@ -285,6 +298,7 @@ function App() {
                 <Wishlist 
                   wishlist={wishlist}
                   removeFromWishlist={removeFromWishlist}
+                  addToCart={addToCart}
                 />
               } 
             />

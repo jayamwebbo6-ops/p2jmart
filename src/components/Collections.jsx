@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 import { getHomeCMS } from '../api/homeCms';
 import { getProductsAPI } from '../api/productApi';
 
-// Replace this with your actual Backend Server URL (e.g., http://localhost:5000 or an env variable)
-const IMAGE_BASE_URL = "http://localhost:5000"; 
+const IMAGE_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api"; 
 
 const Collections = () => {
   const [sections, setSections] = useState([]);
@@ -139,9 +138,8 @@ const Collections = () => {
     // 1. Prioritize the first available variant's image, fall back to root image
     const rawImagePath = product.variants?.[0]?.image || product.image;
 
-    // 2. Format the absolute asset link pointing to your backend server
     const displayImage = rawImagePath
-      ? (rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath}`)
+      ? (rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath.replace(/^\//, '')}`)
       : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
 
     return (

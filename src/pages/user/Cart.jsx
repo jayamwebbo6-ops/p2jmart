@@ -10,6 +10,15 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
   const location = useLocation();
   const navigate = useNavigate();
 
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
+    return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
+  };
+
   /* ==========================================================================
       INTERMEDIARY HANDLER FOR CAPTURING ROUTER STATE BUNDLES
      ========================================================================== */
@@ -89,7 +98,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
             <div className="flex justify-center min-[240px]:block flex-shrink-0">
               <div className="w-16 h-16 min-[240px]:w-20 min-[240px]:h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
                 {/* Fallback image handle for standard bundle components schema */}
-                <img src={item.image || (item.includedProducts && item.includedProducts[0]?.image)} alt={item.title} className="w-full h-full object-cover" />
+                <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title} className="w-full h-full object-cover" />
                 {item.isComboProduct && (
                   <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
                     <Layers size={8} /> Combo
@@ -139,7 +148,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 shadow-sm">
                 <img 
-                  src={subItem.image} 
+                  src={formatImageUrl(subItem.image)} 
                   alt={subItem.productName || subItem.title} 
                   className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300" 
                 />
