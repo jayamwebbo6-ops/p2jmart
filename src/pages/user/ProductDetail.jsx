@@ -32,6 +32,27 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
   };
 
+
+  const handleShare = async () => {
+    // Check if the browser supports the Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Check this out!',
+          text: 'Here is some cool content I wanted to share with you.',
+          url: window.location.href, 
+        });
+        console.log('Successfully shared');
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback behavior for browsers/devices that don't support it (like older desktop browsers)
+      alert('Native sharing is not supported on this browser. Copying URL to clipboard instead!');
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
   // --- DYNAMIC DATA INTEGRATION LAYER ---
   const incomingProduct = location.state?.product;
   const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
@@ -705,9 +726,12 @@ useEffect(() => {
                   className={isWishlisted ? "text-red-500" : "text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors"} 
                 />
               </button>
-              <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
-                <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
-              </button>
+             <button 
+      onClick={handleShare}
+      className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
+    >
+      <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
+    </button>
             </div>
 
             {/* Action Buttons */}
