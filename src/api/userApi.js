@@ -84,6 +84,15 @@ export const updateUserProfile = async (profileData) => {
   return response.data;
 };
 
+
+
+
+export const submitContactFormAPI = async (contactData) => {
+  const response = await userApi.post('/contact-us', contactData);
+  return response.data;
+};
+
+
 // Check if user is authenticated
 export const isUserAuthenticated = () => {
   return !!getCookie('p2jmart_token');
