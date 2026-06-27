@@ -167,42 +167,49 @@ const CategoryTab = ({ sections = [], setSections }) => {
 
   // FRONTEND PERMANENT IMAGE PARSER FIX
   // FRONTEND MULTI-PARSER IMAGE FIX (Leaves server.js untouched)
+  // FRONTEND FIX: Custom path parser aligning to server.js without modifications
   const getProductImage = (prod) => {
     if (!prod) return '';
     
-    let rawImage = prod.image || 
+    // 1. Prioritize picking the first image array index [0] from the first variant item
+    let rawImage = prod.variants?.[0]?.images?.[0] || 
+                    prod.variants?.[0]?.image ||
+                    prod.image || 
                     prod.images?.[0] || 
                     prod.imagePath || 
-                    (Array.isArray(prod.imagePath) ? prod.imagePath[0] : null) ||
-                    prod.thumbnail || 
-                    prod.imgUrl || 
-                    prod.imageUrl ||
-                    prod.variants?.[0]?.images?.[0] || 
-                    prod.variants?.[0]?.image;
+                    (Array.isArray(prod.imagePath) ? prod.imagePath[0] : null);
 
+    // Unpack object wrappers if any API middleware intercepts it as an object
     if (rawImage && typeof rawImage === 'object') {
       rawImage = rawImage.url || rawImage.secure_url || rawImage.path || '';
     }
 
     if (typeof rawImage !== 'string' || !rawImage) return '';
 
-    // 1. Clean up any accidental double api/uploads injection strings
-    let cleanPath = rawImage.replace('http://localhost:5000', '');
-    if (cleanPath.includes('/api/uploads/api/uploads')) {
-      cleanPath = cleanPath.replace('/api/uploads/api/uploads', '/api/uploads');
+    // If it's already an absolute external web URL link, bypass operations
+    if (rawImage.startsWith('http')) {
+      return rawImage;
     }
 
-    // 2. Extract just the relative file structure route path
-    // Remove leading slashes or prefixes to normalize it
-    const relativePath = cleanPath.replace(/^\/?(p2jmart\/)?(api\/)?uploads\//, '');
+    // 2. Resolve the path mismatch:
+    // Strip out duplicated structural references so the path cleanly passes through your server routing
+    let structuralPath = rawImage;
+    if (structuralPath.startsWith('/')) {
+      structuralPath = structuralPath.substring(1);
+    }
+    
+    // If the database path starts with 'uploads/', strip it away 
+    // because your server.js route '/api/uploads' already points directly inside that folder.
+    if (structuralPath.startsWith('uploads/')) {
+      structuralPath = structuralPath.replace('uploads/', '');
+    }
 
-    // 3. Try hitting the active environment base route defined in your server.js
-    // This targets your: app.use(`/${BASE_URL}/api/uploads`, ...) middleware rule
-    return `http://localhost:5000/p2jmart/api/uploads/${relativePath}`;
+    // 3. Construct the clean URL that matches your exact Express app.use('/api/uploads') mount configuration
+    return `http://localhost:5000/api/uploads/${structuralPath}`;
   };
 
 
-  
+
 
   if (loading) {
     return (
