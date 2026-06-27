@@ -10,8 +10,7 @@ const AccountLayout = () => {
     { to: '/my-account/profile', label: 'Profile', icon: <User size={18} /> },
     { to: '/my-account/orders', label: 'Orders', icon: <Package size={18} /> },
     { to: '/my-account/address', label: 'Address Book', icon: <MapPin size={18} /> },
-    { to: '/wishlist', label: 'Wishlist', icon: <Heart size={18} /> },
-    { to: '/cart', label: 'Cart', icon: <ShoppingCart size={18} /> },
+  
     { to: '/my-account/logout', label: 'Logout', icon: <LogOut size={18} /> }
   ];
 
