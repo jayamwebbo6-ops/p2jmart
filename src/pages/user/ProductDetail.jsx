@@ -17,8 +17,22 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [selectedColor, setSelectedColor] = useState('Default');
+  const [selectedSize, setSelectedSize] = useState('Default');
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+
+  // Base backend URL helper function to cleanly resolve image streams
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    const BACKEND_URL = "http://localhost:5000";
+    return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
+  };
+
   // --- DYNAMIC DATA INTEGRATION LAYER ---
-  // Read the dynamic product passed from parent routing context
   const incomingProduct = location.state?.product;
   const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
   const [loading, setLoading] = useState(!incomingProduct);
@@ -89,61 +103,113 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
 
   // Pure data parsing direct from Mongoose model parameters
   const product = useMemo(() => {
-    if (!loadedProduct) return null;
-    return {
-      id: loadedProduct._id || loadedProduct.id,
-      brand: loadedProduct.brand || '',
-      title: loadedProduct.title || loadedProduct.name || 'Product Details',
-      // Safe extraction of populated Category object string { id, name }
-      category: typeof loadedProduct.category === 'object' && loadedProduct.category?.name
-        ? loadedProduct.category.name 
-        : (loadedProduct.category || 'Catalog'),
-      price: loadedProduct.price || 0,
-      originalPrice: loadedProduct.originalPrice || Math.round((loadedProduct.price || 0) * 1.4),
-      discount: loadedProduct.discount || 0,
-      rating: loadedProduct.rating ?? 5,
-      reviews: loadedProduct.reviews || 0,
-      // Extract images safely from variant trees, or slide in the master cover image
-      images: loadedProduct.images || (loadedProduct.image ? [loadedProduct.image] : []),
-      
-      // Fallback parser processing variant attribute configurations dynamically
-      colors: loadedProduct.colors || (loadedProduct.variants 
-        ? [...new Set(loadedProduct.variants.map(v => v.attributes?.color))].filter(Boolean).map(c => ({ name: c, hex: c }))
-        : []),
-        
-      sizes: loadedProduct.sizes || (loadedProduct.variants
-        ? [...new Set(loadedProduct.variants.map(v => v.attributes?.size))].filter(Boolean)
-        : []),
-        
-      inStock: loadedProduct.inStock !== undefined 
-        ? loadedProduct.inStock 
-        : (loadedProduct.variants?.some(v => v.stock > 0) ?? true),
-      warranty: loadedProduct.warranty || '',
-      returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
-      deliveryMode: loadedProduct.deliveryMode || ''
-    };
-  }, [loadedProduct]);
+  if (!loadedProduct) return null;
 
-  // Handle dynamic initialization of variant selection rules safely
-  const [selectedColor, setSelectedColor] = useState('Default');
-  const [selectedSize, setSelectedSize] = useState('Default');
-  const [quantity, setQuantity] = useState(1);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const variants = loadedProduct.variants || [];
+
+  // --- 1. SET UP THE BACKUP IMAGE GALLERY ---
+  // If no variant is selected yet, merge every variant image together 
+  // so the user has a full gallery to browse out-of-the-box.
+  let dynamicImages = [];
+  if (variants.length > 0) {
+    dynamicImages = variants.flatMap(v => v.images || (v.image ? [v.image] : []));
+  }
+  // If variants are empty, fall back to the main product banner image
+  if (dynamicImages.length === 0 && loadedProduct.image) {
+    dynamicImages = [loadedProduct.image];
+  }
+
+  // --- 2. SWITCH TO VARIANT-SPECIFIC IMAGES ---
+  // If a specific color variant is active, throw away the backup gallery
+  // and load ONLY the images belonging to this specific color.
+  if (variants.length > 0 && selectedColor && selectedColor !== 'Default') {
+    const matchingVariant = variants.find(v => {
+      // Handles both plain strings ("Orange") and piped strings ("Green|#10B981")
+      const variantColorName = v.attributes?.color?.includes('|')
+        ? v.attributes.color.split('|')[0]
+        : v.attributes?.color;
+
+      const activeColorName = selectedColor.includes('|')
+        ? selectedColor.split('|')[0]
+        : selectedColor;
+
+      return variantColorName === activeColorName;
+    });
+
+    if (matchingVariant && matchingVariant.images && matchingVariant.images.length > 0) {
+      dynamicImages = matchingVariant.images;
+    }
+  }
+
+  // --- 3. EXTRACT VARIANT UNIQUE VALUES FOR PRICING & STOCK ---
+  const activeVariant = variants.find(v => {
+    const vColor = v.attributes?.color?.includes('|') ? v.attributes.color.split('|')[0] : v.attributes?.color;
+    const aColor = selectedColor.includes('|') ? selectedColor.split('|')[0] : selectedColor;
+    return vColor === aColor && v.attributes?.size === selectedSize;
+  }) || variants.find(v => {
+    const vColor = v.attributes?.color?.includes('|') ? v.attributes.color.split('|')[0] : v.attributes?.color;
+    const aColor = selectedColor.includes('|') ? selectedColor.split('|')[0] : selectedColor;
+    return vColor === aColor;
+  }) || variants[0];
+
+  // --- 4. ASSEMBLE DYNAMIC ATTRIBUTE LISTS ---
+  const colors = loadedProduct.colors || (variants.length > 0
+    ? [...new Set(variants.map(v => v.attributes?.color))].filter(Boolean).map(c => ({ name: c, hex: c }))
+    : []);
+
+  const sizes = loadedProduct.sizes || (variants.length > 0
+    ? [...new Set(variants.map(v => v.attributes?.size))].filter(Boolean)
+    : []);
+
+  return {
+    id: loadedProduct._id || loadedProduct.id,
+    brand: loadedProduct.brand || '',
+    title: loadedProduct.title || loadedProduct.name || 'Product Details',
+    category: typeof loadedProduct.category === 'object' && loadedProduct.category?.name
+      ? loadedProduct.category.name 
+      : (loadedProduct.category || 'Catalog'),
+    price: activeVariant ? activeVariant.price : (loadedProduct.price || 0),
+    originalPrice: activeVariant ? activeVariant.originalPrice : (loadedProduct.originalPrice || 0),
+    discount: loadedProduct.discount || 0,
+    rating: loadedProduct.rating ?? 5,
+    reviews: loadedProduct.reviews || 0,
+    images: dynamicImages, // Handled precisely above
+    colors,
+    sizes,
+    inStock: activeVariant ? activeVariant.stock > 0 : (loadedProduct.inStock ?? true),
+    warranty: loadedProduct.warranty || '',
+    returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
+    deliveryMode: loadedProduct.deliveryMode || ''
+  };
+}, [loadedProduct, selectedColor, selectedSize]);
+
 
   // Scroll to top when page loads
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  // Sync selection instances if alternative product parameters swap
-  useEffect(() => {
-    if (product) {
-      if (product.colors?.[0]?.name) setSelectedColor(product.colors[0].name);
-      if (product.sizes?.[0]) setSelectedSize(product.sizes[0]);
-      setActiveImageIndex(0);
-      setQuantity(1);
+// Sync selection instances ONLY when swapping to a completely different product ID
+useEffect(() => {
+  if (loadedProduct) {
+    const variants = loadedProduct.variants || [];
+    
+    if (variants.length > 0) {
+      // Safely default to the exact raw string representation within MongoDB
+      const firstVariantColor = variants[0].attributes?.color;
+      const firstVariantSize = variants[0].attributes?.size;
+      
+      if (firstVariantColor) setSelectedColor(firstVariantColor);
+      if (firstVariantSize) setSelectedSize(firstVariantSize);
+    } else {
+      setSelectedColor('Default');
+      setSelectedSize('Default');
     }
-  }, [id, product]);
+    
+    setActiveImageIndex(0);
+    setQuantity(1);
+  }
+}, [id, loadedProduct]); //  FIXED: Watch loadedProduct/id, NOT the derived memoized product object
 
   // --- INTERACTIVE DUMMY DATA FOR COMBO PRODUCT INTEGRATION ---
   const comboData = useMemo(() => {
@@ -230,24 +296,28 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     }
   };
 
+ 
+
   const handleBuyNow = () => {
-    if (!product) return;
-    navigate('/checkout', {
-      state: {
-        directPurchase: true,
-        items: [
-          {
-            ...product,
-            quantity: quantity,
-            selectedOptions: {
-              color: selectedColor,
-              size: selectedSize
-            }
+  if (!product) return;
+  navigate('/checkout', {
+    state: {
+      directPurchase: true,
+      items: [
+        {
+          ...product,
+          quantity: quantity,
+          selectedOptions: {
+            color: selectedColor,
+            size: selectedSize
           }
-        ]
-      }
-    });
-  };
+        } 
+      ] 
+    } 
+  }); 
+};
+
+    
 
   const toggleComboItem = (itemId, isCurrent) => {
     if (isCurrent) return;
@@ -355,7 +425,6 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
       image: 'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=500&q=80'
     }
   ];
-  const showNavigation = relatedProducts.length > 4;
 
   if (loading) {
     return (
@@ -419,7 +488,12 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
                   {product.images.map((img, index) => (
                     <SwiperSlide key={index}>
                       <div className="relative w-full h-full">
-                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <img 
+                          src={formatImageUrl(img)} 
+                          alt="" 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.target.src = "https://via.placeholder.com/500?text=No+Image+Available"; }}
+                        />
                         {product.discount > 0 && (
                           <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">
                             -{product.discount}%
@@ -443,7 +517,12 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
                       activeImageIndex === idx ? "border-blue-500" : "border-gray-200"
                     }`}
                   >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img 
+                      src={formatImageUrl(img)} 
+                      alt="" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=Error"; }}
+                    />
                   </button>
                 ))}
               </div>
@@ -456,10 +535,11 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
               >
                 {product.images.length > 0 ? (
                   <img
-                    src={product.images[activeImageIndex] || product.images[0]}
+                    src={formatImageUrl(product.images[activeImageIndex] || product.images[0])}
                     alt={product.title}
                     style={zoomStyle}
                     className="w-full h-full object-cover transition-transform duration-75 ease-out pointer-events-none select-none"
+                    onError={(e) => { e.target.src = "https://via.placeholder.com/500?text=No+Image+Available"; }}
                   />
                 ) : (
                   <div className="text-gray-400 text-sm">No Image Available</div>
@@ -517,44 +597,38 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
               )}
             </div>
 
-              {/* Variants: Color */}
-{product.colors.length > 0 && (
-  <div>
-    <p className="font-bold text-gray-800 mb-3 text-sm">
-      Color: <span className="font-normal text-gray-600 ml-1">
-        {/* If the selected color name contains a separator, show only the human-readable text */}
-        {selectedColor.includes('|') ? selectedColor.split('|')[0] : selectedColor}
-      </span>
-    </p>
-    <div className="flex gap-3">
-      {product.colors.map(color => {
-        // Safely parse name and hex if they are joined together like "Blue|#3B82F6"
-        const hasPipe = color.name?.includes('|');
-        const cleanName = hasPipe ? color.name.split('|')[0] : color.name;
-        const cleanHex = hasPipe ? color.name.split('|')[1] : (color.hex || '#CCCCCC');
-        
-        const isSelected = selectedColor === color.name || cleanName === selectedColor;
+            {/* Variants: Color */}
+            {product.colors.length > 0 && (
+              <div>
+                <p className="font-bold text-gray-800 mb-3 text-sm">
+                  Color: <span className="font-normal text-gray-600 ml-1">
+                    {selectedColor.includes('|') ? selectedColor.split('|')[0] : selectedColor}
+                  </span>
+                </p>
+                <div className="flex gap-3">
+                  {product.colors.map(color => {
+                    const hasPipe = color.name?.includes('|');
+                    const cleanName = hasPipe ? color.name.split('|')[0] : color.name;
+                    const cleanHex = hasPipe ? color.name.split('|')[1] : (color.hex || '#CCCCCC');
+                    const isSelected = selectedColor === color.name || cleanName === selectedColor;
 
-        return (
-          <button
-            key={color.name}
-            onClick={() => setSelectedColor(color.name)}
-            title={cleanName}
-            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
-              isSelected 
-                ? 'ring-2 ring-blue-600 ring-offset-2 scale-105' 
-                : 'hover:scale-110 border border-gray-200'
-            }`}
-            style={{ backgroundColor: cleanHex }}
-          >
-            {/* Inner check dot wrapper indicating selection */}
-          
-          </button>
-        );
-      })}
-    </div>
-  </div>
-)}           
+                    return (
+                      <button
+                        key={color.name}
+                        onClick={() => setSelectedColor(color.name)}
+                        title={cleanName}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
+                          isSelected 
+                            ? 'ring-2 ring-blue-600 ring-offset-2 scale-105' 
+                            : 'hover:scale-110 border border-gray-200'
+                        }`}
+                        style={{ backgroundColor: cleanHex }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            )}          
 
             {/* Variants: Size */}
             {product.sizes.length > 0 && (
@@ -582,7 +656,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
               </span>
             </div>
 
-            <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 ">
+            <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 py-3">
               {product.warranty && (
                 <div className="flex items-center gap-2">
                   <span className="bg-blue-50 text-blue-700 p-1 rounded-sm">🛡️</span>
@@ -599,7 +673,6 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
                   </span>
                 </div>
               )}
-              
             </div>
 
             {/* Quantity Controls */}
@@ -638,20 +711,20 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
             </div>
 
             {/* Action Buttons */}
-           <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
-  <button 
-    onClick={handleAddToCart}
-    className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm"
-  >
-    <ShoppingCart size={15} /> Add to Cart
-  </button>
-  <button 
-    onClick={handleBuyNow}
-    className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm"
-  >
-    <ShoppingBag size={15} /> Buy Now
-  </button>
-</div>
+            <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
+              <button 
+                onClick={handleAddToCart}
+                className="w-full border-2 border-primary text-primary py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:bg-primary/5 transition-colors shadow-sm"
+              >
+                <ShoppingCart size={15} /> Add to Cart
+              </button>
+              <button 
+                onClick={handleBuyNow}
+                className="w-full bg-primary text-white py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 hover:opacity-90 transition-opacity shadow-sm"
+              >
+                <ShoppingBag size={15} /> Buy Now
+              </button>
+            </div>
           </div>
         </div>
 
@@ -673,178 +746,133 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
         </div>
 
         {/* Combo Pack Section */}
-        <div className="w-full mt-10 bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
-            <div>
-              <span className="bg-primary-100 text-green-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase">
-                Limited Time Bundle Offer
-              </span>
-              <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1.5 flex items-center gap-1.5">
-                Frequently Bought Together (Combo Deal)
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Get an extra <span className="text-red-600 font-bold">{comboData.discountPercent}% OFF</span> on the entire setup when purchased collectively!
-              </p>
+        {comboData && (
+          <div className="w-full mt-10 bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+              <div>
+                <span className="bg-primary-100 text-green-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase">
+                  Limited Time Bundle Offer
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1.5 flex items-center gap-1.5">
+                  Frequently Bought Together (Combo Deal)
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Get an extra <span className="text-red-600 font-bold">{comboData.discountPercent}% OFF</span> on the entire setup when purchased collectively!
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex flex-col xl:flex-row gap-6 items-stretch">
-            {/* Left Column Grid Items */}
-            <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
-              {comboData.items.map((item, idx) => (
-                <React.Fragment key={item.id}>
-                  <div 
-                    onClick={() => toggleComboItem(item.id, item.isCurrent)}
-                    className={`flex-1 w-full md:w-auto bg-white border rounded-xl p-3.5 flex flex-row md:flex-col items-center gap-3 transition-all relative ${
-                      item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
-                    } ${
-                      selectedComboItemIds.includes(item.id) 
-                        ? 'border-blue-500 shadow-sm' 
-                        : 'opacity-50 border-gray-200 grayscale scale-95 hover:opacity-80'
-                    }`}
-                  >
-                    <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedComboItemIds.includes(item.id)} 
-                        readOnly
-                        disabled={item.isCurrent}
-                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300"
-                      />
+            <div className="flex flex-col xl:flex-row gap-6 items-stretch">
+              {/* Left Column Grid Items */}
+              <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
+                {comboData.items.map((item, idx) => (
+                  <React.Fragment key={item.id}>
+                    <div 
+                      onClick={() => toggleComboItem(item.id, item.isCurrent)}
+                      className={`flex-1 w-full md:w-auto bg-white border rounded-xl p-3.5 flex flex-row md:flex-col items-center gap-3 transition-all relative ${
+                        item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
+                      } ${
+                        selectedComboItemIds.includes(item.id) 
+                          ? 'border-blue-500 shadow-sm' 
+                          : 'opacity-50 border-gray-200 grayscale scale-95 hover:opacity-80'
+                      }`}
+                    >
+                      <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                        <input 
+                          type="checkbox" 
+                          checked={selectedComboItemIds.includes(item.id)} 
+                          readOnly
+                          disabled={item.isCurrent}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300"
+                        />
+                      </div>
+
+                      <div className="w-16 h-16 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-gray-100 border border-gray-100">
+                        <img 
+                          src={formatImageUrl(item.image)} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=No+Image"; }}
+                        />
+                      </div>
+
+                      <div className="flex-1 md:text-center min-w-0">
+                        <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug md:h-8">
+                          {item.title}
+                        </h4>
+                        <p className="text-sm font-black text-gray-900 mt-1">
+                          ₹{item.price}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="w-16 h-16 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-gray-100 border border-gray-100">
-                      {item.image ? (
-                        <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-200" />
+                    {idx < comboData.items.length - 1 && (
+                      <div className="text-gray-400 bg-gray-200/60 p-1.5 rounded-full shrink-0">
+                        <Plus size={16} strokeWidth={3} />
+                      </div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
+
+              {/* Right Summary Calculations Block */}
+              <div className="w-full xl:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+                <div>
+                  <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
+                    Bundle Price Calculation
+                  </h4>
+                  <div className="space-y-2 text-xs text-gray-600">
+                    <div className="flex justify-between">
+                      <span>Selected Items ({selectedComboItemIds.length}):</span>
+                      <span className="font-medium text-gray-900">₹{regularComboSum}</span>
+                    </div>
+                    {isFullComboSelected ? (
+                      <div className="flex justify-between text-green-600 font-medium">
+                        <span>Combo Promotion Pack Discount:</span>
+                        <span>-{comboData.discountPercent}%</span>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
+                        💡 Select all components to qualify for the bundle discount structure.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex justify-between items-baseline mb-4">
+                    <span className="text-sm font-bold text-gray-800">Total Price:</span>
+                    <div className="text-right">
+                      <span className="text-xl font-black text-gray-900">₹{finalComboPrice}</span>
+                      {totalComboSavings > 0 && (
+                        <p className="text-[11px] font-bold text-green-600">Save ₹{totalComboSavings}</p>
                       )}
                     </div>
-
-                    <div className="flex-1 md:text-center min-w-0">
-                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug md:h-8">
-                        {item.title}
-                      </h4>
-                      <p className="text-sm font-black text-gray-900 mt-1">
-                        ₹{item.price}
-                      </p>
-                    </div>
                   </div>
-
-                  {idx < comboData.items.length - 1 && (
-                    <div className="text-gray-400 bg-gray-200/60 p-1.5 rounded-full shrink-0">
-                      <Plus size={16} strokeWidth={3} />
-                    </div>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {/* Right Summary Calculations Block */}
-            <div className="w-full xl:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
-              <div>
-                <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
-                  Bundle Price Calculation
-                </h4>
-                <div className="space-y-2 text-xs text-gray-600">
-                  <div className="flex justify-between">
-                    <span>Selected Items ({selectedComboItemIds.length}):</span>
-                    <span className="font-medium text-gray-900">₹{regularComboSum}</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={handleAddBundleToCart}
+                      className="w-full border border-gray-300 py-2 text-xs rounded-md font-bold hover:bg-gray-50 transition-colors"
+                    >
+                      Bundle to Cart
+                    </button>
+                    <button 
+                      onClick={handleAddBundleToBuy}
+                      className="w-full bg-blue-900 text-white py-2 text-xs rounded-md font-bold hover:opacity-90 transition-opacity"
+                    >
+                      Buy Bundle Set
+                    </button>
                   </div>
-                  {isFullComboSelected ? (
-                    <div className="flex justify-between text-green-600 font-medium">
-                      <span>Combo Promotion Pack Discount:</span>
-                      <span>-{comboData.discountPercent}%</span>
-                    </div>
-                  ) : (
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
-                      💡 Select <strong>all constituent products</strong> to unlock the {comboData.discountPercent}% price discount tier!
-                    </div>
-                  )}
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 mt-4 pt-4">
-                <div className="flex justify-between items-baseline mb-1">
-                  <span className="text-sm font-bold text-gray-800">Final Price:</span>
-                  <div className="text-right">
-                    {totalComboSavings > 0 && (
-                      <span className="text-xs text-gray-400 line-through mr-1.5 font-medium">₹{regularComboSum}</span>
-                    )}
-                    <span className="text-xl sm:text-2xl font-black text-gray-900">₹{finalComboPrice}</span>
-                  </div>
-                </div>
-
-                {totalComboSavings > 0 && (
-                  <p className="text-[11px] text-right font-bold text-green-600 mb-4">
-                    Your instant pocket savings: ₹{totalComboSavings}
-                  </p>
-                )}
-
-                <div className="grid grid-cols-2 max-[508px]:grid-cols-1 xl:grid-cols-1 gap-2 mt-4 w-full">
-  <button 
-    onClick={handleAddBundleToCart}
-    disabled={selectedComboItemIds.length === 0}
-    className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <ShoppingCart size={15} /> Add Bundle Package to Cart
-  </button>
-
-  <button 
-    onClick={handleAddBundleToBuy}
-    disabled={selectedComboItemIds.length === 0}
-    className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 px-4 text-xs sm:text-sm rounded-lg font-bold flex items-center justify-center gap-2 transition-colors shadow disabled:opacity-50 disabled:cursor-not-allowed"
-  >
-    <ShoppingBag size={15} /> Buy Bundle Package
-  </button>
-</div>
-
-              </div>
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Related Products Swiper Section */}
-      <div className="w-full mt-12">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Related Products</h2>
-          {showNavigation && (
-            <div className="flex gap-2">
-              <button className="related-prev w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition">
-                <ChevronLeft size={20} />
-              </button>
-              <button className="related-next w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 transition">
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        <Swiper
-          modules={[Navigation]}
-          navigation={{ prevEl: ".related-prev", nextEl: ".related-next" }}
-          spaceBetween={16}
-          slidesPerView={1.2}
-          className="!h-auto"
-          breakpoints={{
-            320: { slidesPerView: 1.2 },
-            640: { slidesPerView: 2 },
-            768: { slidesPerView: 2.5 },
-            1024: { slidesPerView: 4 },
-          }}
-        >
-          {relatedProducts.map((prod) => (
-            <SwiperSlide key={prod.id} className="!h-auto flex">
-              <div className="w-full h-full">
-                <ProductCard product={prod} />
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
       </div>
     </div>
   );
-};
+}
 
 export default ProductDetail;

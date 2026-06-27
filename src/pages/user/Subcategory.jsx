@@ -111,6 +111,92 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 };
 
 /* ==========================================================================
+   ISOLATED FILTER WRAPPER SUB-COMPONENT
+   ========================================================================== */
+const FilterContent = ({
+  minPrice, maxPrice, minPriceLimit, maxPriceLimit, setMinPrice, setMaxPrice,
+  minDiscount, maxDiscount, absoluteDiscountLimits, setMinDiscount, setMaxDiscount,
+  brandsList, selectedBrands, handleBrandChange,
+  sizesList, selectedSize, setSelectedSize,
+  clearAllFilters
+}) => (
+  <div className="flex flex-col gap-6 font-sans">
+    <div className="border border-gray-100 rounded-lg bg-white p-4 shadow-xs flex flex-col gap-6">
+      <PriceSliderSection 
+        minPrice={minPrice} 
+        maxPrice={maxPrice}
+        absoluteMin={minPriceLimit}
+        absoluteMax={maxPriceLimit}
+        onFilterCommit={(min, max) => {
+          setMinPrice(min);
+          setMaxPrice(max);
+        }} 
+      />
+
+      <OfferSlider 
+        minDiscount={minDiscount}
+        maxDiscount={maxDiscount}
+        absoluteMin={absoluteDiscountLimits.min}
+        absoluteMax={absoluteDiscountLimits.max}
+        onFilterCommit={(min, max) => {
+          setMinDiscount(min);
+          setMaxDiscount(max);
+        }}
+      />
+
+      {brandsList.length > 0 && (
+        <div className="border-t border-gray-100 pt-4">
+          <h3 className="font-bold text-gray-800 text-base mb-3">Brand</h3>
+          <div className="flex flex-col gap-2.5">
+            {brandsList.map((brand) => (
+              <label key={brand} className="flex items-center gap-3 text-sm text-gray-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedBrands.includes(brand)}
+                  onChange={() => handleBrandChange(brand)}
+                  className="w-4 h-4 rounded border-gray-300 text-[#0A2540]"
+                />
+                <span>{brand}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sizesList.length > 0 && (
+        <div className="border-t border-gray-100 pt-4">
+          <h3 className="font-bold text-gray-800 text-base mb-3">Size</h3>
+          <div className="flex gap-2">
+            {sizesList.map((sz) => (
+              <button
+                key={sz}
+                type="button"
+                onClick={() => setSelectedSize(selectedSize === sz ? null : sz)}
+                className={`w-9 h-9 font-bold text-xs flex items-center justify-center rounded transition-all border cursor-pointer ${
+                  selectedSize === sz ? "bg-[#6C757D] text-white border-[#6C757D]" : "bg-[#6C757D]/10 text-gray-700 border-transparent hover:bg-gray-200"
+                }`}
+              >
+                {sz}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
+        <button
+          type="button"
+          onClick={clearAllFilters}
+          className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded transition-colors uppercase tracking-wider cursor-pointer"
+        >
+          Clear All Filters
+        </button>
+      )}
+    </div>
+  </div>
+);
+
+/* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
 const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart, isCustomizedPage = false }) => {
@@ -118,7 +204,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
   const navigate = useNavigate();
   const { subcategoryId: paramSubcategoryId } = useParams();
 
-  // Extract variables with fallback configurations
   const stateData = location.state || {};
   const subcategoryId = paramSubcategoryId || stateData.subcategoryId || stateData.id;
   
@@ -177,27 +262,24 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
   }, [stateData]);
 
   useEffect(() => {
-    // FIXED: Prevent navigation redirection loops on empty initializations 
     if (!isCustomizedPage && !subcategoryId) {
       console.warn("SubCategory target configuration lacks identification state values.");
     }
 
-    // Inside SubCategoryPage.jsx -> useEffect() -> fetchSubcategoryCatalog:
-const fetchSubcategoryCatalog = async () => {
-  try {
-    setLoading(true);
-    let response;
-    
-    if (isCustomizedPage) {
-      response = await getProductsAPI({ customizeProduct: 'Yes' });
-    } else if (subcategoryId) {
-      response = await getProductsAPI({ subcategoryId: subcategoryId });
-    } else if (location.state?.categoryId) {
-      // FALLBACK: If we came from CategoryPage, query products via parent categoryId field
-      response = await getProductsAPI({ categoryId: location.state.categoryId });
-    } else {
-      response = await getProductsAPI();
-    }
+    const fetchSubcategoryCatalog = async () => {
+      try {
+        setLoading(true);
+        let response;
+        
+        if (isCustomizedPage) {
+          response = await getProductsAPI({ customizeProduct: 'Yes' });
+        } else if (subcategoryId) {
+          response = await getProductsAPI({ subcategoryId: subcategoryId });
+        } else if (location.state?.categoryId) {
+          response = await getProductsAPI({ categoryId: location.state.categoryId });
+        } else {
+          response = await getProductsAPI();
+        }
             
         let fetchedProducts = [];
         if (response && response.success && Array.isArray(response.data)) {
@@ -230,7 +312,7 @@ const fetchSubcategoryCatalog = async () => {
     };
 
     fetchSubcategoryCatalog();
-  }, [subcategoryId, isCustomizedPage]);
+  }, [subcategoryId, isCustomizedPage, location.state?.categoryId]);
 
   const brandsList = useMemo(() => {
     const brands = products.map(p => p.brand).filter(Boolean);
@@ -248,6 +330,15 @@ const fetchSubcategoryCatalog = async () => {
     } else {
       setSelectedBrands([...selectedBrands, brandName]);
     }
+  };
+
+  const clearAllFilters = () => {
+    setSelectedBrands([]);
+    setSelectedSize(null);
+    setMinPrice(minPriceLimit);
+    setMaxPrice(maxPriceLimit);
+    setMinDiscount(0);
+    setMaxDiscount(100);
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -279,87 +370,13 @@ const fetchSubcategoryCatalog = async () => {
     return output;
   }, [products, selectedBrands, selectedSize, minPrice, maxPrice, minDiscount, maxDiscount, sortOption]);
 
-  const FilterContent = () => (
-    <div className="flex flex-col gap-6 font-sans">
-      <div className="border border-gray-100 rounded-lg bg-white p-4 shadow-xs flex flex-col gap-6">
-        <PriceSliderSection 
-          minPrice={minPrice} 
-          maxPrice={maxPrice}
-          absoluteMin={minPriceLimit}
-          absoluteMax={maxPriceLimit}
-          onFilterCommit={(min, max) => {
-            setMinPrice(min);
-            setMaxPrice(max);
-          }} 
-        />
-
-        <OfferSlider 
-          minDiscount={minDiscount}
-          maxDiscount={maxDiscount}
-          absoluteMin={absoluteDiscountLimits.min}
-          absoluteMax={absoluteDiscountLimits.max}
-          onFilterCommit={(min, max) => {
-            setMinDiscount(min);
-            setMaxDiscount(max);
-          }}
-        />
-
-        {brandsList.length > 0 && (
-          <div className="border-t border-gray-100 pt-4">
-            <h3 className="font-bold text-gray-800 text-base mb-3">Brand</h3>
-            <div className="flex flex-col gap-2.5">
-              {brandsList.map((brand) => (
-                <label key={brand} className="flex items-center gap-3 text-sm text-gray-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brand)}
-                    onChange={() => handleBrandChange(brand)}
-                    className="w-4 h-4 rounded border-gray-300 text-[#0A2540]"
-                  />
-                  <span>{brand}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {sizesList.length > 0 && (
-          <div className="border-t border-gray-100 pt-4">
-            <h3 className="font-bold text-gray-800 text-base mb-3">Size</h3>
-            <div className="flex gap-2">
-              {sizesList.map((sz) => (
-                <button
-                  key={sz}
-                  onClick={() => setSelectedSize(selectedSize === sz ? null : sz)}
-                  className={`w-9 h-9 font-bold text-xs flex items-center justify-center rounded transition-all border cursor-pointer ${
-                    selectedSize === sz ? "bg-[#6C757D] text-white border-[#6C757D]" : "bg-[#6C757D]/10 text-gray-700 border-transparent hover:bg-gray-200"
-                  }`}
-                >
-                  {sz}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
-          <button
-            onClick={() => {
-              setSelectedBrands([]);
-              setSelectedSize(null);
-              setMinPrice(minPriceLimit);
-              setMaxPrice(maxPriceLimit);
-              setMinDiscount(0);
-              setMaxDiscount(100);
-            }}
-            className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-xs rounded transition-colors uppercase tracking-wider cursor-pointer"
-          >
-            Clear All Filters
-          </button>
-        )}
-      </div>
-    </div>
-  );
+  const sharedFilterProps = {
+    minPrice, maxPrice, minPriceLimit, maxPriceLimit, setMinPrice, setMaxPrice,
+    minDiscount, maxDiscount, absoluteDiscountLimits, setMinDiscount, setMaxDiscount,
+    brandsList, selectedBrands, handleBrandChange,
+    sizesList, selectedSize, setSelectedSize,
+    clearAllFilters
+  };
 
   return (
     <div className="w-full pt-4 max-w-7xl mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-4">
@@ -407,6 +424,7 @@ const fetchSubcategoryCatalog = async () => {
 
         <div className="flex items-center justify-between sm:justify-end gap-3">
           <button 
+            type="button"
             onClick={() => setIsMobileFilterOpen(true)}
             className="min-[850px]:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 font-medium cursor-pointer"
           >
@@ -420,8 +438,8 @@ const fetchSubcategoryCatalog = async () => {
 
       {/* Main Page Layout Body */}
       <div className="w-full flex flex-col min-[850px]:flex-row gap-6 items-start">
-        <aside className="hidden min-[880px]:block w-[260px] lg:w-[250px] flex-shrink-0 sticky top-4">
-          <FilterContent />
+        <aside className="hidden min-[850px]:block w-[260px] lg:w-[250px] flex-shrink-0 sticky top-4">
+          <FilterContent {...sharedFilterProps} />
         </aside>
 
         <div className="flex-grow w-full">
@@ -466,14 +484,14 @@ const fetchSubcategoryCatalog = async () => {
 
       {/* Slide-over Mobile Filter Drawer */}
       {isMobileFilterOpen && (
-        <div className="fixed inset-0 z-50 flex min-[880px]:hidden">
+        <div className="fixed inset-0 z-50 flex min-[850px]:hidden">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setIsMobileFilterOpen(false)} />
           <div className="relative ml-0 mr-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-gray-50 p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
               <h2 className="text-lg font-bold text-gray-800">Filter Products</h2>
-              <button onClick={() => setIsMobileFilterOpen(false)} className="text-gray-500">✕</button>
+              <button type="button" onClick={() => setIsMobileFilterOpen(false)} className="text-gray-500">✕</button>
             </div>
-            <FilterContent />
+            <FilterContent {...sharedFilterProps} />
           </div>
         </div>
       )}

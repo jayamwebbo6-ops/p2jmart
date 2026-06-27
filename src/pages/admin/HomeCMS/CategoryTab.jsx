@@ -41,23 +41,21 @@ const CategoryTab = ({ sections = [], setSections }) => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch categories with subcategories
         const catRes = await getCategoriesAPI();
         if (catRes && catRes.success) {
           setCategories(catRes.data.map(cat => ({
             ...cat,
-            id: cat._id || cat.id,
+            id: String(cat._id || cat.id || ''),
             subcategories: (cat.subcategories || []).map(sub => ({
               ...sub,
-              id: sub._id || sub.id
+              id: String(sub._id || sub.id || '')
             }))
           })));
         }
 
-        // Fetch all products
         const prodRes = await getProductsAPI();
         if (prodRes && prodRes.success) {
-          setAllProducts(prodRes.data);
+          setAllProducts(prodRes.data || []);
         }
       } catch (err) {
         console.error("Failed to fetch catalog data:", err);
@@ -68,40 +66,37 @@ const CategoryTab = ({ sections = [], setSections }) => {
     fetchData();
   }, []);
 
-  // Helper to save sections
   const saveSections = (updatedSections) => {
     setSections(updatedSections);
   };
 
-  // Add new section
   const handleAddSection = () => {
     const firstCat = categories[0];
     const newSection = {
       id: `sec-${Date.now()}`,
-      categoryId: firstCat?.id || '',
+      categoryId: firstCat?.id ? String(firstCat.id) : '',
       title: firstCat?.name || 'New Showcase',
-      bannerImage: '',
-      bannerLink: firstCat ? `/subCategory?catId=${firstCat.id}` : '',
+      bannerImage: '', 
+      bannerLink: firstCat?.id ? `/subCategory?catId=${firstCat.id}` : '',
       productIds: []
     };
     saveSections([...sections, newSection]);
   };
 
-  // Delete section
   const handleDeleteSection = (id) => {
     saveSections(sections.filter(sec => sec.id !== id));
   };
 
-  // Handle Category selection change
   const handleCategoryChange = (sectionId, catId) => {
-    const selectedCat = categories.find(c => c.id === catId);
+    const stringCatId = String(catId || '');
+    const selectedCat = categories.find(c => String(c.id) === stringCatId);
     saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
         return {
           ...sec,
-          categoryId: catId,
+          categoryId: stringCatId,
           title: selectedCat ? selectedCat.name : '',
-          bannerLink: catId ? `/subCategory?catId=${catId}` : '',
+          bannerLink: stringCatId ? `/subCategory?catId=${stringCatId}` : '',
           productIds: []
         };
       }
@@ -109,49 +104,53 @@ const CategoryTab = ({ sections = [], setSections }) => {
     }));
   };
 
-  // Update section property
   const handleUpdateSectionProp = (sectionId, key, value) => {
     saveSections(sections.map(sec =>
       sec.id === sectionId ? { ...sec, [key]: value } : sec
     ));
   };
 
-  // Upload banner image using base64
   const handleBannerUpload = (e, sectionId) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        saveSections(sections.map(sec =>
-          sec.id === sectionId ? { ...sec, bannerImage: reader.result } : sec
-        ));
-      };
-      reader.readAsDataURL(file);
-    }
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      const updatedSections = sections.map(sec =>
+        sec.id === sectionId ? { ...sec, bannerImage: base64String } : sec
+      );
+      saveSections(updatedSections);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
-  // Add product to section
   const handleAddProductToSection = (sectionId, prodId) => {
+    const targetId = String(prodId);
     saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
-        if (sec.productIds.includes(prodId)) return sec;
-        return { ...sec, productIds: [...sec.productIds, prodId] };
+        const sanitizedIds = (sec.productIds || []).map(id => String(id));
+        if (sanitizedIds.includes(targetId)) return sec;
+        return { ...sec, productIds: [...sanitizedIds, targetId] };
       }
       return sec;
     }));
   };
 
-  // Remove product from section
   const handleRemoveProductFromSection = (sectionId, prodId) => {
+    const targetId = String(prodId);
     saveSections(sections.map(sec => {
       if (sec.id === sectionId) {
-        return { ...sec, productIds: sec.productIds.filter(id => id !== prodId) };
+        return { 
+          ...sec, 
+          productIds: (sec.productIds || []).filter(id => String(id) !== targetId) 
+        };
       }
       return sec;
     }));
   };
 
-  // Move up
   const handleMoveUp = (index) => {
     if (index === 0) return;
     const updated = [...sections];
@@ -159,13 +158,58 @@ const CategoryTab = ({ sections = [], setSections }) => {
     saveSections(updated);
   };
 
-  // Move down
   const handleMoveDown = (index) => {
     if (index === sections.length - 1) return;
     const updated = [...sections];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
     saveSections(updated);
   };
+
+  // FRONTEND PERMANENT IMAGE PARSER FIX
+  // FRONTEND MULTI-PARSER IMAGE FIX (Leaves server.js untouched)
+  // FRONTEND FIX: Custom path parser aligning to server.js without modifications
+  const getProductImage = (prod) => {
+    if (!prod) return '';
+    
+    // 1. Prioritize picking the first image array index [0] from the first variant item
+    let rawImage = prod.variants?.[0]?.images?.[0] || 
+                    prod.variants?.[0]?.image ||
+                    prod.image || 
+                    prod.images?.[0] || 
+                    prod.imagePath || 
+                    (Array.isArray(prod.imagePath) ? prod.imagePath[0] : null);
+
+    // Unpack object wrappers if any API middleware intercepts it as an object
+    if (rawImage && typeof rawImage === 'object') {
+      rawImage = rawImage.url || rawImage.secure_url || rawImage.path || '';
+    }
+
+    if (typeof rawImage !== 'string' || !rawImage) return '';
+
+    // If it's already an absolute external web URL link, bypass operations
+    if (rawImage.startsWith('http')) {
+      return rawImage;
+    }
+
+    // 2. Resolve the path mismatch:
+    // Strip out duplicated structural references so the path cleanly passes through your server routing
+    let structuralPath = rawImage;
+    if (structuralPath.startsWith('/')) {
+      structuralPath = structuralPath.substring(1);
+    }
+    
+    // If the database path starts with 'uploads/', strip it away 
+    // because your server.js route '/api/uploads' already points directly inside that folder.
+    if (structuralPath.startsWith('uploads/')) {
+      structuralPath = structuralPath.replace('uploads/', '');
+    }
+
+    // 3. Construct the clean URL that matches your exact Express app.use('/api/uploads') mount configuration
+    return `http://localhost:5000/api/uploads/${structuralPath}`;
+  };
+
+
+
 
   if (loading) {
     return (
@@ -178,7 +222,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
-      {/* CMS INSTRUCTION BAR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 border border-slate-200 rounded-2xl shadow-2xs">
         <div>
           <h2 className={`text-base font-black uppercase tracking-wider ${THEME.primaryText} flex items-center gap-2`}>
@@ -207,26 +250,28 @@ const CategoryTab = ({ sections = [], setSections }) => {
         <div className="space-y-10">
           {sections.map((section, index) => {
             const searchQuery = searchQueries[section.id] || '';
+            const targetSectionCatId = String(section.categoryId || '');
 
-            // Get products filtered by selected category
+            // Robust validation matching both string IDs and populated object IDs smoothly
             const categoryProducts = allProducts.filter(p => {
-              const catId = p.category?.id || p.category?._id || p.category;
-              return catId === section.categoryId;
+              if (!p) return false;
+              const pCat = p.category;
+              const prodCatId = String(
+                pCat?.id || pCat?._id || (pCat && typeof pCat === 'object' ? (pCat.id || pCat._id) : '') || pCat || ''
+              );
+              return prodCatId !== '' && prodCatId === targetSectionCatId;
             });
 
-            // Selected products - resolved from allProducts
-            const shelfProducts = section.productIds
-              .map(id => allProducts.find(p => (p.id || p._id) === id))
+            const shelfProducts = (section.productIds || [])
+              .map(id => allProducts.find(p => String(p?.id || p?._id || '') === String(id)))
               .filter(Boolean);
 
-            // Display products: selected ones, or first 4 from category
             const displayProducts = shelfProducts.length > 0 
               ? shelfProducts 
               : categoryProducts.slice(0, 4);
 
-            // Filter available products for picker by search
             const filteredPickerProducts = categoryProducts.filter(prod =>
-              prod.title?.toLowerCase().includes(searchQuery.toLowerCase())
+              prod?.title?.toLowerCase().includes(searchQuery.toLowerCase())
             );
 
             return (
@@ -234,14 +279,12 @@ const CategoryTab = ({ sections = [], setSections }) => {
                 key={section.id} 
                 className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 hover:border-slate-300 transition-all"
               >
-                {/* SECTION SHELF BUILDER CONTROLS */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
                   <div className="flex flex-wrap items-center gap-4">
                     <span className="bg-[#002B49] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-black">
                       {index + 1}
                     </span>
 
-                    {/* Category Select Dropdown */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-black uppercase text-slate-400">1. Category</label>
                       <select
@@ -256,7 +299,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                       </select>
                     </div>
 
-                    {/* Title Input field */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[9px] font-black uppercase text-slate-400">Shelf Display Title</label>
                       <input 
@@ -269,7 +311,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                     </div>
                   </div>
 
-                  {/* Reordering Controls */}
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <button 
                       onClick={() => handleMoveUp(index)}
@@ -294,9 +335,7 @@ const CategoryTab = ({ sections = [], setSections }) => {
                   </div>
                 </div>
 
-                {/* PROMO BANNER & PRODUCTS WORKSPACE GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                  {/* Banner Upload Card */}
                   <div className="lg:col-span-4 space-y-4">
                     <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <ImageIcon size={12} />
@@ -305,33 +344,39 @@ const CategoryTab = ({ sections = [], setSections }) => {
 
                     <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden relative flex flex-col items-center justify-center group hover:bg-slate-100/50 hover:border-slate-300 transition-all">
                       {section.bannerImage ? (
-                        <>
-                          <img src={section.bannerImage} alt="Promo" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="w-full h-full relative">
+                          <img 
+                            src={section.bannerImage} 
+                            alt="Promo Banner Preview" 
+                            className="w-full h-full object-cover block" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
                             <button 
-                              onClick={() => handleUpdateSectionProp(section.id, 'bannerImage', '')} 
+                              type="button"
+                              onClick={() => handleUpdateSectionProp(section.id, 'bannerImage', '')}
                               className="bg-white p-2 rounded-full text-red-600 hover:text-red-700 shadow-xl cursor-pointer"
                             >
                               <Trash2 size={16} />
                             </button>
                           </div>
-                        </>
+                        </div>
                       ) : (
-                        <div className="text-center p-4 flex flex-col items-center gap-2">
-                          <Upload size={20} className="text-slate-400" />
-                          <span className="text-[11px] font-bold text-slate-700">Upload Banner Image</span>
-                          <span className="text-[9px] text-slate-400">This image appears on the right side of products</span>
+                        <div className="w-full h-full flex flex-col items-center justify-center relative">
+                          <div className="text-center p-4 flex flex-col items-center gap-2 pointer-events-none">
+                            <Upload size={20} className="text-slate-400" />
+                            <span className="text-[11px] font-bold text-slate-700">Upload Banner Image</span>
+                            <span className="text-[9px] text-slate-400">This image appears on the right side of products</span>
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => handleBannerUpload(e, section.id)} 
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" 
+                          />
                         </div>
                       )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => handleBannerUpload(e, section.id)} 
-                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                      />
                     </div>
 
-                    {/* Destination Link */}
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
                         <Link2 size={10} /> Banner Click Redirect Link
@@ -346,11 +391,10 @@ const CategoryTab = ({ sections = [], setSections }) => {
                     </div>
                   </div>
 
-                  {/* Product Picker */}
                   <div className="lg:col-span-8 space-y-4">
                     <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <Layers size={12} />
-                      Choose Products to Display ({section.productIds.length} selected)
+                      Choose Products to Display ({section.productIds?.length || 0} selected)
                     </h3>
 
                     {!section.categoryId ? (
@@ -363,7 +407,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {/* Search / Filter input */}
                         <div className="relative">
                           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                           <input 
@@ -375,13 +418,12 @@ const CategoryTab = ({ sections = [], setSections }) => {
                           />
                         </div>
 
-                        {/* Checklist Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-72 overflow-y-auto p-1 border border-slate-100 rounded-xl bg-slate-50/20 custom-scrollbar">
                           {filteredPickerProducts.map(prod => {
                             const prodId = prod.id || prod._id;
-                            const isSelected = section.productIds.includes(prodId);
+                            const isSelected = (section.productIds || []).map(id => String(id)).includes(String(prodId));
                             const prodPrice = prod.price || (prod.variants?.[0]?.price) || 0;
-                            const prodImage = prod.image || '';
+                            const prodImage = getProductImage(prod);
 
                             return (
                               <div 
@@ -397,7 +439,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                                   isSelected ? 'border-blue-500 ring-1 ring-blue-500 bg-blue-50/10' : 'border-slate-150 hover:border-slate-350'
                                 }`}
                               >
-                                {/* Selection badge */}
                                 <div className={`absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center border text-[9px] z-10 ${
                                   isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-transparent'
                                 }`}>
@@ -428,7 +469,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                   </div>
                 </div>
 
-                {/* PREVIEW CONTAINER */}
                 <div className="mt-6 pt-5 border-t border-slate-100 space-y-3">
                   <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                     <Eye size={12} className="text-[#006699]" />
@@ -436,7 +476,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                   </div>
 
                   <div className="border border-slate-150 rounded-2xl overflow-hidden bg-slate-50 p-4 sm:p-6 font-['Inter']">
-                    {/* Shelf Header */}
                     <div className="flex justify-between items-center pb-3 border-b border-gray-200 mb-4">
                       <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">{section.title || 'Category Title'}</h3>
                       <span className="text-[9px] font-bold text-slate-500 flex items-center gap-1 cursor-pointer hover:text-blue-600">
@@ -444,14 +483,13 @@ const CategoryTab = ({ sections = [], setSections }) => {
                       </span>
                     </div>
 
-                    {/* Main Layout Preview Row */}
                     <div className="grid grid-cols-12 gap-4">
-                      {/* Products */}
                       <div className="col-span-12 md:col-span-9 grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {displayProducts.slice(0, 4).map(prod => {
+                          if (!prod) return null;
                           const prodPrice = prod.price || (prod.variants?.[0]?.price) || 0;
                           const prodOriginalPrice = prod.originalPrice || (prod.variants?.[0]?.originalPrice) || null;
-                          const prodImage = prod.image || '';
+                          const prodImage = getProductImage(prod);
                           const prodRating = prod.rating || 5;
                           const prodReviews = prod.reviews || 0;
 
@@ -489,7 +527,6 @@ const CategoryTab = ({ sections = [], setSections }) => {
                           );
                         })}
 
-                        {/* Fillers */}
                         {Array.from({ length: Math.max(0, 4 - displayProducts.slice(0, 4).length) }).map((_, idx) => (
                           <div key={idx} className="bg-white/40 border border-dashed border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center text-center text-[9px] text-gray-400 aspect-square">
                             <span>No Product</span>
@@ -497,18 +534,21 @@ const CategoryTab = ({ sections = [], setSections }) => {
                         ))}
                       </div>
 
-                      {/* Side Banner Card */}
                       <div className="col-span-12 md:col-span-3">
                         <div className="w-full h-full min-h-48 rounded-xl overflow-hidden bg-slate-200 relative flex flex-col justify-end p-4 text-white shadow-3xs aspect-[3/5] md:aspect-auto">
                           {section.bannerImage ? (
-                            <img src={section.bannerImage} alt="Promo" className="absolute inset-0 w-full h-full object-cover" />
+                            <img 
+                              src={section.bannerImage} 
+                              alt="Promo Live View Preview" 
+                              className="absolute inset-0 w-full h-full object-cover z-0 block" 
+                            />
                           ) : (
-                            <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-amber-600 flex flex-col items-center justify-center p-3 text-center">
+                            <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-amber-600 flex flex-col items-center justify-center p-3 text-center z-10">
                               <span className="text-xs font-black uppercase tracking-wider">Upload Banner</span>
-                              <span className="text-[9px] font-bold mt-1">Use the upload above</span>
+                              <span className="text-[9px] font-bold mt-1">Use the uploader above</span>
                             </div>
                           )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-0"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-5"></div>
                         </div>
                       </div>
                     </div>

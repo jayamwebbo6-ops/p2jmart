@@ -128,7 +128,7 @@ const CategoryGridTab = ({ cards, setCards }) => {
                 {/* FIELD 3: ACTION BUTTON TEXT */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
-                    Action Button Text
+                    Action Button Text  
                   </label>
                   <input 
                     type="text"

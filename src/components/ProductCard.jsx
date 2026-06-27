@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // 1. Import useNavigate
+import { useNavigate } from 'react-router-dom';
 import { toast } from './toast';
+
+const BACKEND_BASE_URL = "http://localhost:5000"; 
 
 const ProductCard = ({ 
   product, 
@@ -10,48 +12,121 @@ const ProductCard = ({
   onWishlist,
   onRemoveWishlist,
   onAddToCart,
-  onClick // <-- This is the prop passed down by CustomizedProduct
+  onClick
 }) => {
   const navigate = useNavigate();
 
-  // 2. Centralized navigation handler
+  const images = useMemo(() => {
+    let list = [];
+    
+    // 1. Only push the core image if it's a real file path and not a placeholder or broken string
+    if (
+      product.image && 
+      typeof product.image === 'string' && 
+      !product.image.includes('placeholder') && 
+      !product.image.includes('undefined') && 
+      product.image.trim() !== ""
+    ) {
+      list.push(product.image);
+    }
+
+    // 2. Add all variant images safely
+    if (product.variants && Array.isArray(product.variants)) {
+      product.variants.forEach((v) => {
+        if (Array.isArray(v.images)) {
+          list.push(...v.images);
+        } else if (v.image) {
+          list.push(v.image);
+        }
+      });
+    }
+
+    // 3. Clean up paths and attach the backend server base URL
+    return [...new Set(list)]
+      .map(imgSrc => {
+        if (!imgSrc || typeof imgSrc !== 'string' || imgSrc.trim() === "" || imgSrc.includes('undefined')) {
+          return null;
+        }
+        
+        if (imgSrc.startsWith('http://') || imgSrc.startsWith('https://')) {
+          return imgSrc;
+        }
+        
+        const cleanSrc = imgSrc.startsWith('/') ? imgSrc.slice(1) : imgSrc;
+        return `${BACKEND_BASE_URL}/${cleanSrc}`;
+      })
+      .filter(Boolean);
+  }, [product]);
+
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (isHovered && images.length > 1) {
+      intervalRef.current = setInterval(() => {
+        setCurrentImgIndex((prevIndex) => (prevIndex + 1) % images.length);
+      }, 1200); 
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      setCurrentImgIndex(0); // Safely snaps back to the absolute first *working* image path
+    }
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isHovered, images]);
+
   const handleNavigation = (e) => {
     e.preventDefault();
     const targetId = product.id || product._id;
     if (onClick) {
-      // If a custom click handler is passed (like on the customization page), execute it
       onClick(product);
     } else if (product.customizeProduct === 'Yes') {
-      // If the product is customized, navigate to the customized details page!
       navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
     } else {
-      // Otherwise, fallback to the standard e-commerce details route
       navigate(`/product/${targetId}`, { state: { product } });
     }
   };
 
   return (
     <div 
-      onClick={handleNavigation} // 3. Make the whole card area clickable/navigable cleanly
-      className="border border-gray-200 bg-white group hover:shadow-md transition-shadow duration-300 flex flex-col h-full font-['Inter'] w-full min-w-0 overflow-hidden cursor-pointer"
+      onClick={handleNavigation}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className="border border-gray-200 bg-white group hover:shadow-md transition-shadow duration-300 flex flex-col h-full font-['Inter'] w-full min-w-0 overflow-hidden cursor-pointer relative"
     >
       {/* Image Container */}
       <div className="relative aspect-square bg-gray-50 flex items-center justify-center overflow-hidden">
-        {product.image ? (
-          <img src={product.image} alt={product.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" />
+        {images.length > 0 && images[currentImgIndex] ? (
+          <img 
+            src={images[currentImgIndex]} 
+            alt={product.title} 
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              // If index 0 still fails dynamically for any reason, skip it and go straight to the next valid variant image
+              if (currentImgIndex === 0 && images.length > 1) {
+                setCurrentImgIndex(1);
+              } else {
+                e.target.onerror = null;
+                e.target.src = "https://placehold.co/600x600/FAFAFA/A3A3A3?text=Image+Unavailable"; 
+              }
+            }}
+          />
         ) : (
           <div className="w-full h-full bg-[#FAFAFA] flex flex-col items-center justify-center text-gray-400 font-sans text-center">
-            <span className="text-sm font-medium">📷 No Image</span>
+            <span className="text-sm font-medium">📷 Image Unavailable</span>
           </div>
         )}
         
-        {/* Bottom border divider overlay */}
+       
+
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gray-200/80 pointer-events-none z-10"></div>
         
-        {/* Wishlist Actions (e.stopPropagation prevents the card's main handleNavigation from running) */}
+        {/* Wishlist Actions Button */}
         {variant === "wishlist" ? (
           <button
-            onClick={(e) => { e.stopPropagation(); onRemoveWishlist?.(product.id); }}
+            onClick={(e) => { e.stopPropagation(); onRemoveWishlist?.(product.id || product._id); }}
             className="absolute top-3 right-3 bg-white p-2 rounded-full shadow border border-gray-100 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 z-10 cursor-pointer transition-all duration-200"
           >
             <Trash2 size={14} strokeWidth={2} />
@@ -60,7 +135,8 @@ const ProductCard = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (isWishlisted) { onRemoveWishlist?.(product.id); } else { onWishlist?.(product); }
+              const targetId = product.id || product._id;
+              if (isWishlisted) { onRemoveWishlist?.(targetId); } else { onWishlist?.(product); }
             }}
             className="absolute top-3 right-3 bg-white p-1.5 rounded-full shadow border border-gray-100 z-10 cursor-pointer transition-colors"
           >
@@ -71,7 +147,6 @@ const ProductCard = ({
 
       {/* Content Meta Details */}
       <div className="p-4 flex flex-col gap-1.5 flex-1 min-w-0">
-        {/* Title looks like an interactive anchor tag but safely executes the router sequence */}
         <span className="text-gray-800 font-medium text-[15px] truncate hover:text-[#009EDB] transition-colors block">
           {product.title}
         </span>
@@ -113,7 +188,6 @@ const ProductCard = ({
             <button 
               onClick={(e) => {
                 e.stopPropagation();
-                // If product requires customization, prompt user and navigate to detail page
                 if (product?.customizeProduct === 'Yes') {
                   toast.info('Please provide customization (upload image or text) before adding to cart.');
                   const targetId = product.id || product._id;
