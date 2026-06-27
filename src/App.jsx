@@ -21,6 +21,7 @@ const UserProducts = lazy(() => import('./pages/user/Products'));
 const ProductDetail = lazy(() => import('./pages/user/ProductDetail'));
 const Profile = lazy(() => import('./pages/user/Profile'));
 const Orders = lazy(() => import('./pages/user/Orders'));
+const Coupons = lazy(() => import('./pages/user/Coupons'));
 const OrderDetails = lazy(() => import('./pages/user/OrderDetails'));
 const AddressBook = lazy(() => import('./pages/user/AddressBook'));
 const Wishlist = lazy(() => import('./pages/user/Wishlist'));
@@ -41,6 +42,7 @@ const CompleteProfile = lazy(() => import('./pages/user/CompleteProfile'));
 const AdminLogin = lazy(() => import('./pages/admin/Login'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
 const Products = lazy(() => import('./pages/admin/Products'));
+const AdminCoupons = lazy(() => import('./pages/admin/AdminCoupons'));
 const AddProduct = lazy(() => import('./pages/admin/AddProduct'));
 const AdminOrders = lazy(() => import('./pages/admin/Orders'));
 const Users = lazy(() => import('./pages/admin/Users'));
@@ -314,6 +316,7 @@ function App() {
             <Route path="my-account" element={<AccountLayout />}>
               <Route index element={<Profile />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="coupons" element={<Coupons/>} />
               <Route path="orders" element={<Orders />} />
               <Route path="address" element={<AddressBook />} />
             </Route>
@@ -339,6 +342,7 @@ function App() {
 
             <Route path="shippingCost" element={<ShippingCostPage />} />
             <Route path="combo-pack" element={<ComboPack />} />
+            <Route path="admin-coupons" element={<AdminCoupons/>} />
             <Route path="cancel-requests" element={<CancelRequests />} />
 
             <Route path="attributes" element={<AdminAttributes />} />

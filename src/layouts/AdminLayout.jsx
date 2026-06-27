@@ -13,6 +13,7 @@ import {
   User, 
   LogOut,
   XCircle,
+  Ticket,
   Layers
 } from 'lucide-react';
 
@@ -145,6 +146,10 @@ const AdminLayout = () => {
           <Link to="/admin/attributes" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/attributes')}`}>
             <Tag size={18} className="flex-shrink-0" />
             <span className="text-sm">Attributes</span>
+          </Link>
+           <Link to="/admin/admin-coupons" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/admin-coupons')}`}>
+            <Ticket size={18} className="flex-shrink-0" />
+            <span className="text-sm">Coupons</span>
           </Link>
           <Link to="/admin/combo-pack" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/combo-pack')}`}>
             <Layers size={18} className="flex-shrink-0" />
