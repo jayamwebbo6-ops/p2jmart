@@ -11,6 +11,7 @@ import {
   updateShippingAPI, 
   deleteShippingAPI 
 } from '../../api/shippingApi';
+import { getHomeCMS, updateHomeCMS } from '../../api/homeCms';
 
 const ShippingCostManager = () => {
   const [shippingRecords, setShippingRecords] = useState([]);
@@ -20,6 +21,51 @@ const ShippingCostManager = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   
+  // Global Shipping Configurations State
+  const [freeShippingMinAmount, setFreeShippingMinAmount] = useState('1000');
+  const [flatShippingCost, setFlatShippingCost] = useState('50');
+  const [savingGlobal, setSavingGlobal] = useState(false);
+
+  const fetchGlobalShippingConfig = async () => {
+    try {
+      const res = await getHomeCMS();
+      if (res && res.success && res.data) {
+        if (res.data.freeShippingMinAmount !== undefined) {
+          setFreeShippingMinAmount(res.data.freeShippingMinAmount.toString());
+        }
+        if (res.data.flatShippingCost !== undefined) {
+          setFlatShippingCost(res.data.flatShippingCost.toString());
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load global shipping configurations", err);
+    }
+  };
+
+  const handleSaveGlobalConfig = async () => {
+    if (freeShippingMinAmount === '' || flatShippingCost === '') {
+      toast.error("Please populate both global configuration fields.");
+      return;
+    }
+    setSavingGlobal(true);
+    try {
+      const res = await updateHomeCMS({
+        freeShippingMinAmount: Number(freeShippingMinAmount),
+        flatShippingCost: Number(flatShippingCost)
+      });
+      if (res && res.success) {
+        toast.success("Global shipping rules updated successfully.");
+      } else {
+        toast.error(res?.message || "Failed to update global shipping rules.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update global shipping rules.");
+    } finally {
+      setSavingGlobal(false);
+    }
+  };
+
   // Modal Form State Management
   const [currentId, setCurrentId] = useState(null); // stores MongoDB _id
   const [stateName, setStateName] = useState('');
@@ -48,6 +94,7 @@ const ShippingCostManager = () => {
 
   useEffect(() => {
     fetchShippingRecords();
+    fetchGlobalShippingConfig();
   }, []);
 
   // 1. Open Modal for creating a new record
@@ -154,6 +201,70 @@ const ShippingCostManager = () => {
       >
         <AddBtn onClick={openAddModal}>Add State</AddBtn>
       </PageHeader>
+
+      {/* GLOBAL SHIPPING CONFIGURATION CARD */}
+      <div className="w-full max-w-7xl mx-auto bg-white border border-gray-200/60 rounded-xl shadow-xs p-5 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#111c43] tracking-tight">Global Shipping Configurations</h3>
+              <p className="text-xs text-gray-500">Define global thresholds for free delivery and standard shipping fees.</p>
+            </div>
+          </div>
+          <div>
+            <SaveBtn onClick={handleSaveGlobalConfig} disabled={savingGlobal}>
+              {savingGlobal ? 'Saving Rules...' : 'Save Global Configurations'}
+            </SaveBtn>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          {/* Free Shipping threshold */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+              Free Shipping Threshold Amount (Orders Greater Than or Equal To)
+            </label>
+            <div className="relative rounded-lg shadow-xs">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-bold text-sm">
+                ₹
+              </div>
+              <input
+                type="number"
+                placeholder="e.g. 1000"
+                value={freeShippingMinAmount}
+                onChange={(e) => setFreeShippingMinAmount(e.target.value)}
+                className="w-full bg-white border border-gray-200 focus:border-gray-400 rounded-lg pl-8 pr-4 py-2.5 text-sm font-mono text-slate-700 placeholder-gray-300 focus:outline-none transition-all"
+                min="0"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400">If the order total is greater than or equal to this amount, shipping cost is set to free (₹0.00).</p>
+          </div>
+
+          {/* Standard shipping charge below threshold */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block">
+              Flat Shipping Cost (Orders Less Than Threshold)
+            </label>
+            <div className="relative rounded-lg shadow-xs">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400 font-bold text-sm">
+                ₹
+              </div>
+              <input
+                type="number"
+                placeholder="e.g. 50"
+                value={flatShippingCost}
+                onChange={(e) => setFlatShippingCost(e.target.value)}
+                className="w-full bg-white border border-gray-200 focus:border-gray-400 rounded-lg pl-8 pr-4 py-2.5 text-sm font-mono text-slate-700 placeholder-gray-300 focus:outline-none transition-all"
+                min="0"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400">Standard shipping charge applied to orders that do not qualify for free shipping.</p>
+          </div>
+        </div>
+      </div>
 
       {/* CORE DATA SHEET HOUSING CONTAINER CARD */}
       <div className="w-full max-w-7xl mx-auto bg-white border border-gray-200/60 rounded-xl shadow-xs overflow-hidden">

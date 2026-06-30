@@ -512,7 +512,7 @@ const handleItemClick = (product) => {
                         <p className="text-sm font-bold text-gray-800 truncate">{userProfile?.name || 'My Account'}</p>
                       </div>
                       <Link to="/my-account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary transition-colors" onClick={() => setIsUserMenuOpen(false)}>My Account</Link>
-                      <button onClick={() => { setIsUserMenuOpen(false); userLogout(); setIsAuthenticated(false); setUserProfile(null); window.location.href = '/'; }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50 cursor-pointer">Logout</button>
+                      <button onClick={() => { setIsUserMenuOpen(false); userLogout(); setIsAuthenticated(false); setUserProfile(null); window.location.href = import.meta.env.BASE_URL || '/'; }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors mt-1 border-t border-gray-50 cursor-pointer">Logout</button>
                     </>
                   ) : (
                     <Link to="/login" className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-primary font-semibold transition-colors" onClick={() => setIsUserMenuOpen(false)}>Login</Link>

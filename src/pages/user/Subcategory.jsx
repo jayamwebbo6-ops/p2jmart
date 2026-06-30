@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useLocation, useNavigate, Link, useParams } from "react-router-dom";
-import ProductCard from "../../components/ProductCard"; 
-import OfferSlider from "../../components/OfferSlider";
+import ProductCard from "../../components/ProductCard";
+import OfferFilter from "../../components/OfferFilter";
 import { getProductsAPI } from "../../api/productApi";
 import { getCategoriesAPI, getSubcategoryDetailsAPI } from "../../api/categoryApi";
 
@@ -115,7 +115,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
    ========================================================================== */
 const FilterContent = ({
   minPrice, maxPrice, minPriceLimit, maxPriceLimit, setMinPrice, setMaxPrice,
-  minDiscount, maxDiscount, absoluteDiscountLimits, setMinDiscount, setMaxDiscount,
+  selectedDiscount, onDiscountChange,
   brandsList, selectedBrands, handleBrandChange,
   sizesList, selectedSize, setSelectedSize,
   clearAllFilters
@@ -133,15 +133,9 @@ const FilterContent = ({
         }} 
       />
 
-      <OfferSlider 
-        minDiscount={minDiscount}
-        maxDiscount={maxDiscount}
-        absoluteMin={absoluteDiscountLimits.min}
-        absoluteMax={absoluteDiscountLimits.max}
-        onFilterCommit={(min, max) => {
-          setMinDiscount(min);
-          setMaxDiscount(max);
-        }}
+      <OfferFilter 
+        selectedDiscount={selectedDiscount}
+        onDiscountChange={onDiscountChange}
       />
 
       {brandsList.length > 0 && (
@@ -183,7 +177,7 @@ const FilterContent = ({
         </div>
       )}
 
-      {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || minDiscount > 0 || maxDiscount < 100) && (
+      {(selectedBrands.length > 0 || selectedSize !== null || minPrice > minPriceLimit || maxPrice < maxPriceLimit || selectedDiscount > 0) && (
         <button
           type="button"
           onClick={clearAllFilters}
@@ -219,9 +213,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
   const [minPriceLimit, setMinPriceLimit] = useState(0);
   const [maxPriceLimit, setMaxPriceLimit] = useState(100000);
   const [minDiscount, setMinDiscount] = useState(0);
-  const [maxDiscount, setMaxDiscount] = useState(100);
 
-  const [absoluteDiscountLimits] = useState({ min: 0, max: 100 });
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -330,7 +322,6 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     setMinPrice(minPriceLimit);
     setMaxPrice(maxPriceLimit);
     setMinDiscount(0);
-    setMaxDiscount(100);
   };
 
   const filteredAndSortedProducts = useMemo(() => {
@@ -349,7 +340,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
       return targetPrice >= minPrice && targetPrice <= maxPrice;
     });
 
-    output = output.filter(p => (p.discount || 0) >= minDiscount && (p.discount || 0) <= maxDiscount);
+    if (minDiscount > 0) {
+      output = output.filter(p => (p.discount || 0) >= minDiscount);
+    }
 
     if (sortOption === "price-low-high") {
       output.sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -360,11 +353,12 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     }
 
     return output;
-  }, [products, selectedBrands, selectedSize, minPrice, maxPrice, minDiscount, maxDiscount, sortOption]);
+  }, [products, selectedBrands, selectedSize, minPrice, maxPrice, minDiscount, sortOption]);
 
   const sharedFilterProps = {
     minPrice, maxPrice, minPriceLimit, maxPriceLimit, setMinPrice, setMaxPrice,
-    minDiscount, maxDiscount, absoluteDiscountLimits, setMinDiscount, setMaxDiscount,
+    selectedDiscount: minDiscount,
+    onDiscountChange: setMinDiscount,
     brandsList, selectedBrands, handleBrandChange,
     sizesList, selectedSize, setSelectedSize,
     clearAllFilters

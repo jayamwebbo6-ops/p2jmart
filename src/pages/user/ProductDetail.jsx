@@ -272,7 +272,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     isActive: loadedProduct.isActive !== false,
     warranty: loadedProduct.warranty || '',
     returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
-    deliveryMode: loadedProduct.deliveryMode || ''
+    deliveryMode: loadedProduct.deliveryMode || '',
+    freeShipping: loadedProduct.freeShipping || 'No'
   };
 }, [loadedProduct, selectedColor, selectedSize]);
 

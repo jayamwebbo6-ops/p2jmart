@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getHomeCMS } from '../api/homeCms'; // Adjust this import path to your actual api file path
 
 const PromoBanners = () => {
+  const navigate = useNavigate();
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,15 @@ const PromoBanners = () => {
       {/* Top Banner Slot */}
       {topBanner ? (
         <div 
-          onClick={() => { if(topBanner.btnLink) window.location.href = topBanner.btnLink; }}
+          onClick={() => {
+            if (topBanner.btnLink) {
+              if (topBanner.btnLink.startsWith('http://') || topBanner.btnLink.startsWith('https://')) {
+                window.location.href = topBanner.btnLink;
+              } else {
+                navigate(topBanner.btnLink);
+              }
+            }
+          }}
           /* REMOVED: bg-gradient-to-br from-orange-200 to-orange-400 */
           className="w-full flex-1 rounded-lg overflow-hidden relative bg-transparent shadow-sm group cursor-pointer"
         >
@@ -69,7 +79,15 @@ const PromoBanners = () => {
       {/* Bottom Banner Slot */}
       {bottomBanner ? (
         <div 
-          onClick={() => { if(bottomBanner.btnLink) window.location.href = bottomBanner.btnLink; }}
+          onClick={() => {
+            if (bottomBanner.btnLink) {
+              if (bottomBanner.btnLink.startsWith('http://') || bottomBanner.btnLink.startsWith('https://')) {
+                window.location.href = bottomBanner.btnLink;
+              } else {
+                navigate(bottomBanner.btnLink);
+              }
+            }
+          }}
           /* REMOVED: bg-gradient-to-br from-[#4dd0e1] to-[#009EDB] */
           className="w-full flex-1 rounded-lg overflow-hidden relative bg-transparent shadow-sm group cursor-pointer"
         >
