@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import useThrottledCallback from '../../hooks/useThrottledCallback';
+
 import { useDispatch } from 'react-redux';
 import { 
   MapPin, 
@@ -147,6 +148,12 @@ const Checkout = ({ cart = [], setCart }) => {
       setLoading(false);
     }
   };
+
+
+
+
+ 
+
 
   useEffect(() => {
     loadCheckoutData();
@@ -307,10 +314,12 @@ const Checkout = ({ cart = [], setCart }) => {
         isDirectPurchase: isDirectPurchase
       };
 
+      // This single API request now saves the order, clears the cart, and triggers the email!
       const res = await createOrderAPI(orderPayload);
       if (res && res.success) {
         toast.success(res.message || 'Order placed successfully');
         setPlacedOrder(res.data);
+
         if (!isDirectPurchase) {
           dispatch(fetchCart());
           setCart([]);
@@ -327,6 +336,8 @@ const Checkout = ({ cart = [], setCart }) => {
       setLoading(false);
     }
   };
+
+
 
   useEffect(() => {
     if (paymentStage === 'bank_redirect') {
