@@ -14,7 +14,7 @@ const THEME = {
   inputBg: 'bg-white',
 };
 
-const CategoryGridTab = ({ cards, setCards }) => {
+const CategoryGridTab = ({ cards, setCards, askConfirmation }) => {
   const fileInputRefs = useRef({});
 
   const handleFieldChange = (id, field, value) => {
@@ -34,7 +34,13 @@ const CategoryGridTab = ({ cards, setCards }) => {
   };
 
   const handleRemoveCategoryCard = (id) => {
-    setCards(cards.filter(card => card.id !== id));
+    askConfirmation({
+      title: "Delete Category Card",
+      message: "Are you sure you want to delete this category card? This action cannot be undone.",
+      onConfirm: () => {
+        setCards(cards.filter(card => card.id !== id));
+      }
+    });
   };
 
   const handleImageUpload = (id, event) => {

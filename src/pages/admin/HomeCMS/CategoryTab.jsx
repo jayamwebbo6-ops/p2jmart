@@ -30,7 +30,7 @@ const THEME = {
   inputBg: 'bg-white',
 };
 
-const CategoryTab = ({ sections = [], setSections }) => {
+const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
   const [categories, setCategories] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [searchQueries, setSearchQueries] = useState({});
@@ -84,7 +84,13 @@ const CategoryTab = ({ sections = [], setSections }) => {
   };
 
   const handleDeleteSection = (id) => {
-    saveSections(sections.filter(sec => sec.id !== id));
+    askConfirmation({
+      title: "Delete Category Section",
+      message: "Are you sure you want to delete this category showcase section? This action cannot be undone.",
+      onConfirm: () => {
+        saveSections(sections.filter(sec => sec.id !== id));
+      }
+    });
   };
 
   const handleCategoryChange = (sectionId, catId) => {

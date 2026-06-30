@@ -1,7 +1,5 @@
 import axios from 'axios';
-import { getCookie, setCookie, deleteCookie } from './api';
-
-const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+import { getCookie, setCookie, deleteCookie, API_URL } from './api';
 
 const userApi = axios.create({
   baseURL: API_URL

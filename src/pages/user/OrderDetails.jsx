@@ -292,18 +292,24 @@ const OrderDetails = () => {
                 {order.items?.map((item, index) => (
                   <div key={index} className="flex justify-between items-center border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0 print:border-gray-200">
                     <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 print:hidden relative">
+                      <Link 
+                        to={item.isComboProduct && item.includedProducts?.[0]
+                          ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id || item.includedProducts[0].productId}`
+                          : `/product/${item.productId}`
+                        }
+                        className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 print:hidden relative block cursor-pointer"
+                      >
                         <img 
                           src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
                           alt={item.title || item.name} 
-                          className="w-full h-full object-cover rounded-md" 
+                          className="w-full h-full object-cover rounded-md hover:scale-105 transition-transform duration-200" 
                         />
                         {item.isComboProduct && (
                           <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
                             <Layers size={8} /> Combo
                           </div>
                         )}
-                      </div>
+                      </Link>
                       <div>
                         <p className="font-bold text-gray-800 text-sm mb-0.5">{item.title || item.name}</p>
                         

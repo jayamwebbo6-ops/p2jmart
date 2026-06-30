@@ -23,7 +23,8 @@ const MultiColumnShowcaseTab = ({
   trendingProducts = [],
   setTrendingProducts,
   exclusiveProducts = [],
-  setExclusiveProducts
+  setExclusiveProducts,
+  askConfirmation
 }) => {
   const [categories, setCategories] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
@@ -107,9 +108,15 @@ const MultiColumnShowcaseTab = ({
   };
 
   const handleRemoveFromSection = (id) => {
-    setFeaturedProducts(prev => prev.filter(x => x !== id));
-    setTrendingProducts(prev => prev.filter(x => x !== id));
-    setExclusiveProducts(prev => prev.filter(x => x !== id));
+    askConfirmation({
+      title: "Remove Product",
+      message: "Are you sure you want to remove this product from the grid showcase section?",
+      onConfirm: () => {
+        setFeaturedProducts(prev => prev.filter(x => x !== id));
+        setTrendingProducts(prev => prev.filter(x => x !== id));
+        setExclusiveProducts(prev => prev.filter(x => x !== id));
+      }
+    });
   };
 
   // Filter Warehouse Inventory Data

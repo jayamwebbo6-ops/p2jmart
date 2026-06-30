@@ -26,6 +26,7 @@ import PrivacyPolicyManager from './PrivacyPolicyManager';
 import CancellationReturnPolicyManager from './CancellationReturnPolicyHandle';
 import DeliveryPolicyManager from './DeliveryPolicyManager';
 import TermsCondition from './TermsCondition';
+import ConfirmationModal from '../../../components/ConfirmationModal';
 
 
 const HomeContentManager = () => {
@@ -103,6 +104,22 @@ const HomeContentManager = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('Saved changes successfully!');
   const [toastType, setToastType] = useState('success');
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: null
+  });
+
+  const askConfirmation = ({ title, message, onConfirm }) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm
+    });
+  };
 
   // Fetch from DB on mount
   useEffect(() => {
@@ -328,6 +345,7 @@ const HomeContentManager = () => {
                   addSlide={addSlide} 
                   offerBanners={offerBanners} 
                   setOfferBanners={setOfferBanners}
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -337,6 +355,7 @@ const HomeContentManager = () => {
                   setCards={setCategoryGrid} 
                   promoBanner={promoBanner}
                   setPromoBanner={setPromoBanner}
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -344,6 +363,7 @@ const HomeContentManager = () => {
                 <CategoryTab 
                   sections={categorySections} 
                   setSections={setCategorySections} 
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -355,6 +375,7 @@ const HomeContentManager = () => {
                   setTrendingProducts={setTrendingProducts}
                   exclusiveProducts={exclusiveProducts}
                   setExclusiveProducts={setExclusiveProducts}
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -373,6 +394,7 @@ const HomeContentManager = () => {
                   setSections={setPrivacyPolicy}
                   onSave={handleSaveChanges}
                   isSaving={isSaving}
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -382,6 +404,7 @@ const HomeContentManager = () => {
                   setSections={setCancellationReturnPolicy}
                   onSave={handleSaveChanges}
                   isSaving={isSaving}
+                  askConfirmation={askConfirmation}
                 />
               )}
               
@@ -391,6 +414,7 @@ const HomeContentManager = () => {
                   setSections={setDeliveryPolicy}
                   onSave={handleSaveChanges}
                   isSaving={isSaving}
+                  askConfirmation={askConfirmation}
                 />
               )}
 
@@ -400,6 +424,7 @@ const HomeContentManager = () => {
                   setSections={setTermsConditions}
                   onSave={handleSaveChanges}
                   isSaving={isSaving}
+                  askConfirmation={askConfirmation}
                 />
               )}
             </>
@@ -407,6 +432,14 @@ const HomeContentManager = () => {
 
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onConfirm={confirmModal.onConfirm}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 };

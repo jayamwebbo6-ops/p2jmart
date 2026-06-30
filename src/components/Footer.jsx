@@ -72,7 +72,7 @@ const Footer = () => {
 
           {/* DYNAMIC SHOP ADDRESS BLOCK */}
           <div className="col-span-2 md:col-span-1 text-center md:text-left flex flex-col items-center md:items-start">
-            <h4 className="text-white font-bold mb-4 text-[14px]">Address</h4>
+            <h4 className="text-white font-bold mb-4 text-[14px]">ADDRESS</h4>
             
             {isLoading ? (
               <p className="text-[13px] text-gray-400 animate-pulse">Loading address data...</p>
@@ -111,7 +111,7 @@ const Footer = () => {
 
           {/* REGISTERED OFFICE */}
           <div className="col-span-2 md:col-span-1 text-center md:text-left flex flex-col items-center md:items-start">
-            <h4 className="text-white font-bold mb-4 text-[14px]">Registered Office Address:</h4>
+            <h4 className="text-white font-bold mb-4 text-[14px]">REGISTERED OFFICE ADDRESS</h4>
             <div className="leading-relaxed mb-4 space-y-1">
               <p className="text-[13px] text-white m-0">Buildings Alyssa, Begonia &amp; Clove Embassy Tech</p>
               <p className="text-[13px] text-white m-0">Village,</p>

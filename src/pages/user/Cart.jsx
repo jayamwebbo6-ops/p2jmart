@@ -44,7 +44,8 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
 
   // Calculations based on current cart contents
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const shippingFee = subtotal > 1000 || subtotal === 0 ? 0 : 100; 
+  const totalWeight = cart.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
+  const shippingFee = subtotal > 1000 || subtotal === 0 || totalWeight === 0 ? 0 : 100; 
   const freeShippingThreshold = 1000;
   const amountNeededForFreeShipping = freeShippingThreshold - subtotal;
   const total = subtotal + shippingFee;
@@ -99,15 +100,25 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
             
             {/* Image wrapper */}
             <div className="flex justify-start sm:block flex-shrink-0">
-              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
+              <Link 
+                to={item.isComboProduct && item.includedProducts?.[0]
+                  ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id}`
+                  : `/product/${item.productId || item.id || item._id}`
+                }
+                className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative block cursor-pointer"
+              >
                 {/* Fallback image handle for standard bundle components schema */}
-                <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title} className="w-full h-full object-cover" />
+                <img 
+                  src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
+                  alt={item.title} 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" 
+                />
                 {item.isComboProduct && (
                   <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
                     <Layers size={8} /> Combo
                   </div>
                 )}
-              </div>
+              </Link>
             </div>
 
             {/* Middle text data & Quantity Selector */}
