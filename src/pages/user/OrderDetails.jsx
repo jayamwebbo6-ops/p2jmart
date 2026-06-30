@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, XCircle, Calendar, MapPin, Package, Phone, Download, Loader } from 'lucide-react';
+import { ArrowLeft, XCircle, Calendar, MapPin, Package, Phone, Download, Loader, Layers, Copy, Check } from 'lucide-react';
 import { getOrderByIdAPI, cancelOrderAPI } from '../../api/orderApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { toast } from '../../components/toast';
@@ -12,6 +12,14 @@ const OrderDetails = () => {
   const [loading, setLoading] = useState(true);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [copiedTracking, setCopiedTracking] = useState(false);
+
+  const handleCopyTracking = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopiedTracking(true);
+    toast.success('Tracking ID copied to clipboard');
+    setTimeout(() => setCopiedTracking(false), 2000);
+  };
 
   const fetchOrderDetails = async () => {
     try {
@@ -207,6 +215,47 @@ const OrderDetails = () => {
               </div>
             </div>
 
+            {/* Tracking Details Card */}
+            {order.trackingId && (
+              <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-5 shadow-sm print:hidden">
+                <h3 className="flex items-center space-x-2 text-blue-900 font-bold text-sm mb-4 border-b border-blue-200/50 pb-3">
+                  <Package size={16} className="text-[#009EDB]" />
+                  <span>Tracking Information</span>
+                </h3>
+                <div className="space-y-3 text-[13px] font-medium text-slate-700">
+                  <div>
+                    <span className="text-slate-400 block text-xs font-semibold">Tracking ID</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-extrabold text-[#003147] select-all">{order.trackingId}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyTracking(order.trackingId)}
+                        className={`p-1 rounded-md transition-all ${copiedTracking ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400 hover:text-gray-600 hover:bg-gray-200'}`}
+                        title="Copy Tracking ID"
+                      >
+                        {copiedTracking ? <Check size={12} strokeWidth={3} /> : <Copy size={12} />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-xs font-semibold">Tracking Link</span>
+                    {order.trackingLink ? (
+                      <a 
+                        href={order.trackingLink} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[#009EDB] hover:underline font-bold break-all flex items-center gap-1.5"
+                      >
+                        Click here to track your package
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">Not Available</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Shipping Address Card */}
             <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm print:shadow-none print:border-gray-200">
               <h3 className="flex items-center space-x-2 text-[#003147] font-bold text-sm mb-4 border-b border-gray-50 pb-3 print:border-gray-200">
@@ -243,22 +292,94 @@ const OrderDetails = () => {
                 {order.items?.map((item, index) => (
                   <div key={index} className="flex justify-between items-center border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0 print:border-gray-200">
                     <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 print:hidden">
+                      <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 print:hidden relative">
                         <img 
-                          src={formatImageUrl(item.image)} 
+                          src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
                           alt={item.title || item.name} 
                           className="w-full h-full object-cover rounded-md" 
                         />
+                        {item.isComboProduct && (
+                          <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
+                            <Layers size={8} /> Combo
+                          </div>
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-gray-800 text-sm mb-0.5">{item.title || item.name}</p>
-                        <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500">
-                          {item.selectedOptions && Object.entries(item.selectedOptions).map(([key, val]) => (
-                            <span key={key} className="capitalize">{key}: {val}</span>
-                          ))}
+                        
+                        {item.isComboProduct ? (
+                          <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow-2xs">
+                            ✨ Combo Bundle Savings Deal
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
+                            {item.selectedOptions && Object.entries(item.selectedOptions)
+                              .filter(([key]) => key !== 'customImage' && key !== 'customText' && key !== 'customization')
+                              .map(([key, val]) => (
+                                <span key={key} className="capitalize">{key}: {val}</span>
+                              ))
+                            }
+                          </div>
+                        )}
+
+                        {/* Nested Combo items listing */}
+                        {item.isComboProduct && item.includedProducts && (
+                          <div className="mt-2 mb-2 bg-slate-50 border border-slate-200/60 rounded-lg p-2 max-w-sm">
+                            <p className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-500 tracking-wider mb-1">
+                              Included Products:
+                            </p>
+                            <div className="flex flex-col gap-1.5">
+                              {item.includedProducts.map((subItem, index) => (
+                                <div key={subItem.id || index} className="flex items-center gap-1.5 bg-white border border-slate-100 p-1 rounded">
+                                  <div className="w-6 h-6 rounded bg-slate-100 border border-slate-200/85 overflow-hidden shrink-0">
+                                    <img 
+                                      src={formatImageUrl(subItem.image)} 
+                                      alt={subItem.productName || subItem.title} 
+                                      className="w-full h-full object-cover" 
+                                    />
+                                  </div>
+                                  <span className="truncate text-gray-800 text-[10px] font-semibold flex-1">
+                                    {subItem.productName || subItem.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2 text-[11px] text-gray-400">
                           <span>Qty: {item.quantity || item.qty}</span>
+                          <span>•</span>
+                          <span>₹{Number(item.price).toFixed(2)} each</span>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-0.5">₹{Number(item.price).toFixed(2)} each</p>
+
+                        {/* Custom Design / Text details */}
+                        {(item.selectedOptions?.customImage || item.selectedOptions?.customText || item.selectedOptions?.customization) && (
+                          <div className="mt-2 p-3 bg-pink-50/50 border border-pink-100 rounded-lg text-xs space-y-2 max-w-sm">
+                            <p className="font-bold text-pink-700 uppercase text-[9px] tracking-wider">Custom Specifications</p>
+                            {(item.selectedOptions?.customImage || item.selectedOptions?.customization?.image) && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-500 font-medium">Uploaded Photo:</span>
+                                <a 
+                                  href={formatImageUrl(item.selectedOptions.customImage || item.selectedOptions.customization?.image)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-[#009EDB] hover:underline font-bold"
+                                >
+                                  View Photo
+                                </a>
+                              </div>
+                            )}
+                            {(item.selectedOptions?.customText || item.selectedOptions?.customization?.text) && (
+                              <div>
+                                <span className="text-gray-500 font-medium block">Custom Text:</span>
+                                <p className="text-gray-800 font-semibold italic bg-white p-2 border border-pink-100 rounded mt-0.5 select-all">
+                                  "{item.selectedOptions.customText || item.selectedOptions.customization?.text}"
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="font-bold text-gray-800 text-sm">

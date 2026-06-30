@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Heart, ShoppingCart, Star, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import useThrottledCallback from '../hooks/useThrottledCallback';
 import { toast } from './toast';
 
 const BACKEND_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api"; 
@@ -19,6 +20,7 @@ const ProductCard = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [brokenImages, setBrokenImages] = useState(new Set());
+  const imgRef = useRef(null);
 
 
 
@@ -86,6 +88,13 @@ const ProductCard = ({
     return resolved.slice(0, 3);
   }, [product, isHovered, brokenImages]);
 
+  // Cache-safeguard: If the image is already cached, it completes instantly before onLoad is bound.
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      setImageLoaded(true);
+    }
+  }, [images, currentImgIndex]);
+
   const intervalRef = useRef(null);
 
   useEffect(() => {
@@ -115,6 +124,32 @@ const ProductCard = ({
     }
   };
 
+  const handleRemoveWishlistClick = useThrottledCallback((e) => {
+    e.stopPropagation();
+    onRemoveWishlist?.(product.id || product._id);
+  }, 1000);
+
+  const handleWishlistClick = useThrottledCallback((e) => {
+    e.stopPropagation();
+    const targetId = product.id || product._id;
+    if (isWishlisted) {
+      onRemoveWishlist?.(targetId);
+    } else {
+      onWishlist?.(product);
+    }
+  }, 1000);
+
+  const handleAddToCartClick = useThrottledCallback((e) => {
+    e.stopPropagation();
+    if (product?.customizeProduct === 'Yes') {
+      toast.info('Please provide customization (upload image or text) before adding to cart.');
+      const targetId = product.id || product._id;
+      navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
+      return;
+    }
+    onAddToCart?.(product);
+  }, 1000);
+
   return (
     <div 
       onClick={handleNavigation}
@@ -132,6 +167,7 @@ const ProductCard = ({
               </div>
             )}
             <img 
+              ref={imgRef}
               src={images[currentImgIndex]} 
               alt={product.title} 
               onLoad={() => setImageLoaded(true)}
@@ -162,18 +198,14 @@ const ProductCard = ({
         {/* Wishlist Actions Button */}
         {variant === "wishlist" ? (
           <button
-            onClick={(e) => { e.stopPropagation(); onRemoveWishlist?.(product.id || product._id); }}
+            onClick={handleRemoveWishlistClick}
             className="absolute top-3 right-3 bg-white p-2 rounded-full shadow border border-gray-100 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 z-10 cursor-pointer transition-all duration-200"
           >
             <Trash2 size={14} strokeWidth={2} />
           </button>
         ) : (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const targetId = product.id || product._id;
-              if (isWishlisted) { onRemoveWishlist?.(targetId); } else { onWishlist?.(product); }
-            }}
+            onClick={handleWishlistClick}
             className="absolute top-3 right-3 bg-white p-1.5 rounded-full shadow border border-gray-100 z-10 cursor-pointer transition-colors"
           >
             <Heart size={16} strokeWidth={2} fill={isWishlisted ? "#EF4444" : "none"} className={isWishlisted ? "text-red-500" : "text-gray-600 hover:text-red-500"} />
@@ -222,16 +254,7 @@ const ProductCard = ({
         {product.price !== null && product.price !== undefined && (
           <div className="mt-auto pt-0.5">
             <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (product?.customizeProduct === 'Yes') {
-                  toast.info('Please provide customization (upload image or text) before adding to cart.');
-                  const targetId = product.id || product._id;
-                  navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
-                  return;
-                }
-                onAddToCart?.(product);
-              }}
+              onClick={handleAddToCartClick}
               className="bg-[#003147] text-white text-xs font-medium py-2 px-3 rounded flex items-center gap-1.5 w-fit mt-2 hover:bg-[#009EDB] transition-colors cursor-pointer shadow-sm active:scale-95 max-w-full"
             >
               <ShoppingCart size={14} className="flex-shrink-0" />

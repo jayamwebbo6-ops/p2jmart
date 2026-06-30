@@ -377,9 +377,8 @@ const handleItemClick = (product) => {
   };
 
   return (
-    <>
-      {/* Top Bar */}
-      <div className="hidden md:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-12 justify-between items-center font-sans">
+    <>      {/* Top Bar */}
+      <div className="hidden md:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-6 xl:px-12 justify-between items-center font-sans">
         <div>
           <span className="tracking-wide text-[12px] text-white">Free Shipping Over ₹500</span>
         </div>
@@ -422,9 +421,9 @@ const handleItemClick = (product) => {
          
         </div>
       </div>
-
+ 
       {/* Main Navbar */}
-      <header className="w-full bg-white px-4 md:px-8 lg:px-12 py-0 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm">
+      <header className="w-full bg-white px-4 md:px-8 lg:px-6 xl:px-12 py-0 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm">
         <div className="flex items-center">
           <Link to="/" className="flex items-center">
             <img 
@@ -434,17 +433,17 @@ const handleItemClick = (product) => {
             />
           </Link>
         </div>
-
-        <nav className="hidden lg:flex items-center space-x-8">
+ 
+        <nav className="hidden lg:flex items-center space-x-4 xl:space-x-8">
           <Link to="/" className={`${isActive('/')} transition-colors`}>Home</Link>
           <Link to="/products" className={`${isActive('/products')} transition-colors`}>Products</Link>
           <Link to="/customized" className={`${isActive('/customized')} transition-colors`}>Customized Products</Link>
           <Link to="/contact" className={`${isActive('/contact')} transition-colors`}>Contact Us</Link>
         </nav>
-
+ 
         <div className="flex items-center space-x-4 md:space-x-6">
           <div className="relative hidden lg:block" ref={searchContainerRef}>
-            <div className={`flex items-center border rounded-full w-80 transition-all px-1 py-0.5 ${isSearchFocused ? 'border-primary ring-2 ring-primary/10' : 'border-gray-300'}`}>
+            <div className={`flex items-center border rounded-full w-48 xl:w-80 transition-all px-1 py-0.5 ${isSearchFocused ? 'border-primary ring-2 ring-primary/10' : 'border-gray-300'}`}>
               <input 
                 type="text" 
                 value={searchQuery}

@@ -11,8 +11,9 @@ const AccountLayout = () => {
     { to: '/my-account/orders', label: 'Orders', icon: <Package size={18} /> },
     { to: '/my-account/address', label: 'Address Book', icon: <MapPin size={18} /> },
         { to: '/my-account/coupons', label: 'Coupons', icon: <Ticket size={18} /> },
-    { to: '/wishlist', label: 'Wishlist', icon: <Heart size={18} /> },
    
+    { to: '/my-account/logout', label: 'Logout', icon: <LogOut size={18} /> },
+
   ];
 
   // Derive current page for title parsing and mobile header selection

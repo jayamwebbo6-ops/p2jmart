@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, ChevronRight } from 'lucide-react';
-
+import { Link } from 'react-router-dom';
 import { getCategoriesAPI } from '../api/categoryApi'; 
 
 const Sidebar = () => {
@@ -8,7 +8,7 @@ const Sidebar = () => {
   const [loading, setLoading] = useState(true);
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  // Sync state data from backend database collection arrays
+ 
   useEffect(() => {
     const fetchSidebarMenuData = async () => {
       try {
@@ -83,36 +83,59 @@ const Sidebar = () => {
       {/* Mega Menu Flyout Layer */}
       {!loading && hoveredIndex !== null && categories[hoveredIndex] && (
         <div 
-          className="absolute left-full top-[46px] w-[450px] min-h-[350px] bg-white border border-gray-200 shadow-2xl z-50 flex rounded-r-lg opacity-100 transition-opacity duration-200"
+          className="absolute left-full top-[46px] w-[500px] min-h-[360px] bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.12)] z-50 flex rounded-r-2xl animate-flyout"
           style={{ marginLeft: '-1px' }} // Overlaps grid line to eliminate mouse fall-off breaks
         >
           {/* Left Column: Subcategories List Mapping */}
-          <div className="w-1/2 p-6 border-r border-gray-100 flex flex-col">
-            <h3 className="font-bold text-primary mb-4 border-b border-gray-100 pb-2">{categories[hoveredIndex].name}</h3>
-            {categories[hoveredIndex].subcategories.length === 0 ? (
-              <p className="text-xs text-gray-400 font-medium">No subcategories linked</p>
-            ) : (
-              <ul className="flex flex-col space-y-3 overflow-y-auto max-h-[300px] custom-scrollbar">
-                {categories[hoveredIndex].subcategories.map((sub, i) => (
-                  <li key={i} className="text-sm text-gray-600 hover:text-secondary cursor-pointer transition-colors pb-2 border-b border-gray-50 last:border-0">
-                    {sub}
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="w-1/2 p-6 border-r border-slate-100 flex flex-col justify-between">
+            <div>
+              <div className="mb-4">
+                <h3 className="text-base sm:text-lg font-black text-[#003147] leading-tight">
+                  {categories[hoveredIndex].name}
+                </h3>
+                <div className="bg-gradient-to-r from-[#009EDB] to-transparent h-0.5 w-10 mt-1.5 rounded-full"></div>
+              </div>
+
+              {categories[hoveredIndex].subcategories.length === 0 ? (
+                <p className="text-xs text-gray-400 font-medium">No subcategories linked</p>
+              ) : (
+                <ul className="flex flex-col gap-1 overflow-y-auto max-h-[250px] custom-scrollbar pr-1">
+                  {categories[hoveredIndex].subcategories.map((sub, i) => (
+                    <li key={i}>
+                      <a 
+                        href={`/products?category=${categories[hoveredIndex].name}&subcategory=${sub}`}
+                        className="group/sub flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-[13px] font-bold text-gray-600 hover:text-[#009EDB] hover:bg-slate-50 transition-all duration-200"
+                      >
+                        <span className="truncate">{sub}</span>
+                        <ChevronRight 
+                          size={14} 
+                          className="opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0 transition-all duration-200 text-[#009EDB]" 
+                        />
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
           {/* Right Column: Promo Visuals */}
-          <div className="w-1/2 p-6 flex flex-col items-center justify-center bg-gray-50/50 rounded-r-lg">
-            <div className="w-full h-40 mb-5 overflow-hidden rounded-md shadow-sm border border-gray-100">
+          <div className="w-1/2 p-6 flex flex-col justify-between bg-slate-50/50 rounded-r-2xl">
+            <div className="relative overflow-hidden rounded-xl shadow-md border border-slate-100 aspect-[4/3] group/promo w-full mb-4">
               <img 
                 src={categories[hoveredIndex].promoImage} 
                 alt="Promo Banner" 
-                className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover transform scale-100 group-hover/promo:scale-105 transition-transform duration-500"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent"></div>
+              <span className="absolute top-2 left-2 bg-white/95 text-[#003147] text-[8px] font-black uppercase px-2 py-0.5 rounded-md shadow-sm tracking-wider">
+                Trending
+              </span>
             </div>
-            <button className="w-full border-2 border-secondary text-secondary font-semibold py-2 rounded hover:bg-secondary hover:text-white transition-colors text-sm">
-              View All
+
+            <button className="group w-full bg-[#003147] hover:bg-[#009EDB] text-white font-bold py-2.5 rounded-xl transition-all shadow-[0_4px_12px_rgba(0,49,71,0.15)] hover:shadow-[0_4px_15px_rgba(0,158,219,0.2)] text-xs sm:text-sm flex items-center justify-center gap-1.5">
+             <Link to={`/products`}> <span>View All Products</span></Link>
+              <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         </div>

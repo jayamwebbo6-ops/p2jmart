@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import useDebounce from '../../hooks/useDebounce';
 import { Search, ChevronDown, X, Trash2, ShieldAlert } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable'; // Imported your standard component
@@ -53,6 +54,7 @@ const CancelRequests = () => {
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
   const [entriesCount, setEntriesCount] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 350);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
   
   // Interactive Dialog Modal Triggers
@@ -67,9 +69,9 @@ const CancelRequests = () => {
 
   // Search Engine Data Filter Logic
   const filteredRequests = requests.filter(req => 
-    req.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.mobileNo.includes(searchQuery)
+    req.id.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    req.userName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    req.mobileNo.includes(debouncedSearchQuery)
   );
 
   // Sorting Handler for AdminTable

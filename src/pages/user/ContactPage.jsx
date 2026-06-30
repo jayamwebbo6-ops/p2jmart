@@ -1,4 +1,5 @@
 import { useState,useEffect } from "react";
+import useThrottledCallback from "../../hooks/useThrottledCallback";
 import { MapPin, Mail, Phone } from "lucide-react";
 import { createEnqueriesAPI } from "../../api/enqueriesApi";
 import { toast } from "../../components/toast";
@@ -120,8 +121,8 @@ export default function ContactPage() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = useThrottledCallback(async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
 
     // Validate form before submission
     if (!validateForm()) {
@@ -160,7 +161,7 @@ export default function ContactPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, 1500);
 
   return (
     <div className="w-full pt-16 min-h-screen bg-[#f5f5f5]">

@@ -338,10 +338,13 @@ const CategoryTab = ({ sections = [], setSections }) => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                   <div className="lg:col-span-4 space-y-4">
-                    <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                      <ImageIcon size={12} />
-                      Promotion Banner (Right Side)
-                    </h3>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <ImageIcon size={12} />
+                        Promotion Banner (Right Side)
+                      </h3>
+                      <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended: 2:3 Aspect Ratio (Portrait, e.g. 350x520 px) for correct layout display.</span>
+                    </div>
 
                     <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden relative flex flex-col items-center justify-center group hover:bg-slate-100/50 hover:border-slate-300 transition-all">
                       {section.bannerImage ? (
@@ -366,7 +369,7 @@ const CategoryTab = ({ sections = [], setSections }) => {
                           <div className="text-center p-4 flex flex-col items-center gap-2 pointer-events-none">
                             <Upload size={20} className="text-slate-400" />
                             <span className="text-[11px] font-bold text-slate-700">Upload Banner Image</span>
-                            <span className="text-[9px] text-slate-400">This image appears on the right side of products</span>
+                            <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended size: 2:3 Aspect Ratio (Portrait, e.g., 350x520 px) for optimal sidebar layout.</span>
                           </div>
                           <input 
                             type="file" 
