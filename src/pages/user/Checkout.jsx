@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import useThrottledCallback from '../../hooks/useThrottledCallback';
 import { useDispatch } from 'react-redux';
 import { 
   MapPin, 
@@ -12,7 +13,8 @@ import {
   Clock, 
   ShieldCheck, 
   CreditCard,
-  X
+  X,
+  Layers
 } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { toast } from '../../components/toast';
@@ -27,13 +29,24 @@ import { createOrderAPI } from '../../api/orderApi';
 import { fetchCart } from '../../redux/cartSlice';
 
 const Checkout = ({ cart = [], setCart }) => {
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
+      return imagePath;
+    }
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
+    return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
+  };
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
 
   const directPurchaseItems = location.state?.items || null;
-  const isDirectPurchase = !!location.state?.directPurchase;
-  const checkoutItems = isDirectPurchase && directPurchaseItems ? directPurchaseItems : cart;
+  const directPurchaseBundle = location.state?.directPurchaseBundle || null;
+  const isDirectPurchase = !!location.state?.directPurchase || !!directPurchaseBundle;
+  const checkoutItems = isDirectPurchase && (directPurchaseBundle || directPurchaseItems)
+    ? (directPurchaseBundle ? [directPurchaseBundle] : directPurchaseItems)
+    : cart;
 
   // Step state: 1 = Address, 2 = Payment/Order Summary, 3 = Order Success
   const [step, setStep] = useState(1);
@@ -240,15 +253,15 @@ const Checkout = ({ cart = [], setCart }) => {
     }
   };
 
-  const handleUseSelectedAddress = () => {
+  const handleUseSelectedAddress = useThrottledCallback(() => {
     if (!selectedAddressId) {
       toast.error("Please select a shipping address.");
       return;
     }
     setStep(2);
-  };
+  }, 1000);
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = useThrottledCallback(() => {
     if (!selectedAddress) {
       toast.error("Please select a shipping address.");
       setStep(1);
@@ -257,7 +270,7 @@ const Checkout = ({ cart = [], setCart }) => {
     const generatedRef = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
     setOrderRef(generatedRef);
     setPaymentStage('gateway_modal');
-  };
+  }, 1000);
 
   const finalizeSuccessfulPayment = async () => {
     setLoading(true);
@@ -569,28 +582,70 @@ const Checkout = ({ cart = [], setCart }) => {
             {checkoutItems.map((item) => (
               <div 
                 key={item.id || item._id} 
-                className="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0"
+                className="flex items-start justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 gap-4"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 relative">
-                    <img src={item.image || (item.images && item.images[0])} alt={item.title} className="w-full h-full object-cover" />
-                    <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
+                    <img 
+                      src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image) || (item.images && item.images[0]))} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover" 
+                    />
+                    {item.isComboProduct ? (
+                      <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
+                        <Layers size={8} /> Combo
+                      </div>
+                    ) : (
+                      <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
+                    )}
                   </div>
                   
-                  <div className="text-left">
-                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 line-clamp-1 max-w-[180px] sm:max-w-[320px]">
+                  <div className="text-left flex-1 min-w-0">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 line-clamp-2">
                       {item.title}
                     </h4>
-                    <p className="text-[9px] sm:text-xs text-gray-400 mt-0.5">
-                      Joy Gift House / Default Variant
-                    </p>
+                    {item.isComboProduct ? (
+                      <span className="inline-block mt-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full shadow-2xs">
+                        ✨ Combo Bundle Savings Deal
+                      </span>
+                    ) : (
+                      <p className="text-[9px] sm:text-xs text-gray-400 mt-0.5">
+                        Joy Gift House / Default Variant
+                      </p>
+                    )}
+
+                    {/* Nested Combo items listing */}
+                    {item.isComboProduct && item.includedProducts && (
+                      <div className="mt-2 bg-slate-50 border border-slate-200/60 rounded-lg p-2 w-full max-w-full">
+                        <p className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-500 tracking-wider mb-1">
+                          Included Products:
+                        </p>
+                        <div className="flex flex-col gap-1.5">
+                          {item.includedProducts.map((subItem, index) => (
+                            <div key={subItem.id || index} className="flex items-center gap-1.5 bg-white border border-slate-100 p-1 rounded">
+                              <div className="w-6 h-6 rounded bg-slate-100 border border-slate-200/85 overflow-hidden shrink-0">
+                                <img 
+                                  src={formatImageUrl(subItem.image)} 
+                                  alt={subItem.productName || subItem.title} 
+                                  className="w-full h-full object-cover" 
+                                />
+                              </div>
+                              <span className="truncate text-gray-800 text-[10px] font-semibold flex-1">
+                                {subItem.productName || subItem.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <p className="text-[10px] sm:text-xs text-gray-500 font-semibold mt-1">
                       ₹{item.price.toFixed(2)} × {item.quantity}
                     </p>
                   </div>
                 </div>
                 
-                <span className="text-xs sm:text-sm font-black text-gray-955">
+                <span className="text-xs sm:text-sm font-black text-gray-955 shrink-0 mt-1">
                   ₹{(item.price * item.quantity).toFixed(2)}
                 </span>
               </div>

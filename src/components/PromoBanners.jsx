@@ -88,9 +88,7 @@ const PromoBanners = () => {
           <div className="relative z-20 p-6 flex flex-col h-full justify-start items-end text-right">
             <p className="text-white font-medium text-sm mb-1 tracking-wide drop-shadow-[0_1.5px_3px_rgba(0,0,0,0.8)]">{bottomBanner.tagline}</p>
             <h3 className="text-white font-bold text-2xl drop-shadow-[0_2px_5px_rgba(0,0,0,0.85)]">{bottomBanner.title}</h3>
-            <span className="text-white text-xs mt-auto underline decoration-white/50 hover:decoration-white transition-colors group-hover:translate-x-[-2px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              Shop Now
-            </span>
+           
           </div>
         </div>
       ) : (

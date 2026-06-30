@@ -81,6 +81,7 @@ const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBann
               </div>
               <div className="w-full md:w-[180px] flex flex-col gap-1 flex-shrink-0">
                 <span className="text-[11px] font-bold uppercase text-slate-500">Offer Card Photo</span>
+                <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended: 2:3 Aspect Ratio (Portrait, e.g. 400x600 px) for card slot grids.</span>
                 <div 
                   onClick={() => fileInputRefs.current[`offer-${banner.id}`]?.click()}
                   className="border-2 border-dashed border-gray-200 hover:border-gray-300 bg-gray-50/50 rounded-lg flex flex-col items-center justify-center text-center p-3 cursor-pointer flex-grow min-h-[130px] transition-all relative overflow-hidden group"
@@ -174,6 +175,7 @@ const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBann
               </div>
               <div className="w-full xl:w-[280px] flex flex-col gap-1.5 flex-shrink-0">
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">Slider Image Asset</span>
+                <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended: 16:9 Aspect Ratio (Widescreen, e.g. 1920x1080 px) for full bleed layouts.</span>
                 <div 
                   onClick={() => fileInputRefs.current[`slide-${slide.id}`]?.click()}
                   className="w-full border-2 border-dashed border-gray-200 hover:border-gray-400 rounded-lg bg-gray-50 p-4 text-center cursor-pointer transition-colors flex flex-col items-center justify-center min-h-[120px] flex-grow relative overflow-hidden group/img"

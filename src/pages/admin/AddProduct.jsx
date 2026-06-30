@@ -71,7 +71,7 @@ const AttributeDropdown = ({ attr, attrName, value, onChange }) => {
   return (
     <div className="md:col-span-3 flex flex-col gap-1.5 font-bold text-gray-700 relative">
       <label className="text-[10px] font-black text-slate-450 tracking-wider uppercase">
-        CHOOSE {attrName} *
+        CHOOSE {attrName}
       </label>
       
       <div 
@@ -362,8 +362,17 @@ const AddProduct = () => {
   };
 
   const handleUpdateVariant = () => {
+    if (!variantInput.originalPrice || parseFloat(variantInput.originalPrice) <= 0) {
+      return toast.error("Please enter a valid MRP price for the variant");
+    }
     if (!variantInput.price || parseFloat(variantInput.price) <= 0) {
-      return toast.error("Please enter a valid price for the variant");
+      return toast.error("Please enter a valid Original price for the variant");
+    }
+    if (variantInput.stock === '' || isNaN(parseInt(variantInput.stock)) || parseInt(variantInput.stock) < 0) {
+      return toast.error("Please enter a valid Quantity for the variant");
+    }
+    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) <= 0) {
+      return toast.error("Please enter a valid Weight for the variant");
     }
 
     setProdForm(prev => ({
@@ -467,19 +476,17 @@ const AddProduct = () => {
   }, [isEdit, prodId, catalog, selectedSubId]);
 
   const handleAddVariant = () => {
-    const currentCat = catalog.find(c => c.id === selectedCatId);
-    const supportedAttrIds = currentCat?.supportedAttributes || [];
-    const supportedAttrs = attributesList.filter(a => supportedAttrIds.includes(a.id));
-    
-    for (const attr of supportedAttrs) {
-      const attrName = attr.name.toLowerCase();
-      if (!variantInput.attributes[attrName]) {
-        return toast.error(`Please select a value for "${attr.name}" variation`);
-      }
+    if (!variantInput.originalPrice || parseFloat(variantInput.originalPrice) <= 0) {
+      return toast.error("Please enter a valid MRP price for the variant");
     }
-    
     if (!variantInput.price || parseFloat(variantInput.price) <= 0) {
-      return toast.error("Please enter a valid price for the variant");
+      return toast.error("Please enter a valid Original price for the variant");
+    }
+    if (variantInput.stock === '' || isNaN(parseInt(variantInput.stock)) || parseInt(variantInput.stock) < 0) {
+      return toast.error("Please enter a valid Quantity for the variant");
+    }
+    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) <= 0) {
+      return toast.error("Please enter a valid Weight for the variant");
     }
     
     const newVariant = {
@@ -993,7 +1000,7 @@ const AddProduct = () => {
                       {/* Variant Original Price */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          MRP Price (₹)
+                          MRP Price (₹) *
                         </label>
                         <input 
                           type="number"
@@ -1022,7 +1029,7 @@ const AddProduct = () => {
                       {/* Variant Stock */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Quantity
+                          Quantity *
                         </label>
                         <input 
                           type="number"
@@ -1036,7 +1043,7 @@ const AddProduct = () => {
                       {/* Variant Weight */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Weight (kg)
+                          Weight (kg) *
                         </label>
                         <input 
                           type="number"
@@ -1198,10 +1205,11 @@ const AddProduct = () => {
                               </span>
                             </div>
                             
-                            <label className="bg-[#1e293b] hover:bg-[#0f172a] text-white text-xs font-medium py-2 px-4 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
-                              <Upload size={14} /> Add Variant Images
-                              <input 
-                                type="file"
+                            <div className="flex flex-col items-end gap-1.5">
+                              <label className="bg-[#1e293b] hover:bg-[#0f172a] text-white text-xs font-medium py-2 px-4 rounded-lg cursor-pointer transition-colors flex items-center gap-1.5 shadow-sm">
+                                <Upload size={14} /> Add Variant Images
+                                <input 
+                                  type="file"
                                 multiple
                                 accept="image/*"
                                 onChange={async (e) => {
@@ -1229,7 +1237,9 @@ const AddProduct = () => {
                                 className="hidden"
                               />
                             </label>
+                             <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended size: 1:1 Aspect Ratio (Square, e.g. 800x800 px) for perfect presentation.</span>
                           </div>
+                        </div>
 
                           {/* Render uploaded image thumbnails */}
                           <div className="flex flex-wrap gap-4">

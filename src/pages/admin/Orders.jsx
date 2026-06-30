@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useDebounce from '../../hooks/useDebounce';
 import { 
   Search, 
   RotateCw, 
@@ -33,6 +34,7 @@ const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 350);
   const [statusFilter, setStatusFilter] = useState('ALL STATUS');
   const [timeFilter, setTimeFilter] = useState('ALL TIME');
   const [productTypeFilter, setProductTypeFilter] = useState('all'); // 'all', 'custom', 'combo'
@@ -43,6 +45,12 @@ const OrderManagement = () => {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [copiedText, setCopiedText] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+
+  // Tracking modal states
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
+  const [trackingOrderId, setTrackingOrderId] = useState('');
+  const [trackingId, setTrackingId] = useState('');
+  const [trackingLink, setTrackingLink] = useState('');
 
   const tableHeaders = [
     { key: 'id', label: 'Order Identity', sortable: true, align: 'left' },
@@ -62,8 +70,15 @@ const OrderManagement = () => {
       if (res && res.success) {
         // Map database order entities to match component expectation
         const mapped = res.data.map(order => {
-          const firstCustomItem = order.items?.find(item => item.selectedOptions?.customization);
-          const customSpec = firstCustomItem?.selectedOptions?.customization;
+          const firstCustomItem = order.items?.find(item => 
+            item.selectedOptions?.customization || 
+            item.selectedOptions?.customImage || 
+            item.selectedOptions?.customText
+          );
+          const customSpec = firstCustomItem?.selectedOptions?.customization || {
+            text: firstCustomItem?.selectedOptions?.customText,
+            image: firstCustomItem?.selectedOptions?.customImage
+          };
 
           return {
             ...order,
@@ -93,8 +108,10 @@ const OrderManagement = () => {
             razorpayOrderId: order.orderId,
             razorpayPaymentId: 'pay_simulated_' + order._id.slice(-6),
             amount: order.total,
+            trackingId: order.trackingId || '',
+            trackingLink: order.trackingLink || '',
             itemColor: order.items?.[0]?.selectedOptions
-              ? Object.entries(order.items[0].selectedOptions).filter(([k]) => k !== 'customization').map(([k, v]) => `${k}: ${v}`).join(', ')
+              ? Object.entries(order.items[0].selectedOptions).filter(([k]) => k !== 'customization' && k !== 'customImage' && k !== 'customText').map(([k, v]) => `${k}: ${v}`).join(', ')
               : 'Standard',
             itemQuantity: order.items?.[0]?.quantity || 1
           };
@@ -141,6 +158,14 @@ const OrderManagement = () => {
   };
 
   const handleFulfillmentChange = async (orderId, newStatus) => {
+    if (newStatus === 'Shipped') {
+      setTrackingOrderId(orderId);
+      setTrackingId('');
+      setTrackingLink('');
+      setIsTrackingModalOpen(true);
+      return;
+    }
+
     try {
       const res = await adminUpdateOrderStatusAPI(orderId, newStatus);
       if (res && res.success) {
@@ -153,6 +178,48 @@ const OrderManagement = () => {
         if (selectedOrder && selectedOrder._id === orderId) {
           setSelectedOrder(prev => ({ ...prev, status: newStatus, fulfillmentStatus: newStatus }));
         }
+      } else {
+        toast.error(res?.message || 'Failed to update order status');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error updating status');
+    }
+  };
+
+  const submitTrackingAndShip = async () => {
+    if (!trackingId.trim() || !trackingLink.trim()) {
+      toast.error('Both Tracking ID and Tracking Link are required to ship the order');
+      return;
+    }
+    try {
+      const res = await adminUpdateOrderStatusAPI(trackingOrderId, 'Shipped', {
+        trackingId: trackingId.trim(),
+        trackingLink: trackingLink.trim()
+      });
+      if (res && res.success) {
+        toast.success(res.message || 'Order marked as Shipped successfully');
+        setOrders(prev => prev.map(order => 
+          order._id === trackingOrderId 
+            ? { 
+                ...order, 
+                status: 'Shipped', 
+                fulfillmentStatus: 'Shipped',
+                trackingId: trackingId.trim(),
+                trackingLink: trackingLink.trim()
+              } 
+            : order
+        ));
+        if (selectedOrder && selectedOrder._id === trackingOrderId) {
+          setSelectedOrder(prev => ({ 
+            ...prev, 
+            status: 'Shipped', 
+            fulfillmentStatus: 'Shipped',
+            trackingId: trackingId.trim(),
+            trackingLink: trackingLink.trim()
+          }));
+        }
+        setIsTrackingModalOpen(false);
       } else {
         toast.error(res?.message || 'Failed to update order status');
       }
@@ -186,9 +253,9 @@ const OrderManagement = () => {
   // Main interactive state filters combining tabular logic + product type selectors
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.productName.toLowerCase().includes(searchQuery.toLowerCase());
+      order.id.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      order.customerName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      order.productName.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
     
     const matchesStatus = 
       statusFilter === 'ALL STATUS' || 
@@ -299,13 +366,14 @@ const OrderManagement = () => {
             <select
               value={order.fulfillmentStatus}
               onChange={(e) => handleFulfillmentChange(order._id, e.target.value)}
-              className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 pr-7 rounded-lg appearance-none focus:outline-none transition-all cursor-pointer shadow-2xs"
+              disabled={order.fulfillmentStatus === 'Cancelled' || order.fulfillmentStatus === 'Delivered'}
+              className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 pr-7 rounded-lg appearance-none focus:outline-none transition-all cursor-pointer shadow-2xs disabled:bg-slate-50 disabled:cursor-not-allowed"
             >
-              <option value="Pending">Pending</option>
-              <option value="Processing">Processing</option>
-              <option value="Shipped">Shipped</option>
-              <option value="Delivered">Delivered</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value="Pending" disabled={order.fulfillmentStatus !== 'Pending'}>Pending</option>
+              <option value="Processing" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing'}>Processing</option>
+              <option value="Shipped" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing' && order.fulfillmentStatus !== 'Shipped'}>Shipped</option>
+              <option value="Delivered" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing' && order.fulfillmentStatus !== 'Shipped' && order.fulfillmentStatus !== 'Delivered'}>Delivered</option>
+              {order.fulfillmentStatus === 'Cancelled' && <option value="Cancelled">Cancelled</option>}
             </select>
             <ChevronDown size={12} className="absolute right-2 top-2.5 text-slate-400 pointer-events-none" />
           </div>
@@ -550,6 +618,42 @@ const OrderManagement = () => {
                 </div>
               </div>
 
+              {/* TRACKING INFORMATION */}
+              {selectedOrder.fulfillmentStatus === 'Shipped' && (
+                <div className="bg-blue-50/40 border border-blue-100 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-blue-100/60 pb-2">
+                    <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider">Tracking Information</h4>
+                    <span className="bg-blue-600 text-white font-bold text-[9px] px-2 py-0.5 rounded-full uppercase">Shipped</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium text-slate-600">
+                    <div>
+                      <span className="text-slate-400 font-normal block">Tracking ID:</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-slate-900 font-bold select-all">{selectedOrder.trackingId || 'N/A'}</span>
+                        {selectedOrder.trackingId && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyToClipboard(selectedOrder.trackingId)}
+                            className={`p-1 rounded-md transition-all ${copiedText ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-200'}`}
+                            title="Copy Tracking ID"
+                          >
+                            {copiedText ? <Check size={11} strokeWidth={3} /> : <Copy size={11} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-normal block">Tracking Link:</span>
+                      {selectedOrder.trackingLink ? (
+                        <a href={selectedOrder.trackingLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold break-all">
+                          {selectedOrder.trackingLink}
+                        </a>
+                      ) : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* DYNAMIC VIEW FOR CUSTOM PRODUCTS */}
               {selectedOrder.productType === 'custom' && (
                 <div className="bg-pink-50/40 border border-pink-100 rounded-2xl p-5 space-y-4">
@@ -633,10 +737,38 @@ const OrderManagement = () => {
                               <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 font-bold text-[9px] flex items-center justify-center">N/A</div>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-red-600 font-bold max-w-[180px] truncate">{item.title}</td>
+                           <td className="py-3 px-4 max-w-[180px]">
+                            <div className="text-red-600 font-bold truncate">{item.title}</div>
+                            {/* Custom Specs */}
+                            {(item.selectedOptions?.customImage || item.selectedOptions?.customText || item.selectedOptions?.customization) && (
+                              <div className="mt-1.5 p-2 bg-pink-50/50 border border-pink-100 rounded text-[10px] space-y-1">
+                                {(item.selectedOptions?.customImage || item.selectedOptions?.customization?.image) && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400 font-semibold">Photo:</span>
+                                    <a 
+                                      href={formatImageUrl(item.selectedOptions.customImage || item.selectedOptions.customization?.image)} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-pink-600 hover:underline font-bold"
+                                    >
+                                      View Photo
+                                    </a>
+                                  </div>
+                                )}
+                                {(item.selectedOptions?.customText || item.selectedOptions?.customization?.text) && (
+                                  <div>
+                                    <span className="text-slate-400 font-semibold block">Text:</span>
+                                    <p className="text-slate-700 italic select-all break-words font-medium">
+                                      "{item.selectedOptions.customText || item.selectedOptions.customization?.text}"
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
                           <td className="py-3 px-4 text-slate-500 font-normal">
                             {item.selectedOptions
-                              ? Object.entries(item.selectedOptions).filter(([k]) => k !== 'customization').map(([k, v]) => `${k}: ${v}`).join(', ')
+                              ? Object.entries(item.selectedOptions).filter(([k]) => k !== 'customization' && k !== 'customImage' && k !== 'customText').map(([k, v]) => `${k}: ${v}`).join(', ')
                               : 'Standard'}
                           </td>
                           <td className="py-3 px-4 text-center font-bold text-slate-800">{item.quantity}</td>
@@ -688,6 +820,56 @@ const OrderManagement = () => {
           </div>
           <div className="max-w-3xl max-h-[80vh] overflow-hidden rounded-xl border border-slate-800 bg-black flex items-center justify-center">
             <img src={fullscreenImage} alt="Fullscreen View" className="max-w-full max-h-[80vh] object-contain" />
+          </div>
+        </div>
+      )}
+
+      {/* TRACKING DETAILS MODAL */}
+      {isTrackingModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-800">Enter Shipping & Tracking Details</h2>
+              <button onClick={() => setIsTrackingModalOpen(false)} type="button" className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-500 uppercase">Tracking ID <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  placeholder="e.g. TRAK123456789"
+                  value={trackingId}
+                  onChange={(e) => setTrackingId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 shadow-2xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-slate-500 uppercase">Tracking Link / URL <span className="text-red-500">*</span></label>
+                <input
+                  type="url"
+                  placeholder="e.g. https://track.delhivery.com"
+                  value={trackingLink}
+                  onChange={(e) => setTrackingLink(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white rounded-xl px-4 py-2.5 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-400 shadow-2xs"
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsTrackingModalOpen(false)}
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitTrackingAndShip}
+                className="px-4 py-2 bg-[#002B49] hover:bg-blue-900 text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+              >
+                Ship Order
+              </button>
+            </div>
           </div>
         </div>
       )}

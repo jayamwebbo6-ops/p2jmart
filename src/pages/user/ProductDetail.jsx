@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
+import useThrottledCallback from '../../hooks/useThrottledCallback';
 import { ShoppingCart, Heart, Star, Share2, ShoppingBag, Eye, Plus } from 'lucide-react';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
@@ -9,8 +10,9 @@ import { toast } from '../../components/toast';
 import "swiper/css";
 import "swiper/css/pagination";
 import ProductCard from '../../components/ProductCard';
-import { getProductByIdAPI } from '../../api/productApi';
+import { getProductByIdAPI, getProductsAPI } from '../../api/productApi';
 import { getCategoriesAPI } from '../../api/categoryApi';
+import { getCombosAPI } from '../../api/comboApi';
 
 const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { subcategoryId, id } = useParams();
@@ -22,6 +24,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [mainImageLoaded, setMainImageLoaded] = useState(false);
+  const mainImgRef = useRef(null);
 
   useEffect(() => {
     setMainImageLoaded(false);
@@ -62,6 +65,68 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const incomingProduct = location.state?.product;
   const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
   const [loading, setLoading] = useState(!incomingProduct);
+  const [combos, setCombos] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchCombos = async () => {
+      try {
+        const res = await getCombosAPI();
+        if (res && res.success) {
+          setCombos(res.data || []);
+        }
+      } catch (err) {
+        console.error("Error loading combo packs:", err);
+      }
+    };
+    fetchCombos();
+  }, []);
+
+  useEffect(() => {
+    if (!loadedProduct) return;
+    const fetchRelatedProducts = async () => {
+      try {
+        const res = await getProductsAPI();
+        if (res && res.success && Array.isArray(res.data)) {
+          const currentId = loadedProduct._id || loadedProduct.id;
+          const currentCat = typeof loadedProduct.category === 'object' 
+            ? loadedProduct.category._id || loadedProduct.category.id || loadedProduct.category.name 
+            : loadedProduct.category;
+          const currentSubCat = typeof loadedProduct.subcategory === 'object'
+            ? loadedProduct.subcategory._id || loadedProduct.subcategory.id || loadedProduct.subcategory.name
+            : loadedProduct.subcategory;
+
+          const otherProducts = res.data.filter(p => {
+            const pId = p._id || p.id;
+            return pId !== currentId && p.status !== false;
+          });
+
+          const sameSubcategory = [];
+          const sameCategoryOnly = [];
+
+          otherProducts.forEach(p => {
+            const pCat = typeof p.category === 'object' 
+              ? p.category._id || p.category.id || p.category.name 
+              : p.category;
+            const pSubCat = typeof p.subcategory === 'object'
+              ? p.subcategory._id || p.subcategory.id || p.subcategory.name
+              : p.subcategory;
+
+            if (currentSubCat && pSubCat === currentSubCat) {
+              sameSubcategory.push(p);
+            } else if (currentCat && pCat === currentCat) {
+              sameCategoryOnly.push(p);
+            }
+          });
+
+          setRelatedProducts([...sameSubcategory, ...sameCategoryOnly]);
+        }
+      } catch (err) {
+        console.error("Error fetching related products:", err);
+      }
+    };
+    fetchRelatedProducts();
+  }, [loadedProduct]);
 
   const [categoryName, setCategoryName] = useState(
     typeof incomingProduct?.category === 'object' && incomingProduct?.category?.name
@@ -211,6 +276,13 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   };
 }, [loadedProduct, selectedColor, selectedSize]);
 
+  // Cache-safeguard: If the image is already cached, it completes instantly before onLoad is bound.
+  useEffect(() => {
+    if (mainImgRef.current && mainImgRef.current.complete) {
+      setMainImageLoaded(true);
+    }
+  }, [activeImageIndex, product]);
+
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -239,38 +311,45 @@ useEffect(() => {
   }
 }, [id, loadedProduct]); //  FIXED: Watch loadedProduct/id, NOT the derived memoized product object
 
-  // --- INTERACTIVE DUMMY DATA FOR COMBO PRODUCT INTEGRATION ---
+  // Find matching active combo from database containing this product
+  const matchedCombo = useMemo(() => {
+    if (!product || combos.length === 0) return null;
+    const currentProdId = product.id;
+    return combos.find(c => 
+      c.status !== false && 
+      c.selectedItemIds?.some(item => (item._id || item.id || item) === currentProdId)
+    );
+  }, [combos, product]);
+
+  // --- INTERACTIVE DATA FOR COMBO PRODUCT INTEGRATION ---
   const comboData = useMemo(() => {
-    if (!product) return null;
+    if (!product || !matchedCombo) return null;
+    
+    const totalOriginalSum = matchedCombo.totalPrice || matchedCombo.selectedItemIds.reduce((acc, item) => acc + (item.variants?.[0]?.price || item.price || 0), 0);
+    const offerPrice = matchedCombo.offerPrice || 0;
+    const discountPercent = totalOriginalSum > offerPrice 
+      ? Math.round(((totalOriginalSum - offerPrice) / totalOriginalSum) * 100)
+      : 0;
+
     return {
-      id: "COMBO-WS100",
-      title: "Premium Executive Desk Gift Combo",
-      discountPercent: 50,
-      items: [
-        {
-          id: product.id,
-          title: `${product.title} (${selectedColor} / ${selectedSize}) (This Item)`,
-          price: product.price,
-          image: product.images[0] || '',
-          isCurrent: true
-        },
-        {
-          id: 'combo-sub-2',
-          title: 'Luxury Matte Black Signature Pen',
-          price: 150,
-          image: 'https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=300&h=300&q=80',
-          isCurrent: false
-        },
-        {
-          id: 'combo-sub-3',
-          title: 'Handcrafted Leather Card Holder',
-          price: 250,
-          image: 'https://images.unsplash.com/photo-1622560480605-d83c853bc5c3?auto=format&fit=crop&w=300&h=300&q=80',
-          isCurrent: false
-        }
-      ]
+      id: matchedCombo._id || matchedCombo.id,
+      title: matchedCombo.name,
+      discountPercent,
+      category: matchedCombo.category || '',
+      items: matchedCombo.selectedItemIds.map(item => {
+        const isCurrent = (item._id || item.id) === product.id;
+        return {
+          id: item._id || item.id,
+          title: isCurrent ? `${item.title} (${selectedColor} / ${selectedSize}) (This Item)` : item.title,
+          price: item.variants?.[0]?.price || item.price || 0,
+          image: item.image || '',
+          weight: item.weight || 0,
+          category: item.category || '',
+          isCurrent
+        };
+      })
     };
-  }, [product, selectedColor, selectedSize]);
+  }, [product, matchedCombo, selectedColor, selectedSize]);
 
   const [selectedComboItemIds, setSelectedComboItemIds] = useState([]);
 
@@ -299,7 +378,7 @@ useEffect(() => {
     return wishlist.some(item => item.id === product?.id);
   }, [wishlist, product?.id]);
 
-  const handleWishlistToggle = () => {
+  const handleWishlistToggle = useThrottledCallback(() => {
     if (!product) return;
     if (isWishlisted) {
       if (removeFromWishlist) removeFromWishlist(product.id);
@@ -308,9 +387,9 @@ useEffect(() => {
       if (addToWishlist) addToWishlist(product);
      
     }
-  };
+  }, 1000);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useThrottledCallback(() => {
     if (!product) return;
     if (onAddToCart) {
       onAddToCart({
@@ -322,28 +401,26 @@ useEffect(() => {
         }
       });
     }
-  };
+  }, 1000);
 
- 
-
-  const handleBuyNow = () => {
-  if (!product) return;
-  navigate('/checkout', {
-    state: {
-      directPurchase: true,
-      items: [
-        {
-          ...product,
-          quantity: quantity,
-          selectedOptions: {
-            color: selectedColor,
-            size: selectedSize
-          }
-        } 
-      ] 
-    } 
-  }); 
-};
+  const handleBuyNow = useThrottledCallback(() => {
+    if (!product) return;
+    navigate('/checkout', {
+      state: {
+        directPurchase: true,
+        items: [
+          {
+            ...product,
+            quantity: quantity,
+            selectedOptions: {
+              color: selectedColor,
+              size: selectedSize
+            }
+          } 
+        ] 
+      } 
+    }); 
+  }, 1000);
 
     
 
@@ -362,12 +439,12 @@ useEffect(() => {
     .reduce((sum, item) => sum + item.price, 0);
 
   const finalComboPrice = isFullComboSelected 
-    ? Math.round(regularComboSum * (1 - (comboData?.discountPercent || 0) / 100)) 
+    ? (matchedCombo?.offerPrice || Math.round(regularComboSum * (1 - (comboData?.discountPercent || 0) / 100))) 
     : regularComboSum;
 
   const totalComboSavings = regularComboSum - finalComboPrice;
 
-  const handleAddBundleToCart = () => {
+  const handleAddBundleToCart = useThrottledCallback(() => {
     if (!comboData) return;
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCartPayload = {
@@ -378,18 +455,23 @@ useEffect(() => {
       image: comboData.items[0].image, 
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
+      weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
+      category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         id: item.id,
         title: item.title,
         image: item.image,
-        price: item.price
+        price: item.price,
+        weight: item.weight || 0,
+        category: item.category || ''
       }))
     };
     console.log("Adding bundle to cart store:", bundleCartPayload);
-    navigate('/cart', { state: { incomingBundle: bundleCartPayload } });
-  };
+    onAddToCart(bundleCartPayload);
+    navigate('/cart');
+  }, 1000);
 
-  const handleAddBundleToBuy = () => {
+  const handleAddBundleToBuy = useThrottledCallback(() => {
     if (!comboData) return;
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCheckoutPayload = {
@@ -400,59 +482,20 @@ useEffect(() => {
       image: comboData.items[0].image,
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
+      weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
+      category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         id: item.id,
         title: item.title,
         image: item.image,
-        price: item.price
+        price: item.price,
+        weight: item.weight || 0,
+        category: item.category || ''
       }))
     };
     navigate('/checkout', { state: { directPurchaseBundle: bundleCheckoutPayload } });
-  };
+  }, 1000);
 
-  // --- DUMMY DATA FOR RELATED PRODUCTS ---
-  const relatedProducts = [
-    {
-      id: 'rel1',
-      title: 'Samsung A1',
-      price: 50000.00,
-      originalPrice: 54000.00,
-      discount: 7,
-      rating: 4.5,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=500&q=80'
-    },
-    {
-      id: 'rel2',
-      title: 'Samsung C3',
-      price: 5454.00,
-      originalPrice: 5555.00,
-      discount: 2,
-      rating: 4.5,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=500&q=80'
-    },
-    {
-      id: 'rel3',
-      title: 'Samsung D21',
-      price: 5400.00,
-      originalPrice: 55000.00,
-      discount: 90,
-      rating: 4.5,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1533228100845-08145b01de14?auto=format&fit=crop&w=500&q=80'
-    },
-    {
-      id: 'rel4',
-      title: 'Samsung E5',
-      price: 4444.00,
-      originalPrice: 5555.00,
-      discount: 20,
-      rating: 4.5,
-      reviews: 15,
-      image: 'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=500&q=80'
-    }
-  ];
 
   if (loading) {
     return (
@@ -569,6 +612,7 @@ useEffect(() => {
                       </div>
                     )}
                     <img
+                      ref={mainImgRef}
                       src={formatImageUrl(product.images[activeImageIndex] || product.images[0])}
                       alt={product.title}
                       style={zoomStyle}
@@ -823,61 +867,103 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-6 items-stretch">
-              {/* Left Column Grid Items */}
-              <div className="flex-1 flex flex-col md:flex-row items-center gap-4">
-                {comboData.items.map((item, idx) => (
-                  <React.Fragment key={item.id}>
-                    <div 
-                      onClick={() => toggleComboItem(item.id, item.isCurrent)}
-                      className={`flex-1 w-full md:w-auto bg-white border rounded-xl p-3.5 flex flex-row md:flex-col items-center gap-3 transition-all relative ${
-                        item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
-                      } ${
-                        selectedComboItemIds.includes(item.id) 
-                          ? 'border-blue-500 shadow-sm' 
-                          : 'opacity-50 border-gray-200 grayscale scale-95 hover:opacity-80'
-                      }`}
+            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+              {/* Left Column Grid Items (Swiper Slider) */}
+              <div className="flex-1 min-w-0 relative px-8 flex items-center bg-white border border-gray-150 rounded-xl p-4 shadow-2xs">
+                {comboData.items.length > 0 && (
+                  <>
+                    <button className="combo-prev-btn absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+                      <ChevronLeft size={18} className="text-gray-700" />
+                    </button>
+                    
+                    <Swiper
+                      modules={[Navigation]}
+                      navigation={{
+                        prevEl: '.combo-prev-btn',
+                        nextEl: '.combo-next-btn',
+                      }}
+                      spaceBetween={16}
+                      slidesPerView={4}
+                      breakpoints={{
+                        320: {
+                          slidesPerView: 1.2,
+                          spaceBetween: 10
+                        },
+                        480: {
+                          slidesPerView: 2,
+                          spaceBetween: 12
+                        },
+                        768: {
+                          slidesPerView: 3,
+                          spaceBetween: 14
+                        },
+                        1200: {
+                          slidesPerView: 4,
+                          spaceBetween: 16
+                        }
+                      }}
+                      className="w-full h-full"
                     >
-                      <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                        <input 
-                          type="checkbox" 
-                          checked={selectedComboItemIds.includes(item.id)} 
-                          readOnly
-                          disabled={item.isCurrent}
-                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300"
-                        />
-                      </div>
+                      {comboData.items.map((item, idx) => (
+                        <SwiperSlide key={item.id} className="py-1">
+                          <div 
+                            onClick={() => toggleComboItem(item.id, item.isCurrent)}
+                            className={`w-full bg-white border rounded-xl p-3.5 flex flex-col items-center gap-3 transition-all relative ${
+                              item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
+                            } ${
+                              selectedComboItemIds.includes(item.id) 
+                                ? 'border-blue-500 shadow-xs' 
+                                : 'opacity-50 border-gray-200 grayscale scale-95 hover:opacity-80'
+                            }`}
+                          >
+                            <div className="absolute top-2 left-2 z-10 pointer-events-none">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedComboItemIds.includes(item.id)} 
+                                readOnly
+                                disabled={item.isCurrent}
+                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
+                              />
+                            </div>
 
-                      <div className="w-16 h-16 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-gray-100 border border-gray-100">
-                        <img 
-                          src={formatImageUrl(item.image)} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover" 
-                          onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=No+Image"; }}
-                        />
-                      </div>
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-gray-50 border border-gray-100 flex items-center justify-center">
+                              <img 
+                                src={formatImageUrl(item.image)} 
+                                alt={item.title} 
+                                className="w-full h-full object-cover" 
+                                onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=No+Image"; }}
+                              />
+                            </div>
 
-                      <div className="flex-1 md:text-center min-w-0">
-                        <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug md:h-8">
-                          {item.title}
-                        </h4>
-                        <p className="text-sm font-black text-gray-900 mt-1">
-                          ₹{item.price}
-                        </p>
-                      </div>
-                    </div>
+                            <div className="text-center min-w-0 w-full">
+                              <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug h-8">
+                                {item.title}
+                              </h4>
+                              <p className="text-sm font-black text-gray-900 mt-1">
+                                ₹{item.price}
+                              </p>
+                            </div>
 
-                    {idx < comboData.items.length - 1 && (
-                      <div className="text-gray-400 bg-gray-200/60 p-1.5 rounded-full shrink-0">
-                        <Plus size={16} strokeWidth={3} />
-                      </div>
-                    )}
-                  </React.Fragment>
-                ))}
+                            {/* Floating Plus bubble connecting items */}
+                            {idx < comboData.items.length - 1 && (
+                              <div className="absolute right-[-14px] top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden sm:flex">
+                                <Plus size={10} strokeWidth={3} />
+                              </div>
+                            )}
+                          </div>
+                        </SwiperSlide>
+                      ))}
+                    </Swiper>
+
+                    <button className="combo-next-btn absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+                      <ChevronRight size={18} className="text-gray-700" />
+                    </button>
+                  </>
+                )}
               </div>
 
               {/* Right Summary Calculations Block */}
-              <div className="w-full xl:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm">
+              <div className="w-full md:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm shrink-0">
                 <div>
                   <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
                     Bundle Price Calculation
@@ -927,6 +1013,67 @@ useEffect(() => {
                 </div>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* You May Also Like Section */}
+        {relatedProducts.length > 0 && (
+          <div className="w-full mt-12 bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-2xs">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
+                  You May Also Like
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Handpicked recommendations based on your current selection
+                </p>
+              </div>
+            </div>
+
+            <div className="relative px-8 flex items-center">
+              <button className="related-prev-btn absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+                <ChevronLeft size={18} className="text-gray-700" />
+              </button>
+
+              <Swiper
+                modules={[Navigation]}
+                navigation={{
+                  prevEl: '.related-prev-btn',
+                  nextEl: '.related-next-btn',
+                }}
+                spaceBetween={20}
+                slidesPerView={4}
+                breakpoints={{
+                  320: {
+                    slidesPerView: 1.2,
+                    spaceBetween: 12
+                  },
+                  480: {
+                    slidesPerView: 2,
+                    spaceBetween: 16
+                  },
+                  768: {
+                    slidesPerView: 3,
+                    spaceBetween: 18
+                  },
+                  1200: {
+                    slidesPerView: 4,
+                    spaceBetween: 20
+                  }
+                }}
+                className="w-full"
+              >
+                {relatedProducts.map((p) => (
+                  <SwiperSlide key={p._id || p.id} className="py-1">
+                    <ProductCard product={p} />
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+
+              <button className="related-next-btn absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+                <ChevronRight size={18} className="text-gray-700" />
+              </button>
             </div>
           </div>
         )}

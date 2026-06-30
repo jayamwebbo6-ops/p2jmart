@@ -1,12 +1,10 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
 import Loader from './components/Loader';
 import ScrollToTop from './components/ScrollToTop';
-import { toast, ToastContainer } from './components/toast';
-import { isUserAuthenticated } from './api/userApi';
-import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart, clearCartState } from './redux/cartSlice';
-import { fetchWishlist, addWishlistItem, removeWishlistItem, clearWishlistState } from './redux/wishlistSlice';
+import { ToastContainer } from './components/toast';
+import { useCart } from './hooks/useCart';
+import { useWishlist } from './hooks/useWishlist';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
@@ -60,144 +58,21 @@ const HomeContentManager = lazy(() => import('./pages/admin/HomeCMS/HomeContentM
 
 function App() {
   const basename = import.meta.env.BASE_URL;
-  
-  const dispatch = useDispatch();
-  const cart = useSelector((state) => state.cart.items || []);
 
-  const [localCart, setLocalCart] = useState(cart);
+  const {
+    localCart,
+    setLocalCart,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    clearCartItems
+  } = useCart();
 
-  useEffect(() => {
-    setLocalCart(cart);
-  }, [cart]);
-
-  const wishlist = useSelector((state) => state.wishlist.items || []);
-
-  /* ==========================================================================
-      LOAD AUTHENTICATED USER CART & WISHLIST
-     ========================================================================== */
-  useEffect(() => {
-    if (isUserAuthenticated()) {
-      dispatch(fetchCart());
-      dispatch(fetchWishlist());
-    }
-  }, [dispatch]);
-
-  useEffect(() => {
-    const onLoginStateChange = () => {
-      if (isUserAuthenticated()) {
-        dispatch(fetchCart());
-        dispatch(fetchWishlist());
-      } else {
-        dispatch(clearCartState());
-        dispatch(clearWishlistState());
-      }
-    };
-
-    window.addEventListener('userLoginStateChange', onLoginStateChange);
-    return () => window.removeEventListener('userLoginStateChange', onLoginStateChange);
-  }, [dispatch]);
-
-  /* ==========================================================================
-      GLOBAL WISHLIST STATE MANAGEMENT (DYNAMIC BACKEND INTEGRATED)
-     ========================================================================== */
-  const addToWishlist = async (product) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before adding items to wishlist.');
-      return;
-    }
-    const productId = product.id || product._id || product.productId;
-    if (!productId) return;
-
-    try {
-      await dispatch(addWishlistItem(productId)).unwrap();
-      toast.success(`"${product.title || 'Product'}" added to Wishlist!`);
-    } catch (error) {
-      toast.error(error || 'Unable to add item to wishlist.');
-    }
-  };
-
-  const removeFromWishlist = async (productId) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before removing items from wishlist.');
-      return;
-    }
-    if (!productId) return;
-
-    try {
-      await dispatch(removeWishlistItem(productId)).unwrap();
-      toast.info('Item removed from Wishlist.');
-    } catch (error) {
-      toast.error(error || 'Unable to remove item from wishlist.');
-    }
-  };
-
-  /* ==========================================================================
-      CORE CART OPERATIONAL HANDLERS
-     ========================================================================== */
-  const addToCart = async (product) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before adding items to cart.');
-      return;
-    }
-
-    const productId = product.id || product._id || product.productId;
-    const payload = {
-      productId,
-      title: product.title || product.name || 'Product',
-      price: Number(product.price ?? 0),
-      quantity: product.quantity || 1,
-      image: product.image || (product.images && product.images[0]) || '',
-      selectedOptions: product.selectedOptions || {},
-      isComboProduct: Boolean(product.isComboProduct),
-      includedProducts: product.includedProducts || [],
-      weight: Number(product.weight || 0),
-      category: product.category || 'Catalog'
-    };
-
-    try {
-      await dispatch(addCartItem(payload)).unwrap();
-      toast.success(`"${payload.title}" added to Cart!`);
-    } catch (error) {
-      toast.error(error || 'Unable to add product to cart.');
-    }
-  };
-
-  const updateQuantity = (id, amount) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before updating your cart.');
-      return;
-    }
-
-    const existingItem = cart.find((item) => item.id === id || item._id === id);
-    if (!existingItem) return;
-
-    const nextQty = Math.max(1, (existingItem.quantity || 1) + amount);
-    dispatch(updateCartItem({ itemId: existingItem.id || existingItem._id, payload: { quantity: nextQty } }));
-  };
-
-  const removeFromCart = (id) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before updating your cart.');
-      return;
-    }
-
-    if (!id) return;
-    dispatch(removeCartItem(id));
-  };
-
-  const clearCartItems = async () => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before updating your cart.');
-      return;
-    }
-
-    try {
-      await dispatch(clearCart()).unwrap();
-      toast.success('All cart items have been removed.');
-    } catch (error) {
-      toast.error(error || 'Unable to clear cart.');
-    }
-  };
+  const {
+    wishlist,
+    addToWishlist,
+    removeFromWishlist
+  } = useWishlist();
 
   return (
     <BrowserRouter basename={basename}>
@@ -251,7 +126,6 @@ function App() {
             <Route path="terms" element={<TermsContion/>} />
             <Route path="cancellation-return-policy" element={<CancellationReturnPolicy />} />
 
-            {/* FIXED: Modified component properties targeting to accept global items and safe setter references */}
             <Route 
               path="cart" 
               element={
@@ -261,6 +135,7 @@ function App() {
                   removeFromCart={removeFromCart} 
                   clearCart={clearCartItems}
                   setCart={setLocalCart}
+                  onAddToCart={addToCart}
                 />
               } 
             />

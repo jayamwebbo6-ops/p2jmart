@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 // FIXED: Added passed structural dependency setCart to accept remote data transfers
-const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart }) => {
+const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, onAddToCart }) => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const location = useLocation();
@@ -12,7 +12,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
 
   const formatImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
       return imagePath;
     }
     const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000/api";
@@ -26,18 +26,21 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
     if (location.state && location.state.incomingBundle) {
       const bundle = location.state.incomingBundle;
 
-      // Ensure the collection item is not already inside the active layout context
-      const bundleExists = cart.some(item => item.id === bundle.id);
-
-      if (!bundleExists && typeof setCart === 'function') {
-        // Safe mapping mutation push update
-        setCart(prevCart => [...prevCart, bundle]);
-      }
-
-      // Clean historical router state context references to prevent item duplication triggers on reload
+      // Clean historical router state context references FIRST to prevent duplicate triggers
       navigate(location.pathname, { replace: true, state: {} });
+
+      // Ensure the collection item is not already inside the active layout context
+      const bundleExists = cart.some(item => (item.id === bundle.id || item._id === bundle.id || item.productId === bundle.id));
+
+      if (!bundleExists) {
+        if (typeof onAddToCart === 'function') {
+          onAddToCart(bundle);
+        } else if (typeof setCart === 'function') {
+          setCart(prevCart => [...prevCart, bundle]);
+        }
+      }
     }
-  }, [location.state, cart, setCart, navigate, location.pathname]);
+  }, [location.state, navigate, location.pathname, onAddToCart, cart, setCart]);
 
   // Calculations based on current cart contents
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -92,11 +95,11 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
 
         <div className={cart.length > 3 ? 'max-h-[calc(100vh-200px)] overflow-y-auto pr-2' : ''}>
           {cart.map((item) => (
-            <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col min-[240px]:flex-row gap-4 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
+            <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row gap-4 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
             
             {/* Image wrapper */}
-            <div className="flex justify-center min-[240px]:block flex-shrink-0">
-              <div className="w-16 h-16 min-[240px]:w-20 min-[240px]:h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
+            <div className="flex justify-start sm:block flex-shrink-0">
+              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative">
                 {/* Fallback image handle for standard bundle components schema */}
                 <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title} className="w-full h-full object-cover" />
                 {item.isComboProduct && (
@@ -108,80 +111,79 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
             </div>
 
             {/* Middle text data & Quantity Selector */}
-            <div className="flex-1 flex flex-col justify-between py-0.5 text-center min-[240px]:text-left">
+            <div className="flex-1 flex flex-col justify-between py-0.5 text-left min-w-0">
               
               <div>
-  {/* Badges & Vendor Line */}
-  <div className="flex items-center justify-center min-[240px]:justify-start gap-2 flex-wrap mb-1.5">
-    <span className="text-[10px] sm:text-xs text-gray-500 font-semibold tracking-wide uppercase">
-      Joy Gift House
-    </span>
-    {item.isComboProduct && (
-      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-        ✨ Combo Bundle Savings Deal
-      </span>
-    )}
-  </div>
+                {/* Badges & Vendor Line */}
+                <div className="flex items-center justify-start gap-2 flex-wrap mb-1.5">
+                  <span className="text-[10px] sm:text-xs text-gray-500 font-semibold tracking-wide uppercase">
+                    Joy Gift House
+                  </span>
+                  {item.isComboProduct && (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                      ✨ Combo Bundle Savings Deal
+                    </span>
+                  )}
+                </div>
 
-  {/* Main Item Title */}
-  <h3 className="text-13px sm:text-base font-extrabold text-gray-900 leading-snug line-clamp-2">
-    {item.title}
-  </h3>
-  
-  {/* --- DYNAMIC NESTED SUB-ITEMS RENDER FOR COMBO PACKS --- */}
-  {item.isComboProduct && item.includedProducts && (
-    <div className="mt-3 bg-slate-50 border border-slate-200/60 rounded-xl p-3 max-w-xl shadow-inner">
-      <div className="flex items-center gap-1.5 mb-2 border-b border-slate-200/40 pb-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-        <p className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-500 tracking-wider">
-          Included Package Customizations ({item.includedProducts.length} items)
-        </p>
-      </div>
+                {/* Main Item Title */}
+                <h3 className="text-[13px] sm:text-base font-extrabold text-gray-900 leading-snug line-clamp-2">
+                  {item.title}
+                </h3>
+                
+                {/* --- DYNAMIC NESTED SUB-ITEMS RENDER FOR COMBO PACKS --- */}
+                {item.isComboProduct && item.includedProducts && (
+                  <div className="mt-3 bg-slate-50 border border-slate-200/60 rounded-xl p-3 w-full max-w-full shadow-inner">
+                    <div className="flex items-center gap-1.5 mb-2 border-b border-slate-200/40 pb-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                      <p className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-500 tracking-wider">
+                        Included Package Customizations ({item.includedProducts.length} items)
+                      </p>
+                    </div>
 
-      <div className="flex flex-col gap-2">
-        {item.includedProducts.map((subItem, index) => (
-          <div 
-            key={subItem.id || index} 
-            className="flex items-center justify-between gap-3 bg-white border border-slate-100 p-1.5 rounded-lg hover:border-blue-200 transition-colors shadow-sm"
-          >
-            {/* Thumbnail + Title Group */}
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-slate-100 border border-slate-200/80 overflow-hidden shrink-0 shadow-sm">
-                <img 
-                  src={formatImageUrl(subItem.image)} 
-                  alt={subItem.productName || subItem.title} 
-                  className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300" 
-                />
+                    <div className="flex flex-col gap-2">
+                      {item.includedProducts.map((subItem, index) => (
+                        <div 
+                          key={subItem.id || index} 
+                          className="flex items-center justify-between gap-3 bg-white border border-slate-100 p-1.5 rounded-lg hover:border-blue-200 transition-colors shadow-sm"
+                        >
+                          {/* Thumbnail + Title Group */}
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-slate-100 border border-slate-200/85 overflow-hidden shrink-0 shadow-sm">
+                              <img 
+                                src={formatImageUrl(subItem.image)} 
+                                alt={subItem.productName || subItem.title} 
+                                className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300" 
+                              />
+                            </div>
+                            <span className="truncate font-semibold text-gray-800 text-xs sm:text-sm">
+                              {subItem.productName || subItem.title}
+                            </span>
+                          </div>
+
+                          {/* Individual Item Multiplier Counter Badge */}
+                          <div className="shrink-0 bg-slate-100 text-slate-700 font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md border border-slate-200/50">
+                            QTY: {item.quantity}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <span className="truncate font-semibold text-gray-800 text-xs sm:text-sm">
-                {subItem.productName || subItem.title}
-              </span>
-            </div>
-
-            {/* Individual Item Multiplier Counter Badge */}
-            <div className="shrink-0 bg-slate-100 text-slate-700 font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md border border-slate-200/50">
-              QTY: {item.quantity}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
-
 
               {/* Quantity Counter */}
               <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
-                <div className="flex items-center border border-gray-200 rounded-full w-fit bg-white px-1 py-0.5 mx-auto min-[240px]:mx-0">
+                <div className="flex items-center border border-gray-200 rounded-full w-fit bg-white px-1 py-0.5">
                   <button 
-                    onClick={() => item.quantity > 1 ? updateQuantity(item.id, -1) : handleOpenConfirmation(item)}
+                    onClick={() => item.quantity > 1 ? updateQuantity(item.id || item._id, -1) : handleOpenConfirmation(item)}
                     className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                   >
                     <Minus size={14} />
                   </button>
                   <span className="px-3 text-xs font-bold text-gray-800 min-w-6 text-center">{item.quantity}</span>
                   <button 
-                    onClick={() => updateQuantity(item.id, 1)}
+                    onClick={() => updateQuantity(item.id || item._id, 1)}
                     className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                   >
                     <Plus size={14} />
@@ -190,7 +192,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
 
                 <button 
                   onClick={() => handleOpenConfirmation(item)}
-                  className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-medium mx-auto min-[240px]:mx-0"
+                  className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-medium"
                 >
                   <Trash2 size={14} /> Remove
                 </button>
@@ -198,13 +200,13 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart })
             </div>
 
             {/* Right Side Price Displays */}
-            <div className="text-center min-[240px]:text-right flex flex-row min-[240px]:flex-col justify-between min-[240px]:justify-start items-center min-[240px]:items-end gap-1 shrink-0 border-t min-[240px]:border-t-0 pt-2 min-[240px]:pt-0 border-gray-50">
-              <span className="text-xs text-gray-400 block min-[240px]:hidden font-medium">Total:</span>
+            <div className="text-left sm:text-right flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-end gap-1 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-50">
+              <span className="text-xs text-gray-400 block sm:hidden font-medium">Total:</span>
               <span className="text-sm sm:text-base font-black text-[#003147]">₹{item.price * item.quantity}</span>
             </div>
 
           </div>
-        ))}
+          ))}
         </div>
       </div>
       {/* Right Side calculations layout summary section */}

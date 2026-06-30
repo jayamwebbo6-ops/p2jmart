@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useDebounce from '../../hooks/useDebounce';
 import { 
   Search, 
   Trash2, 
@@ -113,6 +114,7 @@ const Users = () => {
 
   // Filters & Sorting state
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 350);
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortConfig, setSortConfig] = useState({ key: 'joinedDate', direction: 'desc' });
 
@@ -226,10 +228,10 @@ const Users = () => {
     .filter(c => {
       // Search filter
       const matchesSearch = 
-        c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.phone.includes(searchQuery) ||
-        (c.address && c.address.toLowerCase().includes(searchQuery.toLowerCase()));
+        c.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        c.email.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        c.phone.includes(debouncedSearchQuery) ||
+        (c.address && c.address.toLowerCase().includes(debouncedSearchQuery.toLowerCase()));
       
       // Status filter
       const matchesStatus = statusFilter === 'All' || c.status === statusFilter;

@@ -1,22 +1,33 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useParams, useNavigate, Link } from 'react-router-dom';
-import { Heart, ShoppingCart, ShoppingBag, Star, ChevronUp, Share2, Plus, Minus, Upload, Eye, Type, CheckCircle, Play, SkipBack, SkipForward } from 'lucide-react';
+import useThrottledCallback from '../../hooks/useThrottledCallback';
+import { Heart, ShoppingCart, ShoppingBag, Star, ChevronUp, Share2, Plus, Minus, Upload, Eye, Type, CheckCircle, Play, SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from '../../components/toast';
 
 // Swiper imports for carousels
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination } from 'swiper/modules';
+import { Pagination, Navigation } from 'swiper/modules';
 
 // Import Swiper styles
 import 'swiper/css';
 import 'swiper/css/pagination';
-import { getProductByIdAPI } from '../../api/productApi';
+import ProductCard from '../../components/ProductCard';
+import { getProductByIdAPI, getProductsAPI } from '../../api/productApi';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
 const getImageURL = (path) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
   return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
+};
+
+const fileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error);
+  });
 };
 
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
@@ -176,6 +187,38 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   const [customImageURL, setCustomImageURL] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [mainImageLoaded, setMainImageLoaded] = useState(false);
+  const mainImgRef = useRef(null);
+
+  const productGalleryThumbnails = useMemo(() => {
+    const list = [];
+    if (customImageURL) list.push(customImageURL);
+    // Prefer selected variant images
+    const variantImages = selectedVariant?.images?.length
+      ? selectedVariant.images
+      : selectedVariant?.image
+        ? [selectedVariant.image]
+        : [];
+    if (variantImages.length > 0) {
+      variantImages.forEach(img => { if (img) list.push(getImageURL(img)); });
+    } else {
+      // Fallback to product-level image
+      if (product.image) list.push(getImageURL(product.image));
+      (product.images || []).forEach(img => {
+        const url = getImageURL(img);
+        if (img && !list.includes(url)) list.push(url);
+      });
+    }
+    return list;
+  }, [customImageURL, selectedVariant, product.image, product.images]);
+
+  const activePreviewImage = productGalleryThumbnails[activeImageIndex];
+
+  // Cache-safeguard: If the image is already cached, it completes instantly before onLoad is bound.
+  useEffect(() => {
+    if (mainImgRef.current && mainImgRef.current.complete) {
+      setMainImageLoaded(true);
+    }
+  }, [activePreviewImage]);
 
   useEffect(() => {
     setMainImageLoaded(false);
@@ -213,30 +256,6 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     };
   }, [customImageURL]);
 
-  const productGalleryThumbnails = useMemo(() => {
-    const list = [];
-    if (customImageURL) list.push(customImageURL);
-    // Prefer selected variant images
-    const variantImages = selectedVariant?.images?.length
-      ? selectedVariant.images
-      : selectedVariant?.image
-        ? [selectedVariant.image]
-        : [];
-    if (variantImages.length > 0) {
-      variantImages.forEach(img => { if (img) list.push(getImageURL(img)); });
-    } else {
-      // Fallback to product-level image
-      if (product.image) list.push(getImageURL(product.image));
-      (product.images || []).forEach(img => {
-        const url = getImageURL(img);
-        if (img && !list.includes(url)) list.push(url);
-      });
-    }
-    return list;
-  }, [customImageURL, selectedVariant, product.image, product.images]);
-
-  const activePreviewImage = productGalleryThumbnails[activeImageIndex];
-
   // Synchronize swiper when activeImageIndex changes
   useEffect(() => {
     if (swiperRef) {
@@ -244,12 +263,53 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     }
   }, [activeImageIndex, swiperRef]);
 
-  const RELATED_PRODUCTS_MOCK = [
-    { id: 101, title: "Glass Photo", price: 540, originalPrice: 550, image: product.image },
-    { id: 102, title: "The Playlist", price: 540, originalPrice: 550, image: product.image },
-    { id: 103, title: "Glass Photo", price: 544, originalPrice: 666, image: product.image },
-    { id: 104, title: "The Playlist", price: 540, originalPrice: 550, image: product.image },
-  ];
+  const [relatedProducts, setRelatedProducts] = useState([]);
+
+  useEffect(() => {
+    if (!product || !product.id) return;
+    const fetchRelatedCustomProducts = async () => {
+      try {
+        const res = await getProductsAPI();
+        if (res && res.success && Array.isArray(res.data)) {
+          const currentId = product.id;
+          const currentCat = typeof loadedProduct?.category === 'object' 
+            ? loadedProduct.category._id || loadedProduct.category.id || loadedProduct.category.name 
+            : loadedProduct?.category || product.category;
+          const currentSubCat = typeof loadedProduct?.subcategory === 'object'
+            ? loadedProduct.subcategory._id || loadedProduct.subcategory.id || loadedProduct.subcategory.name
+            : loadedProduct?.subcategory;
+
+          const otherCustomProducts = res.data.filter(p => {
+            const pId = p._id || p.id;
+            return pId !== currentId && p.status !== false && p.customizeProduct === 'Yes';
+          });
+
+          const sameSubcategory = [];
+          const sameCategoryOnly = [];
+
+          otherCustomProducts.forEach(p => {
+            const pCat = typeof p.category === 'object' 
+              ? p.category._id || p.category.id || p.category.name 
+              : p.category;
+            const pSubCat = typeof p.subcategory === 'object'
+              ? p.subcategory._id || p.subcategory.id || p.subcategory.name
+              : p.subcategory;
+
+            if (currentSubCat && pSubCat === currentSubCat) {
+              sameSubcategory.push(p);
+            } else if (currentCat && pCat === currentCat) {
+              sameCategoryOnly.push(p);
+            }
+          });
+
+          setRelatedProducts([...sameSubcategory, ...sameCategoryOnly]);
+        }
+      } catch (err) {
+        console.error("Error fetching related customized products:", err);
+      }
+    };
+    fetchRelatedCustomProducts();
+  }, [product, loadedProduct]);
 
   useEffect(() => {
     const checkScrollHeight = () => {
@@ -298,7 +358,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     return wishlist.some(item => item.id === product?.id);
   }, [wishlist, product?.id]);
 
-  const handleWishlistToggle = () => {
+  const handleWishlistToggle = useThrottledCallback(() => {
     if (!product) return;
     if (isWishlisted) {
       if (removeFromWishlist) removeFromWishlist(product.id);
@@ -307,7 +367,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       if (addToWishlist) addToWishlist(product);
       toast.success("Added to wishlist!");
     }
-  };
+  }, 1000);
 
   const validateCustomization = () => {
     if (product.customizeProduct !== 'Yes') return true;
@@ -327,9 +387,31 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     return true;
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useThrottledCallback(async () => {
     if (!product) return;
     if (!validateCustomization()) return;
+
+    let base64Image = null;
+    if (selectedImageFile) {
+      try {
+        base64Image = await fileToBase64(selectedImageFile);
+      } catch (err) {
+        console.error("Failed to convert image to base64:", err);
+        toast.error("Failed to process the uploaded image.");
+        return;
+      }
+    }
+
+    const options = {};
+    if (selectedVariant && selectedVariant.attributes) {
+      Object.assign(options, selectedVariant.attributes);
+    }
+    if (customUserText) {
+      options.customText = customUserText;
+    }
+    if (base64Image) {
+      options.customImage = base64Image;
+    }
 
     if (onAddToCart) {
       onAddToCart({
@@ -338,17 +420,36 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         originalPrice: activeOriginalPrice || product.originalPrice,
         weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
         quantity: quantity,
-        customization: {
-          text: customUserText,
-          image: customImageURL
-        }
+        selectedOptions: options
       });
     }
-  };
+  }, 1000);
 
-  const handleBuyNow = () => {
+  const handleBuyNow = useThrottledCallback(async () => {
     if (!product) return;
     if (!validateCustomization()) return;
+
+    let base64Image = null;
+    if (selectedImageFile) {
+      try {
+        base64Image = await fileToBase64(selectedImageFile);
+      } catch (err) {
+        console.error("Failed to convert image to base64:", err);
+        toast.error("Failed to process the uploaded image.");
+        return;
+      }
+    }
+
+    const options = {};
+    if (selectedVariant && selectedVariant.attributes) {
+      Object.assign(options, selectedVariant.attributes);
+    }
+    if (customUserText) {
+      options.customText = customUserText;
+    }
+    if (base64Image) {
+      options.customImage = base64Image;
+    }
 
     navigate('/checkout', {
       state: {
@@ -360,15 +461,12 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
             originalPrice: activeOriginalPrice || product.originalPrice,
             weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
             quantity: quantity,
-            customization: {
-              text: customUserText,
-              image: customImageURL
-            }
+            selectedOptions: options
           }
         ]
       }
     });
-  };
+  }, 1000);
 
 
   return (
@@ -445,6 +543,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                   </div>
                 )}
                 <img 
+                  ref={mainImgRef}
                   src={activePreviewImage} 
                   alt={product.title} 
                   style={{
@@ -743,92 +842,58 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       </div>
 
       {/* Related Products Section */}
-      <div className="w-full max-w-[2500px] mx-auto">
-        <h2 className="text-lg font-bold text-gray-900 mb-6 tracking-tight relative pb-2 after:absolute after:bottom-0 after:left-0 after:w-12 after:h-0.5 after:bg-blue-600">
-          Related Products
-        </h2>
+      {relatedProducts.length > 0 && (
+        <div className="w-full max-w-[2500px] mx-auto px-4 mt-12 mb-10">
+          <h2 className="text-lg font-bold text-gray-900 mb-6 tracking-tight relative pb-2 after:absolute after:bottom-0 after:left-0 after:w-12 after:h-0.5 after:bg-blue-600">
+            Related Customized Products
+          </h2>
 
-        {/* 1. Mobile & Tablet Swiper version: Active exclusively below 1010px */}
-        <div className="block min-[1010px]:hidden w-full">
-          <Swiper
-            spaceBetween={16}
-            breakpoints={{
-              0: { slidesPerView: 1.25 },
-              440: { slidesPerView: 1.6 },
-              550: { slidesPerView: 2.2 },
-              740: { slidesPerView: 3.2 },
-              900: { slidesPerView: 3.8 }
-            }}
-            className="w-full related-products-swiper"
-          >
-            {RELATED_PRODUCTS_MOCK.map((relProduct) => (
-              <SwiperSlide key={relProduct.id} className="flex justify-center !h-auto">
-                {/* Fixed operational sizing constraint prevents cards from ballooning out of scale */}
-                <div className="border border-gray-100 rounded bg-white flex flex-col h-full w-full max-w-[280px] min-w-0 overflow-hidden relative mx-auto">
-                  
-                  {/* Main Card Media Wrapper */}
-                  <div className="aspect-square bg-gray-50/50 relative overflow-hidden flex items-center justify-center">
-                    <img 
-                      src={relProduct.image} 
-                      alt={relProduct.title} 
-                      className="w-full h-full object-cover" 
-                    />
-                    <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow border border-gray-100 text-gray-400">
-                      <Heart size={14} />
-                    </button>
-                  </div>
-                  
-                  {/* Card Text Meta Body */}
-                  <div className="p-3 flex flex-col gap-1 flex-1 min-w-0 bg-white">
-                    <h4 className="text-xs font-medium text-gray-800 truncate">
-                      {relProduct.title}
-                    </h4>
-                    <div className="flex items-baseline gap-1.5 mt-auto">
-                      <span className={`text-xs font-bold ${colors.primaryText}`}>
-                        ₹{relProduct.price.toFixed(2)}
-                      </span>
-                      <span className="text-[10px] text-gray-400 line-through">
-                        ₹{relProduct.originalPrice.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
+          <div className="relative px-8 flex items-center">
+            <button className="rel-custom-prev absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+              <ChevronLeft size={18} className="text-gray-700" />
+            </button>
 
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-
-        {/* 2. Desktop Single Row Layout: Fixed at 4 elements horizontally, active from 1010px and up */}
-        <div className="hidden min-[1010px]:grid grid-cols-4 gap-4 w-full min-w-0 items-stretch">
-          {RELATED_PRODUCTS_MOCK.map((relProduct) => (
-            <div 
-              key={relProduct.id}
-              className="border border-gray-100 rounded bg-white hover:shadow-md transition-shadow flex flex-col h-full min-w-0 overflow-hidden relative group cursor-pointer"
+            <Swiper
+              modules={[Navigation]}
+              navigation={{
+                prevEl: '.rel-custom-prev',
+                nextEl: '.rel-custom-next',
+              }}
+              spaceBetween={20}
+              slidesPerView={4}
+              breakpoints={{
+                320: {
+                  slidesPerView: 1.25,
+                  spaceBetween: 12
+                },
+                480: {
+                  slidesPerView: 2,
+                  spaceBetween: 16
+                },
+                768: {
+                  slidesPerView: 3,
+                  spaceBetween: 18
+                },
+                1010: {
+                  slidesPerView: 4,
+                  spaceBetween: 20
+                }
+              }}
+              className="w-full"
             >
-              <div className="aspect-square bg-gray-50/50 relative overflow-hidden flex items-center justify-center">
-                <img 
-                  src={relProduct.image} 
-                  alt={relProduct.title} 
-                  className="w-full h-full object-cover transition-transform group-hover:scale-102" 
-                />
-                <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow border border-gray-100 text-gray-400 hover:text-red-500 transition-colors">
-                  <Heart size={14} />
-                </button>
-              </div>
-              <div className="p-3 flex flex-col gap-1 flex-1 min-w-0 bg-white">
-                <h4 className="text-xs font-medium text-gray-800 truncate group-hover:text-blue-500 transition-colors">
-                  {relProduct.title}
-                </h4>
-                <div className="flex items-baseline gap-1.5 mt-auto">
-                  <span className={`text-xs font-bold ${colors.primaryText}`}>₹{relProduct.price.toFixed(2)}</span>
-                  <span className="text-[10px] text-gray-400 line-through">₹{relProduct.originalPrice.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+              {relatedProducts.map((p) => (
+                <SwiperSlide key={p._id || p.id} className="py-1">
+                  <ProductCard product={p} />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+
+            <button className="rel-custom-next absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+              <ChevronRight size={18} className="text-gray-700" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Back to top scroll button element */}
       {showScrollTop && (

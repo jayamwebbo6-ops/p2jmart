@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useDebounce from '../../hooks/useDebounce';
 import { 
   Plus, 
   Trash2, 
@@ -61,6 +62,7 @@ const Products = () => {
   const [selectedCatId, setSelectedCatId] = useState('');
   const [selectedSubId, setSelectedSubId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 350);
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -220,7 +222,7 @@ const Products = () => {
 
   // Filtered products list
   const filteredProducts = activeProducts.filter(p => 
-    p.title.toLowerCase().includes(searchQuery.toLowerCase())
+    p.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
   );
 
   // Total stats calculators
@@ -1054,6 +1056,7 @@ const Products = () => {
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
                       <Image size={11} /> Upload Category Image
                     </label>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1.5 rounded-lg font-semibold mt-0.5 inline-flex items-center gap-1">ℹ️ Recommended size: 1:1 Aspect Ratio (Square, e.g. 500x500 px) for perfect sidebar display.</span>
                     <input 
                       type="file" 
                       accept="image/*"
@@ -1130,6 +1133,7 @@ const Products = () => {
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
                       <Image size={11} /> Upload Subcategory Image
                     </label>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1.5 rounded-lg font-semibold mt-0.5 inline-flex items-center gap-1">ℹ️ Recommended size: 1:1 Aspect Ratio (Square, e.g. 500x500 px) for clean layout presentation.</span>
                     <input 
                       type="file" 
                       accept="image/*"
@@ -1247,6 +1251,7 @@ const Products = () => {
                     <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1">
                       <Image size={11} /> Upload Product Image
                     </label>
+                    <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1.5 rounded-lg font-semibold mt-0.5 inline-flex items-center gap-1">ℹ️ Recommended size: 1:1 Aspect Ratio (Square, e.g. 800x800 px) for perfect card representation.</span>
                     <input 
                       type="file" 
                       accept="image/*"
