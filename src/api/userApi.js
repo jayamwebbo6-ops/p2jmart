@@ -83,6 +83,25 @@ export const updateUserProfile = async (profileData) => {
 };
 
 
+// Admin: Fetch all registered customers along with their calculated stats
+export const adminGetAllCustomersAPI = async () => {
+  const response = await userApi.get('/user/admin/get-all-users'); // Adjust route to match your backend exactly
+  return response.data;
+};
+
+// Admin: Update customer status (Active / Inactive)
+export const adminUpdateCustomerStatusAPI = async (id, status) => {
+  const response = await userApi.put(`/user/admin/update-status/${id}`, { status });
+  return response.data;
+};
+
+// Admin: Delete a customer account permanently
+export const adminDeleteCustomerAPI = async (id) => {
+  const response = await userApi.delete(`/user/admin/delete/${id}`);
+  return response.data;
+};
+
+
 
 
 export const submitContactFormAPI = async (contactData) => {
