@@ -388,9 +388,7 @@ const OrderDetails = () => {
                         )}
                       </div>
                     </div>
-                    <div className="font-bold text-gray-800 text-sm">
-                      ₹{(Number(item.price) * Number(item.quantity || item.qty || 1)).toFixed(2)}
-                    </div>
+                    
                   </div>
                 ))}
               </div>

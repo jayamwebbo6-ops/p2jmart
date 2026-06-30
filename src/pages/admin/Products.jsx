@@ -105,7 +105,8 @@ const Products = () => {
     discount: '0',
     image: '',
     rating: '5',
-    reviews: '0'
+    reviews: '0',
+    freeShipping: 'No'
   });
 
   // Helper to initialize products map if not present
@@ -399,7 +400,8 @@ const Products = () => {
         discount: editProd.discount || '0',
         image: editProd.image,
         rating: editProd.rating || '5',
-        reviews: editProd.reviews || '0'
+        reviews: editProd.reviews || '0',
+        freeShipping: editProd.freeShipping || 'No'
       });
       setEditItem(editProd);
     } else {
@@ -410,7 +412,8 @@ const Products = () => {
         discount: '0',
         image: '',
         rating: '5',
-        reviews: '0'
+        reviews: '0',
+        freeShipping: 'No'
       });
       setEditItem(null);
     }
@@ -438,7 +441,8 @@ const Products = () => {
         rating: parseFloat(prodForm.rating),
         reviews: parseInt(prodForm.reviews),
         categoryId: selectedCatId,
-        subcategoryId: parentId || selectedSubId
+        subcategoryId: parentId || selectedSubId,
+        freeShipping: prodForm.freeShipping || 'No'
       };
 
       try {
@@ -465,7 +469,8 @@ const Products = () => {
         categoryId: selectedCatId,
         subcategoryId: parentId || selectedSubId,
         variants: [],
-        selectedAttributes: {}
+        selectedAttributes: {},
+        freeShipping: prodForm.freeShipping || 'No'
       };
 
       try {
@@ -1244,6 +1249,27 @@ const Products = () => {
                         onChange={(e) => setProdForm({ ...prodForm, reviews: e.target.value })}
                         className="w-full border border-gray-300 px-3 py-2 text-xs rounded-md focus:ring-1 focus:ring-blue-500 outline-none bg-white"
                       />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                      Free Shipping?
+                    </label>
+                    <div className="flex gap-4">
+                      {['No', 'Yes'].map(option => (
+                        <label key={option} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name="freeShippingModal"
+                            value={option}
+                            checked={prodForm.freeShipping === option}
+                            onChange={(e) => setProdForm({ ...prodForm, freeShipping: e.target.value })}
+                            className="w-4 h-4 text-blue-600 border-gray-300"
+                          />
+                          <span>{option}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
 

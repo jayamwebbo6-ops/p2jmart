@@ -278,6 +278,7 @@ const AddProduct = () => {
     warranty: '',
     returnPolicy: 'Select Return Days',
     deliveryMode: '',
+    freeShipping: 'No',
     // Unit List Tab
     price: '',
     originalPrice: '',
@@ -456,6 +457,7 @@ const AddProduct = () => {
           warranty: foundProd.warranty || '',
           returnPolicy: foundProd.returnPolicy || 'Select Return Days',
           deliveryMode: foundProd.deliveryMode || '',
+          freeShipping: foundProd.freeShipping || 'No',
           price: foundProd.price !== undefined ? foundProd.price.toString() : '',
           originalPrice: foundProd.originalPrice !== undefined ? foundProd.originalPrice.toString() : '',
           discount: foundProd.discount !== undefined ? foundProd.discount.toString() : '0',
@@ -602,6 +604,7 @@ const AddProduct = () => {
       warranty: prodForm.warranty,
       returnPolicy: prodForm.returnPolicy,
       deliveryMode: prodForm.deliveryMode,
+      freeShipping: prodForm.freeShipping || 'No',
       price: priceNum,
       originalPrice: originalPriceNum,
       discount: discountNum,
@@ -892,6 +895,28 @@ const AddProduct = () => {
                   onChange={(e) => setProdForm({ ...prodForm, warranty: e.target.value })}
                   className="w-full border border-gray-200 px-3 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium"
                 />
+              </div>
+
+              {/* Free Shipping Option */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider">
+                  Free Shipping?
+                </label>
+                <div className="flex gap-4 mt-1">
+                  {['No', 'Yes'].map(option => (
+                    <label key={option} className="flex items-center gap-2 text-xs font-semibold text-gray-700 cursor-pointer">
+                      <input 
+                        type="radio" 
+                        name="freeShipping"
+                        value={option}
+                        checked={prodForm.freeShipping === option}
+                        onChange={(e) => setProdForm({ ...prodForm, freeShipping: e.target.value })}
+                        className="w-4 h-4 text-blue-600 border-gray-300"
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* Return Policy */}

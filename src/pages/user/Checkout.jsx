@@ -28,6 +28,7 @@ import { getAllShippingAPI } from '../../api/shippingApi';
 import { getAllGstAPI } from '../../api/gstApi';
 import { createOrderAPI } from '../../api/orderApi';
 import { fetchCart } from '../../redux/cartSlice';
+import { getHomeCMS } from '../../api/homeCms';
 
 const Checkout = ({ cart = [], setCart }) => {
   const formatImageUrl = (imagePath) => {
@@ -60,6 +61,10 @@ const Checkout = ({ cart = [], setCart }) => {
   const [addresses, setAddresses] = useState([]);
   const [shippingStates, setShippingStates] = useState([]);
   const [gstSettings, setGstSettings] = useState([]);
+  const [globalShippingRules, setGlobalShippingRules] = useState({
+    freeShippingMinAmount: 1000,
+    flatShippingCost: 50
+  });
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState(null);
@@ -89,22 +94,46 @@ const Checkout = ({ cart = [], setCart }) => {
 
   const shippingFee = (() => {
     if (!selectedAddress || checkoutItems.length === 0) return 0;
-    const totalWeight = checkoutItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
-    if (totalWeight === 0) return 0;
 
-    if (!shippingStates.length) {
-      return subtotal > 1000 ? 0 : 100;
-    }
-    const rule = shippingStates.find(s => s.stateName.trim().toLowerCase() === selectedAddress.state.trim().toLowerCase());
-    if (!rule) {
-      return subtotal > 1000 ? 0 : 100;
-    }
-    if (totalWeight <= rule.baseWeight) {
-      return rule.baseCost;
+    // Check if any product has freeShipping === 'No'
+    const hasNonFreeShippingItem = checkoutItems.some(item => {
+      const isFree = item.freeShipping === 'Yes' || (item.productId && item.productId.freeShipping === 'Yes');
+      return !isFree;
+    });
+
+    if (hasNonFreeShippingItem) {
+      // Calculate weight-based shipping only for non-free-shipping items
+      const nonFreeItems = checkoutItems.filter(item => {
+        const isFree = item.freeShipping === 'Yes' || (item.productId && item.productId.freeShipping === 'Yes');
+        return !isFree;
+      });
+
+      const totalWeight = nonFreeItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
+      if (totalWeight === 0) return 0;
+
+      const threshold = Number(globalShippingRules.freeShippingMinAmount) || 1000;
+      const flatCost = Number(globalShippingRules.flatShippingCost) || 50;
+
+      if (!shippingStates.length) {
+        return subtotal >= threshold ? 0 : flatCost;
+      }
+      const rule = shippingStates.find(s => s.stateName.trim().toLowerCase() === selectedAddress.state.trim().toLowerCase());
+      if (!rule) {
+        return subtotal >= threshold ? 0 : flatCost;
+      }
+      if (totalWeight <= rule.baseWeight) {
+        return rule.baseCost;
+      } else {
+        const extraWeight = totalWeight - rule.baseWeight;
+        const extraUnits = Math.ceil(extraWeight / rule.additionalWeight);
+        return rule.baseCost + (extraUnits * rule.additionalCost);
+      }
     } else {
-      const extraWeight = totalWeight - rule.baseWeight;
-      const extraUnits = Math.ceil(extraWeight / rule.additionalWeight);
-      return rule.baseCost + (extraUnits * rule.additionalCost);
+      // All items in cart/checkout are free shipping!
+      // Apply global threshold rules:
+      const threshold = Number(globalShippingRules.freeShippingMinAmount) || 1000;
+      const flatCost = Number(globalShippingRules.flatShippingCost) || 50;
+      return subtotal >= threshold ? 0 : flatCost;
     }
   })();
 
@@ -122,10 +151,11 @@ const Checkout = ({ cart = [], setCart }) => {
   const loadCheckoutData = async () => {
     setLoading(true);
     try {
-      const [addressRes, shippingRes, gstRes] = await Promise.all([
+      const [addressRes, shippingRes, gstRes, cmsRes] = await Promise.all([
         getMyAddressesAPI(),
         getAllShippingAPI(),
-        getAllGstAPI()
+        getAllGstAPI(),
+        getHomeCMS()
       ]);
 
       if (addressRes && addressRes.success) {
@@ -144,6 +174,13 @@ const Checkout = ({ cart = [], setCart }) => {
 
       if (gstRes && gstRes.success) {
         setGstSettings(gstRes.data);
+      }
+
+      if (cmsRes && cmsRes.success && cmsRes.data) {
+        setGlobalShippingRules({
+          freeShippingMinAmount: cmsRes.data.freeShippingMinAmount !== undefined ? cmsRes.data.freeShippingMinAmount : 1000,
+          flatShippingCost: cmsRes.data.flatShippingCost !== undefined ? cmsRes.data.flatShippingCost : 50
+        });
       }
     } catch (err) {
       console.error(err);

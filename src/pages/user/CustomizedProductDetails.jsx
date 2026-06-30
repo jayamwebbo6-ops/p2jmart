@@ -111,6 +111,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       price: defaultPrice,
       originalPrice: defaultOriginalPrice,
       weight: defaultWeight,
+      freeShipping: raw.freeShipping || 'No',
       category: typeof raw.category === 'object' && raw.category?.name
         ? raw.category.name 
         : (raw.category || 'Catalog'),
