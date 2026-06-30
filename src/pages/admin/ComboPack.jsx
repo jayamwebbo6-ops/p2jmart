@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import useDebounce from '../../hooks/useDebounce';
 import { Search, X } from 'lucide-react';
 import AdminTable from '../../components/AdminTable';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { 
   EditBtn, 
   DeleteBtn, 
@@ -39,6 +40,38 @@ const getProductStock = (p) => {
 };
 
 const ComboPacks = () => {
+  const getComboVariantDetails = (combo, prod) => {
+    if (!prod) return { title: '', price: 0, stock: 0, image: '', weight: 0 };
+    const prodId = prod._id || prod.id;
+    const sv = combo?.selectedVariants?.find(svRef => (svRef.productId?._id || svRef.productId?.id || svRef.productId) === prodId);
+    
+    if (sv && prod.variants && prod.variants.length > 0) {
+      const variant = prod.variants.find(v => v.id === sv.variantId);
+      if (variant) {
+        const attrStr = Object.values(variant.attributes || {})
+          .filter(val => val && val !== 'Default')
+          .map(val => val.includes('|') ? val.split('|')[0] : val)
+          .join(' / ');
+        
+        return {
+          title: attrStr ? `${prod.title} (${attrStr})` : prod.title,
+          price: variant.price || prod.price || 0,
+          stock: variant.stock ?? 0,
+          image: variant.image || prod.image || '',
+          weight: variant.weight ?? 0
+        };
+      }
+    }
+    
+    return {
+      title: prod.title || prod.name || '',
+      price: prod.variants?.[0]?.price || prod.price || 0,
+      stock: getProductStock(prod),
+      image: prod.image || '',
+      weight: prod.weight || 0
+    };
+  };
+
   const [combos, setCombos] = useState([]);
   const [availableProducts, setAvailableProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -56,6 +89,7 @@ const ComboPacks = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentCombo, setCurrentCombo] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [comboToDelete, setComboToDelete] = useState(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -64,7 +98,8 @@ const ComboPacks = () => {
     totalPrice: '',
     offerPrice: '',
     description: '',
-    selectedItemIds: []
+    selectedItemIds: [],
+    selectedVariants: []
   });
 
   const tableHeaders = [
@@ -138,23 +173,21 @@ const ComboPacks = () => {
     }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this combo pack record?")) {
-      const performDelete = async () => {
-        try {
-          const res = await deleteComboAPI(id);
-          if (res && res.success) {
-            toast.success("Combo pack deleted successfully.");
-            loadData();
-          } else {
-            toast.error(res.message || "Failed to delete combo pack.");
-          }
-        } catch (err) {
-          console.error("Error deleting combo:", err);
-          toast.error("Failed to delete combo pack.");
-        }
-      };
-      performDelete();
+  const handleConfirmDelete = async () => {
+    if (!comboToDelete) return;
+    try {
+      const res = await deleteComboAPI(comboToDelete._id || comboToDelete.id);
+      if (res && res.success) {
+        toast.success("Combo pack deleted successfully.");
+        loadData();
+      } else {
+        toast.error(res.message || "Failed to delete combo pack.");
+      }
+    } catch (err) {
+      console.error("Error deleting combo:", err);
+      toast.error("Failed to delete combo pack.");
+    } finally {
+      setComboToDelete(null);
     }
   };
 
@@ -168,7 +201,8 @@ const ComboPacks = () => {
       totalPrice: '',
       offerPrice: '',
       description: '',
-      selectedItemIds: []
+      selectedItemIds: [],
+      selectedVariants: []
     });
     setIsFormModalOpen(true);
   };
@@ -177,6 +211,17 @@ const ComboPacks = () => {
     setIsEditMode(true);
     setCurrentCombo(combo);
     setModalProductSearch('');
+    
+    // If selectedVariants is missing (legacy), reconstruct it from selectedItemIds
+    const loadedVariants = combo.selectedVariants && combo.selectedVariants.length > 0
+      ? combo.selectedVariants.map(sv => ({ productId: sv.productId?._id || sv.productId?.id || sv.productId, variantId: sv.variantId }))
+      : (combo.selectedItemIds || []).map(p => {
+          const pId = p._id || p.id || p;
+          const fullProd = availableProducts.find(prod => (prod._id || prod.id) === pId);
+          const varId = fullProd?.variants?.[0]?.id || 'default';
+          return { productId: pId, variantId: varId };
+        });
+
     setFormData({
       name: combo.name,
       category: combo.category || '',
@@ -184,7 +229,8 @@ const ComboPacks = () => {
       totalPrice: combo.totalPrice,
       offerPrice: combo.offerPrice,
       description: combo.description || '',
-      selectedItemIds: (combo.selectedItemIds || []).map(p => p._id || p.id || p)
+      selectedItemIds: (combo.selectedItemIds || []).map(p => p._id || p.id || p),
+      selectedVariants: loadedVariants
     });
     setIsFormModalOpen(true);
   };
@@ -194,33 +240,12 @@ const ComboPacks = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleProductSelectionToggle = (productId) => {
-    setFormData(prev => {
-      const alreadySelected = prev.selectedItemIds.includes(productId);
-      const updatedIds = alreadySelected 
-        ? prev.selectedItemIds.filter(id => id !== productId)
-        : [...prev.selectedItemIds, productId];
-
-      const currentSelectedProducts = availableProducts.filter(p => updatedIds.includes(p._id || p.id));
-      const collectiveSum = currentSelectedProducts.reduce((acc, current) => {
-        const price = current.variants?.[0]?.price || current.price || 0;
-        return acc + price;
-      }, 0);
-
-      return {
-        ...prev,
-        selectedItemIds: updatedIds,
-        totalPrice: collectiveSum > 0 ? collectiveSum : ''
-      };
-    });
-  };
-
   const handleFormSave = async (e) => {
     e.preventDefault();
     const cleanOfferPrice = Math.max(0, Number(formData.offerPrice) || 0);
 
-    if (!formData.name || formData.selectedItemIds.length === 0) {
-      toast.warning("Please provide a valid combo name and select at least one item.");
+    if (!formData.name || formData.selectedVariants.length === 0) {
+      toast.warning("Please provide a valid combo name and select at least one item variant.");
       return;
     }
 
@@ -232,7 +257,8 @@ const ComboPacks = () => {
         totalPrice: Number(formData.totalPrice) || 0,
         offerPrice: cleanOfferPrice,
         description: formData.description,
-        selectedItemIds: formData.selectedItemIds
+        selectedItemIds: formData.selectedItemIds,
+        selectedVariants: formData.selectedVariants
       };
 
       if (isEditMode && currentCombo) {
@@ -280,7 +306,9 @@ const ComboPacks = () => {
   const renderComboRow = (combo, index) => {
     const sNo = index + 1;
     const internalProducts = combo.selectedItemIds || [];
-    const previewImage = internalProducts[0]?.image ? formatImageUrl(internalProducts[0].image) : '';
+    const firstProd = internalProducts[0];
+    const firstVarDetails = firstProd ? getComboVariantDetails(combo, firstProd) : null;
+    const previewImage = firstVarDetails?.image ? formatImageUrl(firstVarDetails.image) : '';
     
     return (
       <tr key={combo._id || combo.id} className="hover:bg-slate-50/50 transition-colors font-medium">
@@ -300,10 +328,10 @@ const ComboPacks = () => {
         <td className="py-4 px-4">
           <div className="flex items-center gap-1 flex-wrap">
             {internalProducts.map((p) => {
-              const stockVal = getProductStock(p);
+              const varDetails = getComboVariantDetails(combo, p);
               return (
-                <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${stockVal === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={p.title || p.name}>
-                  {stockVal}
+                <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
+                  {varDetails.stock}
                 </span>
               );
             })}
@@ -329,7 +357,7 @@ const ComboPacks = () => {
         <td className="py-4 px-4">
           <div className="flex items-center justify-center gap-2">
             <EditBtn onClick={() => openEditModal(combo)} />
-            <DeleteBtn onClick={() => handleDelete(combo._id || combo.id)} />
+            <DeleteBtn onClick={() => setComboToDelete(combo)} />
             <ViewBtn onClick={() => openViewModal(combo)} />
           </div>
         </td>
@@ -350,30 +378,82 @@ const ComboPacks = () => {
   const activeCategory = categories.find(c => c.name === formData.category);
   const subcategoriesList = activeCategory ? activeCategory.subcategories : [];
 
-  const filteredProductsForBundle = availableProducts.filter(prod => {
-    // Always show if it's already selected
-    const isSelected = formData.selectedItemIds.includes(prod._id || prod.id);
-    if (isSelected) return true;
+  const allVariantsList = [];
+  availableProducts.forEach(prod => {
+    const prodCatName = prod.category?.name || prod.category;
+    const prodSubCatName = prod.subcategory?.name || prod.subcategory;
+    
+    if (formData.category && prodCatName !== formData.category) return;
 
-    // Filter by search inside the modal
-    if (modalProductSearch && !prod.title.toLowerCase().includes(modalProductSearch.toLowerCase())) {
+    if (prod.variants && prod.variants.length > 0) {
+      prod.variants.forEach(v => {
+        const attrStr = Object.values(v.attributes || {})
+          .filter(val => val && val !== 'Default')
+          .map(val => val.includes('|') ? val.split('|')[0] : val)
+          .join(' / ');
+        const variantTitle = attrStr ? `${prod.title} (${attrStr})` : prod.title;
+
+        allVariantsList.push({
+          productId: prod._id || prod.id,
+          variantId: v.id,
+          title: variantTitle,
+          price: v.price || prod.price || 0,
+          stock: v.stock ?? 0,
+          image: v.image || prod.image || '',
+          weight: v.weight ?? 0,
+          subcategory: prodSubCatName
+        });
+      });
+    } else {
+      allVariantsList.push({
+        productId: prod._id || prod.id,
+        variantId: 'default',
+        title: prod.title,
+        price: prod.price || 0,
+        stock: prod.stock ?? 0,
+        image: prod.image || '',
+        weight: prod.weight ?? 0,
+        subcategory: prodSubCatName
+      });
+    }
+  });
+
+  const filteredVariantsForBundle = allVariantsList.filter(v => {
+    if (formData.subcategory && v.subcategory !== formData.subcategory) {
       return false;
     }
-
-    // Filter by category
-    if (formData.category) {
-      const prodCatName = prod.category?.name || prod.category;
-      if (prodCatName !== formData.category) return false;
+    if (modalProductSearch && !v.title.toLowerCase().includes(modalProductSearch.toLowerCase())) {
+      return false;
     }
-
-    // Filter by subcategory
-    if (formData.subcategory) {
-      const prodSubCatName = prod.subcategory?.name || prod.subcategory;
-      if (prodSubCatName !== formData.subcategory) return false;
-    }
-
     return true;
   });
+
+  const handleVariantSelectionToggle = (productId, variantId) => {
+    setFormData(prev => {
+      const isSelected = prev.selectedVariants.some(sv => sv.productId === productId && sv.variantId === variantId);
+      
+      let updatedVariants;
+      if (isSelected) {
+        updatedVariants = prev.selectedVariants.filter(sv => !(sv.productId === productId && sv.variantId === variantId));
+      } else {
+        updatedVariants = [...prev.selectedVariants, { productId, variantId }];
+      }
+
+      const updatedProductIds = [...new Set(updatedVariants.map(sv => sv.productId))];
+
+      const collectiveSum = updatedVariants.reduce((sum, sv) => {
+        const found = allVariantsList.find(v => v.productId === sv.productId && v.variantId === sv.variantId);
+        return sum + (found ? found.price : 0);
+      }, 0);
+
+      return {
+        ...prev,
+        selectedVariants: updatedVariants,
+        selectedItemIds: updatedProductIds,
+        totalPrice: collectiveSum > 0 ? collectiveSum : ''
+      };
+    });
+  };
 
   return (
     <div className="w-full font-sans text-primary antialiased">
@@ -437,7 +517,7 @@ const ComboPacks = () => {
                   <label className="text-primary font-bold">Category</label>
                   <select 
                     value={formData.category} 
-                    onChange={(e) => setFormData({...formData, category: e.target.value, subcategory: ''})} 
+                    onChange={(e) => setFormData({...formData, category: e.target.value, subcategory: '', selectedItemIds: [], selectedVariants: [], totalPrice: ''})} 
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 bg-white font-semibold text-primary outline-none focus:border-gray-300"
                   >
                     <option value="">Select Category</option>
@@ -481,10 +561,10 @@ const ComboPacks = () => {
               
               <div className="md:col-span-7 flex flex-col border border-gray-100 rounded-xl overflow-hidden bg-white shadow-2xs">
                 <div className="p-3 bg-gray-50 border-b border-gray-100 font-bold text-primary flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span>Select Products to Bundle</span>
+                  <span>Select Variants to Bundle</span>
                   <input 
                     type="text"
-                    placeholder="Search products..."
+                    placeholder="Search variants..."
                     value={modalProductSearch}
                     onChange={(e) => setModalProductSearch(e.target.value)}
                     className="bg-white border border-gray-200 rounded px-2 py-1 text-[11px] font-semibold outline-none focus:border-gray-300 w-full sm:w-44"
@@ -493,29 +573,32 @@ const ComboPacks = () => {
                 <div className="overflow-y-auto flex-1 max-h-[380px] custom-scrollbar">
                   <table className="w-full text-left text-xs font-semibold">
                     <tbody className="divide-y divide-gray-100">
-                      {filteredProductsForBundle.map((prod) => (
-                        <tr key={prod._id || prod.id} className="hover:bg-slate-50/60">
-                          <td className="py-3 px-3">
-                            <input 
-                              type="checkbox" 
-                              checked={formData.selectedItemIds.includes(prod._id || prod.id)} 
-                              onChange={() => handleProductSelectionToggle(prod._id || prod.id)} 
-                            />
-                          </td>
-                          <td className="py-3 px-3">
-                            {prod.image ? (
-                              <img src={formatImageUrl(prod.image)} className="w-9 h-9 object-cover rounded border border-gray-100" />
-                            ) : (
-                              <div className="w-9 h-9 bg-gray-50 rounded flex items-center justify-center text-[10px] text-gray-400">N/A</div>
-                            )}
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="font-bold text-primary">{prod.title}</div>
-                            <div className="text-[10px] text-gray-400 font-normal">Stock: {getProductStock(prod)}</div>
-                          </td>
-                          <td className="py-3 px-3 text-right font-bold text-primary">₹{(prod.variants?.[0]?.price || prod.price || 0).toFixed(2)}</td>
-                        </tr>
-                      ))}
+                      {filteredVariantsForBundle.map((v) => {
+                        const isChecked = formData.selectedVariants.some(sv => sv.productId === v.productId && sv.variantId === v.variantId);
+                        return (
+                          <tr key={`${v.productId}-${v.variantId}`} className="hover:bg-slate-50/60">
+                            <td className="py-3 px-3">
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked} 
+                                onChange={() => handleVariantSelectionToggle(v.productId, v.variantId)} 
+                              />
+                            </td>
+                            <td className="py-3 px-3">
+                              {v.image ? (
+                                <img src={formatImageUrl(v.image)} className="w-9 h-9 object-cover rounded border border-gray-100" />
+                              ) : (
+                                <div className="w-9 h-9 bg-gray-50 rounded flex items-center justify-center text-[10px] text-gray-400">N/A</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <div className="font-bold text-primary">{v.title}</div>
+                              <div className="text-[10px] text-gray-400 font-normal">Stock: {v.stock}</div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-primary">₹{v.price.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -550,22 +633,25 @@ const ComboPacks = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <span className="font-bold text-primary uppercase block tracking-wider text-[10px]">Bundled Products</span>
+                <span className="font-bold text-primary uppercase block tracking-wider text-[10px]">Bundled Variants</span>
                 <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 overflow-hidden">
-                  {currentCombo.selectedItemIds?.map((prod) => (
-                    <div key={prod._id || prod.id} className="flex items-center gap-3 p-3 bg-white">
-                      {prod.image ? (
-                        <img src={formatImageUrl(prod.image)} className="w-10 h-10 object-cover rounded border border-gray-100" />
-                      ) : (
-                        <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">N/A</div>
-                      )}
-                      <div className="flex-grow">
-                        <span className="font-bold text-primary block">{prod.title || prod.name}</span>
-                        <span className="text-gray-400 text-[10px]">Stock: {getProductStock(prod)}</span>
+                  {currentCombo.selectedItemIds?.map((prod) => {
+                    const varDetails = getComboVariantDetails(currentCombo, prod);
+                    return (
+                      <div key={prod._id || prod.id} className="flex items-center gap-3 p-3 bg-white">
+                        {varDetails.image ? (
+                          <img src={formatImageUrl(varDetails.image)} className="w-10 h-10 object-cover rounded border border-gray-100" />
+                        ) : (
+                          <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">N/A</div>
+                        )}
+                        <div className="flex-grow">
+                          <span className="font-bold text-primary block">{varDetails.title}</span>
+                          <span className="text-gray-400 text-[10px]">Stock: {varDetails.stock}</span>
+                        </div>
+                        <span className="font-bold text-primary">₹{varDetails.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
-                      <span className="font-bold text-primary">₹{(prod.variants?.[0]?.price || prod.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <div className="flex justify-end pt-2">
@@ -575,6 +661,16 @@ const ComboPacks = () => {
           </div>
         </div>
       )}
+      
+      <ConfirmationModal
+        isOpen={comboToDelete !== null}
+        onClose={() => setComboToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Combo Pack"
+        message={`Are you sure you want to delete the combo pack "${comboToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        isDanger={true}
+      />
     </div>
   );
 };

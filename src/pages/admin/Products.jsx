@@ -820,9 +820,9 @@ const Products = () => {
                                     <span className="bg-amber-50 text-amber-600 px-1 py-0.2 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
                                   ) : null}
                                 </div>
-                                {v.weight !== undefined && v.weight > 0 && (
+                                {v.weight !== undefined && v.weight >= 0 && (
                                   <div className="text-[9px] text-gray-450 font-bold mt-0.5">
-                                    Weight: <span className="text-slate-700 font-bold">{v.weight} kg</span>
+                                    Weight: <span className="text-slate-700 font-bold">{v.weight} g</span>
                                   </div>
                                 )}
                               </div>

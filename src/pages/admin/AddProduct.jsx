@@ -371,7 +371,7 @@ const AddProduct = () => {
     if (variantInput.stock === '' || isNaN(parseInt(variantInput.stock)) || parseInt(variantInput.stock) < 0) {
       return toast.error("Please enter a valid Quantity for the variant");
     }
-    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) <= 0) {
+    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) < 0) {
       return toast.error("Please enter a valid Weight for the variant");
     }
 
@@ -485,7 +485,7 @@ const AddProduct = () => {
     if (variantInput.stock === '' || isNaN(parseInt(variantInput.stock)) || parseInt(variantInput.stock) < 0) {
       return toast.error("Please enter a valid Quantity for the variant");
     }
-    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) <= 0) {
+    if (variantInput.weight === '' || isNaN(parseFloat(variantInput.weight)) || parseFloat(variantInput.weight) < 0) {
       return toast.error("Please enter a valid Weight for the variant");
     }
     
@@ -1043,12 +1043,11 @@ const AddProduct = () => {
                       {/* Variant Weight */}
                       <div className="md:col-span-3 flex flex-col gap-1.5">
                         <label className="text-[10px] font-black text-slate-455 tracking-wider">
-                          Weight (kg) *
+                          Weight (grams) *
                         </label>
                         <input 
                           type="number"
-                          step="0.01"
-                          placeholder="e.g. 0.5"
+                          placeholder="e.g. 500"
                           value={variantInput.weight}
                           onChange={(e) => setVariantInput(prev => ({ ...prev, weight: e.target.value }))}
                           className="w-full border border-gray-255 px-2.5 py-2 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-semibold"
@@ -1091,7 +1090,7 @@ const AddProduct = () => {
                             <th className="py-3 px-4 font-semibold">Price (₹)</th>
                             <th className="py-3 px-4 font-semibold">Original Price (₹)</th>
                             <th className="py-3 px-4 font-semibold">Quantity</th>
-                            <th className="py-3 px-4 font-semibold">Weight (kg)</th>
+                            <th className="py-3 px-4 font-semibold">Weight (grams)</th>
                             <th className="py-3 px-4 text-right pr-6 font-semibold">Actions</th>
                           </tr>
                         </thead>
@@ -1147,7 +1146,7 @@ const AddProduct = () => {
                                 {v.stock}
                               </td>
                               <td className="py-4 px-4 text-slate-600">
-                                {v.weight !== undefined ? `${v.weight} kg` : '0 kg'}
+                                {v.weight !== undefined ? `${v.weight} g` : '0 g'}
                               </td>
                               <td className="py-4 px-4 text-right pr-6">
                                 <div className="flex items-center justify-end gap-2">

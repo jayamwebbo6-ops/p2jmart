@@ -87,14 +87,18 @@ const Checkout = ({ cart = [], setCart }) => {
   // Math Calculations
   const subtotal = checkoutItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
-  // Dynamic Shipping calculation
   const shippingFee = (() => {
-    if (!selectedAddress || !shippingStates.length || checkoutItems.length === 0) return 0;
+    if (!selectedAddress || checkoutItems.length === 0) return 0;
+    const totalWeight = checkoutItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
+    if (totalWeight === 0) return 0;
+
+    if (!shippingStates.length) {
+      return subtotal > 1000 ? 0 : 100;
+    }
     const rule = shippingStates.find(s => s.stateName.trim().toLowerCase() === selectedAddress.state.trim().toLowerCase());
     if (!rule) {
       return subtotal > 1000 ? 0 : 100;
     }
-    const totalWeight = checkoutItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
     if (totalWeight <= rule.baseWeight) {
       return rule.baseCost;
     } else {
@@ -596,11 +600,17 @@ const Checkout = ({ cart = [], setCart }) => {
                 className="flex items-start justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0 gap-4"
               >
                 <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 relative">
+                  <Link 
+                    to={item.isComboProduct && item.includedProducts?.[0]
+                      ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id || item.includedProducts[0].productId}`
+                      : `/product/${item.productId || item.id || item._id}`
+                    }
+                    className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 flex-shrink-0 relative block cursor-pointer"
+                  >
                     <img 
                       src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image) || (item.images && item.images[0]))} 
                       alt={item.title} 
-                      className="w-full h-full object-cover" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" 
                     />
                     {item.isComboProduct ? (
                       <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
@@ -609,7 +619,7 @@ const Checkout = ({ cart = [], setCart }) => {
                     ) : (
                       <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-black rounded-full border border-white"></div>
                     )}
-                  </div>
+                  </Link>
                   
                   <div className="text-left flex-1 min-w-0">
                     <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 line-clamp-2">

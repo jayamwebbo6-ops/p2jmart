@@ -325,7 +325,47 @@ useEffect(() => {
   const comboData = useMemo(() => {
     if (!product || !matchedCombo) return null;
     
-    const totalOriginalSum = matchedCombo.totalPrice || matchedCombo.selectedItemIds.reduce((acc, item) => acc + (item.variants?.[0]?.price || item.price || 0), 0);
+    const items = (matchedCombo.selectedItemIds || []).map(item => {
+      if (!item) return null;
+      const isCurrent = (item._id || item.id) === product.id;
+      const itemIdStr = item._id || item.id;
+      const sv = matchedCombo.selectedVariants?.find(v => (v.productId?._id || v.productId?.id || v.productId || v) === itemIdStr);
+      let resolvedPrice = item.price || 0;
+      let resolvedWeight = item.weight || 0;
+      let resolvedImage = item.image || '';
+      let resolvedTitle = item.title;
+
+      if (sv && item.variants && item.variants.length > 0) {
+        const variant = item.variants.find(v => v.id === sv.variantId);
+        if (variant) {
+          resolvedPrice = variant.price || item.price || 0;
+          resolvedWeight = variant.weight ?? item.weight ?? 0;
+          resolvedImage = variant.image || item.image || '';
+          const attrStr = Object.values(variant.attributes || {})
+            .filter(val => val && val !== 'Default')
+            .map(val => val.includes('|') ? val.split('|')[0] : val)
+            .join(' / ');
+          resolvedTitle = attrStr ? `${item.title} (${attrStr})` : item.title;
+        }
+      } else if (item.variants && item.variants.length > 0) {
+        const variant = item.variants[0];
+        resolvedPrice = variant.price || item.price || 0;
+        resolvedWeight = variant.weight ?? item.weight ?? 0;
+        resolvedImage = variant.image || item.image || '';
+      }
+
+      return {
+        id: item._id || item.id,
+        title: isCurrent ? `${resolvedTitle} (${selectedColor} / ${selectedSize}) (This Item)` : resolvedTitle,
+        price: resolvedPrice,
+        image: resolvedImage,
+        weight: resolvedWeight,
+        category: typeof item.category === 'object' ? (item.category?.name || '') : (item.category || ''),
+        isCurrent
+      };
+    }).filter(Boolean);
+
+    const totalOriginalSum = items.reduce((acc, item) => acc + item.price, 0);
     const offerPrice = matchedCombo.offerPrice || 0;
     const discountPercent = totalOriginalSum > offerPrice 
       ? Math.round(((totalOriginalSum - offerPrice) / totalOriginalSum) * 100)
@@ -336,18 +376,7 @@ useEffect(() => {
       title: matchedCombo.name,
       discountPercent,
       category: matchedCombo.category || '',
-      items: matchedCombo.selectedItemIds.map(item => {
-        const isCurrent = (item._id || item.id) === product.id;
-        return {
-          id: item._id || item.id,
-          title: isCurrent ? `${item.title} (${selectedColor} / ${selectedSize}) (This Item)` : item.title,
-          price: item.variants?.[0]?.price || item.price || 0,
-          image: item.image || '',
-          weight: item.weight || 0,
-          category: item.category || '',
-          isCurrent
-        };
-      })
+      items
     };
   }, [product, matchedCombo, selectedColor, selectedSize]);
 
@@ -858,8 +887,11 @@ useEffect(() => {
                 <span className="bg-primary-100 text-green-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase">
                   Limited Time Bundle Offer
                 </span>
-                <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1.5 flex items-center gap-1.5">
-                  Frequently Bought Together (Combo Deal)
+                <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1.5 flex flex-wrap items-center gap-2">
+                  <span>Frequently Bought Together (Combo Deal)</span>
+                  <span className="flex items-center gap-1 text-xs bg-amber-50 border border-amber-250 text-amber-700 px-2 py-0.5 rounded-full font-bold">
+                    ★ {(matchedCombo?.rating || 5.0).toFixed(1)} ({matchedCombo?.reviewCount || 0})
+                  </span>
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   Get an extra <span className="text-red-600 font-bold">{comboData.discountPercent}% OFF</span> on the entire setup when purchased collectively!
@@ -867,9 +899,13 @@ useEffect(() => {
               </div>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-6 items-stretch">
+            <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center">
               {/* Left Column Grid Items (Swiper Slider) */}
-              <div className="flex-1 min-w-0 relative px-8 flex items-center bg-white border border-gray-150 rounded-xl p-4 shadow-2xs">
+              <div className={`min-w-0 w-full relative px-8 flex items-center bg-white border border-gray-150 rounded-xl p-4 shadow-2xs ${
+                comboData.items.length === 1 ? 'max-w-[220px]' :
+                comboData.items.length === 2 ? 'max-w-[420px]' :
+                comboData.items.length === 3 ? 'max-w-[620px]' : 'max-w-[820px] flex-1'
+              }`}>
                 {comboData.items.length > 0 && (
                   <>
                     <button className="combo-prev-btn absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
@@ -883,22 +919,22 @@ useEffect(() => {
                         nextEl: '.combo-next-btn',
                       }}
                       spaceBetween={16}
-                      slidesPerView={4}
+                      slidesPerView={Math.min(4, comboData.items.length)}
                       breakpoints={{
                         320: {
-                          slidesPerView: 1.2,
+                          slidesPerView: Math.min(1.2, comboData.items.length),
                           spaceBetween: 10
                         },
                         480: {
-                          slidesPerView: 2,
+                          slidesPerView: Math.min(2, comboData.items.length),
                           spaceBetween: 12
                         },
                         768: {
-                          slidesPerView: 3,
+                          slidesPerView: Math.min(3, comboData.items.length),
                           spaceBetween: 14
                         },
                         1200: {
-                          slidesPerView: 4,
+                          slidesPerView: Math.min(4, comboData.items.length),
                           spaceBetween: 16
                         }
                       }}

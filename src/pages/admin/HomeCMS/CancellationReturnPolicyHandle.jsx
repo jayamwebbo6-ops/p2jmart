@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
-const CancellationReturnPolicyHandle = ({ sections = [], setSections, onSave, isSaving }) => {
+const CancellationReturnPolicyHandle = ({ sections = [], setSections, onSave, isSaving, askConfirmation }) => {
 
   // 1. Core Section Action Handlers
   const handleAddSection = () => {
@@ -14,7 +14,13 @@ const CancellationReturnPolicyHandle = ({ sections = [], setSections, onSave, is
   };
 
   const handleRemoveSection = (sectionId) => {
-    setSections(sections.filter(s => (s._id || s.id) !== sectionId));
+    askConfirmation({
+      title: "Delete Policy Section",
+      message: "Are you sure you want to delete this cancellation and returns policy section? This action cannot be undone.",
+      onConfirm: () => {
+        setSections(sections.filter(s => (s._id || s.id) !== sectionId));
+      }
+    });
   };
 
   const handleUpdateTitle = (sectionId, value) => {

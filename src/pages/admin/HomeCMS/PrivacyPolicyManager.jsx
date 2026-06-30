@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
-const PolicyManager = ({ sections = [], setSections, onSave, isSaving }) => {
+const PolicyManager = ({ sections = [], setSections, onSave, isSaving, askConfirmation }) => {
 
   // 1. Core Section Action Handlers
   const handleAddSection = () => {
@@ -14,7 +14,13 @@ const PolicyManager = ({ sections = [], setSections, onSave, isSaving }) => {
   };
 
   const handleRemoveSection = (sectionId) => {
-    setSections(sections.filter(s => (s._id || s.id) !== sectionId));
+    askConfirmation({
+      title: "Delete Policy Section",
+      message: "Are you sure you want to delete this privacy policy section? This action cannot be undone.",
+      onConfirm: () => {
+        setSections(sections.filter(s => (s._id || s.id) !== sectionId));
+      }
+    });
   };
 
   const handleUpdateTitle = (sectionId, value) => {
