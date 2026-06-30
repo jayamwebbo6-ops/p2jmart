@@ -18,6 +18,18 @@ export const getAdminProfile = async () => {
   return response.data;
 };
 
+// Fixed: Now using your centralized configured axios "api" instance
+export const forgotPasswordApi = async (email) => {
+  const response = await api.post('/admin/forgot-password', { email });
+  return response.data; 
+};
+
+// Fixed: Now using your centralized configured axios "api" instance
+export const resetPasswordApi = async (email, otp, newPassword) => {
+  const response = await api.post('/admin/reset-password', { email, otp, newPassword });
+  return response.data;
+};
+
 // Update Admin Profile
 export const updateAdminProfile = async (profileData) => {
   const response = await api.put('/admin/profile', profileData);
