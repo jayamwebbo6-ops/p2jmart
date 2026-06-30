@@ -7,6 +7,18 @@ import { toast } from '../../components/toast';
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 10;
+  const indexOfLastOrder = currentPage * itemsPerPage;
+  const indexOfFirstOrder = indexOfLastOrder - itemsPerPage;
+  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -97,7 +109,7 @@ const Orders = () => {
     <div className="flex-1 bg-white h-full p-4 sm:p-8 font-['Inter']">
       <h1 className="text-lg sm:text-2xl font-bold text-[#003147] mb-6">Order History</h1>
       <div className="space-y-4">
-        {orders.map((order) => {
+        {currentOrders.map((order) => {
           const orderId = order._id || order.id;
           const firstItem = order.items?.[0];
           return (
@@ -140,6 +152,41 @@ const Orders = () => {
           );
         })}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-8">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-[#003147] hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          >
+            Previous
+          </button>
+          {[...Array(totalPages)].map((_, idx) => {
+            const pageNum = idx + 1;
+            return (
+              <button
+                key={pageNum}
+                onClick={() => handlePageChange(pageNum)}
+                className={`w-8 h-8 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  currentPage === pageNum
+                    ? 'bg-[#003147] border-[#003147] text-white shadow-sm'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-bold text-[#003147] hover:bg-gray-50 disabled:opacity-50 disabled:hover:bg-transparent transition-colors cursor-pointer"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
