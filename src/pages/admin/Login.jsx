@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User, Eye, EyeOff, Mail, KeyRound } from 'lucide-react';
-import { adminLogin, forgotPasswordApi, resetPasswordApi } from '../../api/adminApi';
+import { adminLogin, forgotPasswordApi, resetPasswordApi, getAdminEmailPublic } from '../../api/adminApi';
 import { toast } from '../../components/toast';
 
 export default function AdminLogin() {
@@ -14,12 +14,31 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Password Recovery Parameters
-  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmail, setResetEmail] = useState(''); 
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  // Load the current admin email profile directly from MongoDB via public API (bypass cookies)
+  useEffect(() => {
+    const fetchEmailFromMongo = async () => {
+      try {
+        const response = await getAdminEmailPublic();
+        if (response && response.success && response.email) {
+          setResetEmail(response.email);
+        }
+      } catch (error) {
+        console.error('Failed to resolve MongoDB admin email reference:', error);
+        toast.error('Database connection error. Could not sync admin setup configuration.');
+      }
+    };
+
+    fetchEmailFromMongo();
+  }, []);
 
   // Core Login Form Submission
   const handleLogin = async (e) => {
@@ -42,6 +61,12 @@ export default function AdminLogin() {
   // Flow Step 1: Dispatches Verification OTP Token
   const handleSendOtp = async (e) => {
     e.preventDefault();
+    
+    if (!resetEmail) {
+      toast.error('Unable to locate dynamic administration email record. Check database logs.');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await forgotPasswordApi(resetEmail);
@@ -61,12 +86,21 @@ export default function AdminLogin() {
   // Flow Step 2: Validates Code & Sets New Password
   const handleResetPassword = async (e) => {
     e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match! Please verify your inputs.');
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await resetPasswordApi(resetEmail, otp, newPassword);
       if (response.success) {
         toast.success('Password changed successfully!');
-        navigate('/admin');
+        setOtp('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setView('login');
       } else {
         toast.error(response.message || 'Failed to change password.');
       }
@@ -159,12 +193,12 @@ export default function AdminLogin() {
           </form>
         )}
 
-        {/* CONDITION 2: DISPATCH REQUEST (COLLECT EMAIL) */}
+        {/* CONDITION 2: DISPATCH REQUEST (COLLECT EMAIL - READ ONLY) */}
         {view === 'forgot_email' && (
           <form onSubmit={handleSendOtp} className="p-8">
             <div className="space-y-5">
               <h3 className="text-lg font-medium text-gray-900">Forgot Password</h3>
-              <p className="text-xs text-gray-500">Enter your registered admin email. We will send an OTP code to reset your access.</p>
+              <p className="text-xs text-gray-500">Confirm your registered administrator email address below to receive a validation OTP code.</p>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email Address</label>
@@ -174,10 +208,12 @@ export default function AdminLogin() {
                   </div>
                   <input
                     type="email"
-                    required
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    readOnly
+                    disabled
+                    value={resetEmail || 'Synchronizing with database...'}
+                    className={`w-full pl-10 pr-3 py-2.5 border rounded-md text-sm select-none outline-none cursor-not-allowed font-medium transition-colors ${
+                      resetEmail ? 'bg-gray-100 border-gray-200 text-gray-600' : 'bg-yellow-50/50 border-yellow-200 text-yellow-600 italic'
+                    }`}
                     placeholder="admin@p2jmart.com"
                   />
                 </div>
@@ -193,7 +229,7 @@ export default function AdminLogin() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !resetEmail}
                   className="w-1/2 bg-primary text-white py-2.5 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
                 >
                   {loading ? 'Sending...' : 'Send OTP'}
@@ -204,71 +240,100 @@ export default function AdminLogin() {
         )}
 
         {/* CONDITION 3: CONFIRMATION PROCESS (OTP & PASSWORD RECORD) */}
-        {/* CONDITION 3: CONFIRMATION PROCESS (OTP & PASSWORD RECORD) */}
-{view === 'forgot_otp_pass' && (
-  <form onSubmit={handleResetPassword} className="p-8" autoComplete="off">
-    <div className="space-y-5">
-      <h3 className="text-lg font-medium text-gray-900">Verification Required</h3>
-      <p className="text-xs text-gray-600">An OTP code was sent to <strong className="text-gray-800">{resetEmail}</strong>.</p>
-      
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Enter 6-Digit OTP</label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <KeyRound size={18} />
-          </div>
-          <input
-            type="text"
-            required
-            maxLength={6}
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            autoComplete="one-time-code" 
-            data-lpignore="true"
-            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm tracking-widest font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-            placeholder="000000"
-          />
-        </div>
-      </div>
+        {view === 'forgot_otp_pass' && (
+          <form onSubmit={handleResetPassword} className="p-8" autoComplete="off">
+            <div className="space-y-5">
+              <h3 className="text-lg font-medium text-gray-900">Verification Required</h3>
+              <p className="text-xs text-gray-600">An OTP code was sent to <strong className="text-gray-800">{resetEmail}</strong>.</p>
+              
+              {/* OTP Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Enter 6-Digit OTP</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <KeyRound size={18} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    autoComplete="one-time-code" 
+                    data-lpignore="true"
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm tracking-widest font-mono outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    placeholder="000000"
+                  />
+                </div>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-            <Lock size={18} />
-          </div>
-          <input
-            type="password"
-            required
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            autoComplete="new-password"
-            data-lpignore="true"
-            className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-            placeholder="Enter new password"
-          />
-        </div>
-      </div>
+              {/* New Password Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    placeholder="Enter new password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
 
-      <div className="flex space-x-3 mt-6">
-        <button
-          type="button"
-          onClick={() => setView('forgot_email')}
-          className="w-1/2 border border-gray-300 text-gray-700 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
-        >
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-1/2 bg-primary text-white py-2.5 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
-        >
-          {loading ? 'Resetting...' : 'Reset & Login'}
-        </button>
-      </div>
-    </div>
-  </form>
-)}
+              {/* Confirm New Password Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Lock size={18} />
+                  </div>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    data-lpignore="true"
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-md text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    placeholder="Re-enter new password"
+                  />
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setView('forgot_email')}
+                  className="w-1/2 border border-gray-300 text-gray-700 py-2.5 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !resetEmail}
+                  className="w-1/2 bg-primary text-white py-2.5 rounded-md text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {loading ? 'Resetting...' : 'Reset & Login'}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
 
         {/* Footer block */}
         <div className="bg-gray-50 border-t border-gray-100 px-8 py-4 text-center">
