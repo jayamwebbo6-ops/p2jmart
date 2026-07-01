@@ -10,9 +10,57 @@ export default function ReviewModal({ isOpen, onClose, item, formatImageUrl, onS
   const [isEditable, setIsEditable] = useState(true);
   const [timeWarning, setTimeWarning] = useState('');
 
-  // Normalize once — both prop names have been used across the app
-  const myReview = item?.existingReview || item?.myReview || null;
-  const allReviews = item?.productReviews || item?.productId?.reviews || [];
+  // Inside ReviewModal Component...
+
+// 1. Safe extraction logic for review payloads on Combos and Regular products
+const myReview = item?.existingReview || 
+                 item?.myReview || 
+                 (item?.reviews && Array.isArray(item.reviews) ? item.reviews.find(r => r.isCurrentUser) : null) || 
+                 (item?.reviewList && Array.isArray(item.reviewList) ? item.reviewList.find(r => r.user === userObjectId) : null) ||
+                 null;
+
+// Combos use schema 'reviews' as the array field; Products use 'reviewList'. Let's group them:
+const allReviews = item?.productReviews || 
+                   item?.productId?.reviews || 
+                   item?.reviewList ||
+                   (Array.isArray(item?.reviews) ? item.reviews : []) || 
+                   [];
+
+// 2. Identify if target represents a compound combo pack item
+const isComboItem = !!(
+  item?.isComboProduct ||
+  (Array.isArray(item?.includedProducts) && item.includedProducts.length > 0) ||
+  item?.selectedItemIds ||
+  item?.selectedVariants
+);
+
+const resolveItemId = () =>
+  item.itemId || item.productId?._id || item.productId || item.id || item._id;
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (!isEditable) return;
+
+  if (rating === 0) {
+    alert("Please select a rating before submitting.");
+    return;
+  }
+
+  setSubmitting(true);
+  try {
+    await onSubmit({
+      itemId: resolveItemId(),
+      rating,
+      description,
+      isCombo: isComboItem // 
+    });
+    onClose();
+  } catch (error) {
+    console.error("Failed to submit review:", error);
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   useEffect(() => {
     if (isOpen && item) {
@@ -48,32 +96,10 @@ export default function ReviewModal({ isOpen, onClose, item, formatImageUrl, onS
 
   if (!isOpen || !item) return null;
 
-  const resolveItemId = () =>
-    item.itemId || item.productId?._id || item.productId || item.id || item._id;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!isEditable) return;
 
-    if (rating === 0) {
-      alert("Please select a rating before submitting.");
-      return;
-    }
+  
 
-    setSubmitting(true);
-    try {
-      await onSubmit({
-        itemId: resolveItemId(),
-        rating,
-        description
-      });
-      onClose();
-    } catch (error) {
-      console.error("Failed to submit review:", error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!window.confirm("Delete your review? This cannot be undone.")) return;
@@ -131,10 +157,10 @@ export default function ReviewModal({ isOpen, onClose, item, formatImageUrl, onS
             <div className="flex items-center space-x-3 sm:space-x-4 bg-[#003147] p-3 rounded-xl mb-5 shadow-sm">
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 p-0.5">
                 <img
-                  src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))}
-                  alt={item.title || item.name}
-                  className="w-full h-full object-cover rounded-md"
-                />
+  src={formatImageUrl(item.image || (item.selectedVariants && item.selectedVariants[0]?.image) || 'uploads/placeholder.webp')}
+  alt={item.title || item.name}
+  className="w-full h-full object-cover rounded-md"
+/>
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-white text-xs sm:text-sm truncate">{item.title || item.name}</p>

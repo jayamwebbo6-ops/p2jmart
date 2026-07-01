@@ -31,8 +31,10 @@ const OrderDetails = () => {
   // productId -> myReview (or null), used to label buttons before opening the modal
   const [reviewStatusMap, setReviewStatusMap] = useState({});
 
+
+
   const resolveProductId = (item) =>
-    item.productId?._id || item.productId || item.id || item._id;
+  item.productId?._id || item.productId || item.id || item._id;
 
   const invoiceColors = {
     primary: '#003147',    // Brand primary color (Deep Navy Blue)
@@ -133,31 +135,32 @@ const OrderDetails = () => {
   };
 
   const handleReviewSubmit = async (reviewPayload) => {
-    try {
-      const response = await addProductReviewAPI({
-        productId: reviewPayload.itemId,
-        rating: reviewPayload.rating,
-        description: reviewPayload.description
-      });
+  try {
+    const response = await addProductReviewAPI({
+      productId: reviewPayload.itemId,
+      rating: reviewPayload.rating,
+      description: reviewPayload.description
+    });
 
-      if (response.success) {
-        toast.success(response.message || "Review posted successfully!");
-        // Refresh this product's status so the button label updates immediately
-        setReviewStatusMap(prev => ({
+    if (response.success) {
+      toast.success(response.message || "Review posted successfully!");
+
+      const res = await getProductReviewsAPI(reviewPayload.itemId);
+      if (res.success) {
+        setReviewStatusMap(prev => ({ ...prev, [reviewPayload.itemId]: res.data.myReview }));
+        setSelectedReviewItem(prev => prev && ({
           ...prev,
-          [reviewPayload.itemId]: {
-            rating: reviewPayload.rating,
-            description: reviewPayload.description,
-            createdAt: new Date().toISOString()
-          }
+          productReviews: res.data.reviews,
+          existingReview: res.data.myReview
         }));
       }
-    } catch (error) {
-      console.error("Review Submission Error:", error);
-      toast.error(error.response?.data?.message || "Could not submit your review.");
-      throw error;
     }
-  };
+  } catch (error) {
+    console.error("Review Submission Error:", error);
+    toast.error(error.response?.data?.message || "Could not submit your review.");
+    throw error;
+  }
+};
 
   const handleReviewDelete = async (productId) => {
     try {
@@ -462,73 +465,103 @@ const OrderDetails = () => {
                 <span>Items ({order.items?.length || 0})</span>
               </h3>
 
-              <div className="space-y-4">
-                {order.items?.map((item, index) => {
-                  const productId = resolveProductId(item);
-                  const hasReview = !!reviewStatusMap[productId];
+             <div className="space-y-4">
+  {order.items?.map((item, index) => {
+    const productId = resolveProductId(item);
+    const hasReview = !!reviewStatusMap[productId];
 
-                  return (
-                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-start md:items-center gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-start space-x-4 min-w-0 flex-1">
-                        <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
-                          <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
-                          {item.isComboProduct && (
-                            <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
-                              <Layers size={8} /> Combo
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-gray-800 text-sm mb-0.5 truncate">{item.title || item.name}</p>
-                          {item.isComboProduct ? (
-                            <>
-                              <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                                ✨ Combo Bundle Savings Deal
-                              </span>
-                              {item.includedProducts && item.includedProducts.length > 0 && (
-                                <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
-                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
-                                  <div className="grid grid-cols-1 gap-1.5 max-w-md">
-                                    {item.includedProducts.map((incProd, idx) => (
-                                      <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
-                                        {incProd.image ? (
-                                          <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
-                                        ) : (
-                                          <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
-                                        )}
-                                        <div className="min-w-0 flex-1">
-                                          <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
-                                          <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </>
+    return (
+      <div 
+        key={index} 
+        className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0"
+      >
+        {/* Left Side: Product Image & Metadata Details */}
+        <div className="flex items-start space-x-4 min-w-0 flex-1">
+          <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
+            <img 
+              src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
+              alt={item.title || item.name} 
+              className="w-full h-full object-cover rounded-md" 
+            />
+            {item.isComboProduct && (
+              <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
+                <Layers size={8} /> Combo
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-gray-800 text-sm mb-0.5 truncate">{item.title || item.name}</p>
+            
+            {item.isComboProduct ? (
+              <>
+                <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                  ✨ Combo Bundle Savings Deal
+                </span>
+                {item.includedProducts && item.includedProducts.length > 0 && (
+                  <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
+                    <div className="grid grid-cols-1 gap-1.5 max-w-md">
+                      {item.includedProducts.map((incProd, idx) => (
+                        <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
+                          {incProd.image ? (
+                            <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
                           ) : (
-                            <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
-                              {item.selectedOptions && Object.entries(item.selectedOptions)
-                                .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
-                                .map(([key, val]) => (
-                                  <span key={key} className="capitalize">{key}: {val}</span>
-                                ))
-                              }
-                            </div>
+                            <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
                           )}
-                          <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                            <span>Qty: {item.quantity || item.qty}</span>
-                            <span>•</span>
-                            <span>₹{Number(item.price).toFixed(2)} each</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
+                            <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
                           </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                    
                   </div>
-                ))}
+                )}
+              </>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
+                {item.selectedOptions && Object.entries(item.selectedOptions)
+                  .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
+                  .map(([key, val]) => (
+                    <span key={key} className="capitalize">{key}: {val}</span>
+                  ))
+                }
               </div>
+            )}
+
+            <div className="flex items-center gap-2 text-[11px] text-gray-400">
+              <span>Qty: {item.quantity || item.qty}</span>
+              <span>•</span>
+              <span>₹{Number(item.price).toFixed(2)} each</span>
             </div>
+          </div>
+        </div>
+
+        {/* Right Side: Review Action Button Trigger */}
+        <div className="flex-shrink-0 self-start sm:self-center">
+          {order.status?.toLowerCase() === 'delivered' ? (
+            <button
+              onClick={() =>  openReviewModal(item)}
+              className={`w-full sm:w-auto px-4 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                hasReview 
+                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' 
+                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-sm'
+              }`}
+            >
+              {hasReview ? '⭐ Edit Your Review' : '✍️ Write Product Review'}
+            </button>
+          ) : (
+            <span className="text-[11px] font-semibold text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md">
+              Review locks until Delivery
+            </span>
+          )}
+        </div>
+
+      </div>
+    );
+  })}
+</div>
 
             <div className="bg-[#f9fafb] border border-gray-100 rounded-xl p-4 sm:p-5 shadow-sm">
               <div className="space-y-2.5 text-[13px] border-b border-gray-200 pb-4 mb-4">
@@ -564,6 +597,7 @@ const OrderDetails = () => {
           </div>
         </div>
       </div>
+      
 
       {/* Printable Invoice View Layer */}
       <div id="printable-invoice-area" className="hidden print:block bg-white text-black font-sans" style={{ fontSize: '11px', lineHeight: '1.4' }}>
@@ -638,7 +672,7 @@ const OrderDetails = () => {
         </table>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '20px', paddingRight: '10px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 100px', gap: '10px', textAlign: 'right', color: '#4B5563', fontSize: '13px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 100px', gap: '10px', textAlign: 'right', color: '#4B5563', fontSize: '13px' }}></div>
             <span style={{ color: '#9CA3AF', fontWeight: '500' }}>Subtotal:</span>
             <span style={{ fontWeight: '600', color: '#374151' }}>Rs. {Number(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
             {order.gst > 0 && (
@@ -673,6 +707,7 @@ const OrderDetails = () => {
           </p>
         </div>
       </div>
+
       {/* Off-screen container for rendering A4 invoice for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <OrderInvoice 

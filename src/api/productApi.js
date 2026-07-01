@@ -39,26 +39,22 @@ export const toggleProductStatusAPI = async (id) => {
 
 // 🌟 Post a product review safely through your initialized API module instance
 
-
-// 1. Add/Update Review (Using your existing combined POST controller)
 export const addProductReviewAPI = async (reviewData) => {
-  // Expects reviewData to contain: { productId, rating, description }
+  // Expects reviewData: { productId, rating, description, isCombo }
   const response = await userApi.post('/reviews/add', reviewData);
   return response.data;
 };
 
-// 2. Edit Existing Review Explicitly (If using the split PUT controller)
+// 2. Edit Existing Review
 export const editProductReviewAPI = async (reviewData) => {
-  // Expects reviewData to contain: { productId, rating, description }
   const response = await userApi.put('/reviews/edit', reviewData);
   return response.data;
 };
 
 // 3. Delete Review
-export const deleteProductReviewAPI = async (productId) => {
-  // Sends the target product ID to clean up the review array
+export const deleteProductReviewAPI = async (productId, isCombo = false) => {
   const response = await userApi.delete('/reviews/delete', { 
-    data: { productId } 
+    data: { productId, isCombo } 
   });
   return response.data;
 };
