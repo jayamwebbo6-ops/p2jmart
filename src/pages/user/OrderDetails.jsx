@@ -11,7 +11,6 @@ import {
   getProductReviewsAPI,
   deleteProductReviewAPI
 } from '../../api/productApi';
-import logo from '../../../public/logo.png';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import OrderInvoice from '../../components/OrderInvoice';
@@ -36,8 +35,6 @@ const OrderDetails = () => {
     item.productId?._id || item.productId || item.id || item._id;
 
   const invoiceColors = {
-    primary: '#A31D1D',
-    secondary: '#F8F9FA'
     primary: '#003147',    // Brand primary color (Deep Navy Blue)
     secondary: '#F8F9FA'  // Off-white light tint used for subtle body row text/table backgrounds
   };
@@ -333,7 +330,6 @@ const OrderDetails = () => {
           #printable-invoice-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px !important; }
         }
       `}} />
-    <div className="bg-[#fcf9f5] min-h-screen py-6 px-4 md:px-6 lg:px-8 font-['Inter'] print:bg-white print:py-0 print:px-0">
 
       {/* Main Container Dashboard Card */}
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 print:hidden">
@@ -472,8 +468,8 @@ const OrderDetails = () => {
                   const hasReview = !!reviewStatusMap[productId];
 
                   return (
-                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-center space-x-4 min-w-0">
+                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-start md:items-center gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-start space-x-4 min-w-0 flex-1">
                         <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
                           <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
                           {item.isComboProduct && (
@@ -482,12 +478,34 @@ const OrderDetails = () => {
                             </div>
                           )}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="font-bold text-gray-800 text-sm mb-0.5 truncate">{item.title || item.name}</p>
                           {item.isComboProduct ? (
-                            <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                              ✨ Combo Bundle Savings Deal
-                            </span>
+                            <>
+                              <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                                ✨ Combo Bundle Savings Deal
+                              </span>
+                              {item.includedProducts && item.includedProducts.length > 0 && (
+                                <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
+                                  <div className="grid grid-cols-1 gap-1.5 max-w-md">
+                                    {item.includedProducts.map((incProd, idx) => (
+                                      <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
+                                        {incProd.image ? (
+                                          <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
+                                        ) : (
+                                          <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
+                                        )}
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
+                                          <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
                               {item.selectedOptions && Object.entries(item.selectedOptions)
@@ -518,65 +536,6 @@ const OrderDetails = () => {
                     </div>
                   );
                 })}
-                {order.items?.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
-                        <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
-                        {item.isComboProduct && (
-                          <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
-                            <Layers size={8} /> Combo
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800 text-sm mb-0.5">{item.title || item.name}</p>
-                        {item.isComboProduct ? (
-                          <>
-                            <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                              ✨ Combo Bundle Savings Deal
-                            </span>
-                            {item.includedProducts && item.includedProducts.length > 0 && (
-                              <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
-                                <div className="grid grid-cols-1 gap-1.5 max-w-md">
-                                  {item.includedProducts.map((incProd, idx) => (
-                                    <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
-                                      {incProd.image ? (
-                                        <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
-                                      ) : (
-                                        <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
-                                      )}
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
-                                        <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
-                            {item.selectedOptions && Object.entries(item.selectedOptions)
-                              .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
-                              .map(([key, val]) => (
-                                <span key={key} className="capitalize">{key}: {val}</span>
-                              ))
-                            }
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                          <span>Qty: {item.quantity || item.qty}</span>
-                          <span>•</span>
-                          <span>₹{Number(item.price).toFixed(2)} each</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                  </div>
-                ))}
               </div>
             </div>
 
@@ -603,9 +562,6 @@ const OrderDetails = () => {
               </div>
             </div>
 
-            <button
-              onClick={handlePrint}
-              className="w-full bg-[#003147] text-white flex items-center justify-center space-x-2 py-2.5 rounded-xl hover:bg-[#002232] transition-colors font-bold shadow-md text-xs sm:text-sm cursor-pointer active:scale-95 duration-200"
             <button 
               onClick={handleDownloadInvoice}
               disabled={downloading}
@@ -725,6 +681,7 @@ const OrderDetails = () => {
             Please note that payment conditions apply based on terms of billing. If you have any questions or concerns regarding this invoice record statement, feel free to contact us at the provided support email address.
           </p>
         </div>
+      </div>
       {/* Off-screen container for rendering A4 invoice for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <OrderInvoice 
