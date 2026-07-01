@@ -29,6 +29,7 @@ import { getAllGstAPI } from '../../api/gstApi';
 import { createOrderAPI } from '../../api/orderApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
+import { isUserAuthenticated } from '../../api/userApi';
 
 const Checkout = ({ cart = [], setCart }) => {
   const formatImageUrl = (imagePath) => {
@@ -197,8 +198,13 @@ const Checkout = ({ cart = [], setCart }) => {
 
 
   useEffect(() => {
-    loadCheckoutData();
-  }, []);
+    if (!isUserAuthenticated()) {
+      toast.info('Please login to proceed to checkout.');
+      navigate('/login', { state: { from: '/checkout', checkoutState: location.state } });
+    } else {
+      loadCheckoutData();
+    }
+  }, [navigate, location]);
 
   // Redirect if checkout items are empty and we are not in success step
   useEffect(() => {

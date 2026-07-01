@@ -5,7 +5,6 @@ import { getOrderByIdAPI, cancelOrderAPI } from '../../api/orderApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import ReviewModal from '../../components/ReviewModal';
 import { toast } from '../../components/toast';
-import logo from '../../../public/logo.png';
 import {
   addProductReviewAPI,
   getProductReviewsAPI,
@@ -507,7 +506,18 @@ const OrderDetails = () => {
                           {incProd.image ? (
                             <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
                           ) : (
+<<<<<<< HEAD
                             <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
+=======
+                            <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
+                              {item.selectedOptions && Object.entries(item.selectedOptions)
+                                .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
+                                .map(([key, val]) => (
+                                  <span key={key} className="capitalize">{key}: {formatOptionValue(val)}</span>
+                                ))
+                              }
+                            </div>
+>>>>>>> 744c15d4e25d9ad365bf1b567f16ce22fe83293c
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
@@ -597,6 +607,7 @@ const OrderDetails = () => {
           </div>
         </div>
       </div>
+<<<<<<< HEAD
       
 
       {/* Printable Invoice View Layer */}
@@ -710,6 +721,10 @@ const OrderDetails = () => {
 
       {/* Off-screen container for rendering A4 invoice for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+=======
+      {/* Off-screen container for rendering A4 invoice for PDF generation & printing */}
+      <div id="printable-invoice-area" className="hidden print:block" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+>>>>>>> 744c15d4e25d9ad365bf1b567f16ce22fe83293c
         <OrderInvoice 
           order={order} 
           invoiceColors={invoiceColors} 

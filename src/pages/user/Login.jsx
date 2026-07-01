@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mail, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { toast } from '../../components/toast';
 import { googleLoginAPI, isUserAuthenticated, sendOtpAPI, verifyOtpAPI } from '../../api/userApi';
+import { addCartItem } from '../../redux/cartSlice';
 
 // Integrated Loader sub-component
 const Loader = () => {
@@ -18,6 +20,8 @@ const Loader = () => {
 
 export default function AuthFlow() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -36,21 +40,73 @@ export default function AuthFlow() {
   const [otpBoxes, setOtpBoxes] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
 
+  const handleSuccessfulLogin = async (result) => {
+    window.dispatchEvent(new Event('userLoginStateChange'));
+    toast.success('Logged in successfully!');
+
+    const from = location.state?.from || '/';
+    const checkoutState = location.state?.checkoutState || null;
+    const addToCartPayload = location.state?.addToCartPayload || null;
+    const directPurchasePayload = location.state?.directPurchasePayload || null;
+    const directPurchaseBundlePayload = location.state?.directPurchaseBundlePayload || null;
+
+    if (addToCartPayload) {
+      try {
+        setIsLoading(true);
+        await dispatch(addCartItem(addToCartPayload)).unwrap();
+        toast.success(`"${addToCartPayload.title}" added to Cart!`);
+        navigate('/cart');
+        return;
+      } catch (err) {
+        console.error('Failed to auto-add item to cart after login:', err);
+        toast.error(err || 'Failed to add item to cart');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (directPurchasePayload) {
+      navigate('/checkout', {
+        state: {
+          directPurchase: true,
+          items: [directPurchasePayload]
+        }
+      });
+      return;
+    }
+
+    if (directPurchaseBundlePayload) {
+      navigate('/checkout', {
+        state: {
+          directPurchaseBundle: directPurchaseBundlePayload
+        }
+      });
+      return;
+    }
+
+    if (!result.data.phone) {
+      toast.info('Please complete your profile details.');
+      navigate('/complete-profile', {
+        state: {
+          from,
+          checkoutState,
+          addToCartPayload,
+          directPurchasePayload,
+          directPurchaseBundlePayload
+        }
+      });
+    } else {
+      navigate(from, { state: checkoutState });
+    }
+  };
+
   useEffect(() => {
     const handleCredentialResponse = async (response) => {
       setIsLoading(true);
       try {
         const result = await googleLoginAPI(response.credential);
         if (result && result.success) {
-          window.dispatchEvent(new Event('userLoginStateChange'));
-          toast.success('Logged in successfully!');
-
-          if (!result.data.phone) {
-            toast.info('Please complete your profile details.');
-            navigate('/my-account/profile');
-          } else {
-            navigate('/');
-          }
+          await handleSuccessfulLogin(result);
         } else {
           toast.error(result.message || 'Google Login failed');
         }
@@ -159,15 +215,7 @@ export default function AuthFlow() {
     const result = await verifyOtpAPI(email.toLowerCase(), finalOtp);
 
     if (result.success) {
-      window.dispatchEvent(new Event('userLoginStateChange'));
-      toast.success('Logged in successfully!');
-
-      if (!result.data.phone) {
-        toast.info('Please complete your profile details.');
-        navigate('/my-account/profile');
-      } else {
-        navigate('/');
-      }
+      await handleSuccessfulLogin(result);
     } else {
       toast.error(result.message || 'Invalid or expired OTP code');
     }
@@ -184,9 +232,10 @@ export default function AuthFlow() {
       {isLoading && <Loader />}
 
       <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden flex flex-col transition-all duration-300">
-        <div className="text-white text-center flex flex-col items-center justify-center pt-13">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome Back</h1>
-          <p className="text-primary text-sm font-medium">Sign in to your account</p>
+        {/* Header Panel */}
+        <div className="bg-[#003147] text-white text-center flex flex-col items-center justify-center pt-10 pb-8 px-6 w-full">
+          <h1 className="text-2xl font-bold tracking-tight mb-2 text-white">Welcome Back</h1>
+          <p className="text-red-100 text-sm font-medium">Sign in to your account</p>
         </div>
 
         <div className="flex flex-col items-center w-full my-10 mx-auto max-w-[80%]">

@@ -14,6 +14,7 @@ import ProductCard from '../../components/ProductCard';
 import { getProductByIdAPI, getProductsAPI } from '../../api/productApi';
 import { getCategoriesAPI } from '../../api/categoryApi';
 import { getCombosAPI } from '../../api/comboApi';
+import { isUserAuthenticated } from '../../api/userApi';
 
 const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { subcategoryId, id } = useParams();
@@ -307,8 +308,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     id: loadedProduct._id || loadedProduct.id,
     brand: loadedProduct.brand || '',
     title: loadedProduct.title || loadedProduct.name || 'Product Details',
-    category: typeof loadedProduct.category === 'object' && loadedProduct.category?.name
-      ? loadedProduct.category.name 
+    category: (loadedProduct.category && typeof loadedProduct.category === 'object')
+      ? (loadedProduct.category.name || loadedProduct.category.id || loadedProduct.category._id || 'Catalog')
       : (loadedProduct.category || 'Catalog'),
     price: activeVariant ? activeVariant.price : (loadedProduct.price || 0),
     originalPrice: activeVariant ? activeVariant.originalPrice : (loadedProduct.originalPrice || 0),
@@ -473,31 +474,57 @@ useEffect(() => {
 
   const handleAddToCart = useThrottledCallback(() => {
     if (!product) return;
+    const selectedOptions = product.activeVariant && product.activeVariant.attributes
+      ? product.activeVariant.attributes
+      : { color: selectedColor, size: selectedSize };
+    const payload = {
+      productId: product.id || product._id || product.productId,
+      title: product.title,
+      price: Number(product.price ?? 0),
+      quantity: quantity,
+      image: product.image || (product.images && product.images[0]) || '',
+      selectedOptions,
+      isComboProduct: false,
+      includedProducts: [],
+      weight: Number(product.weight || 0),
+      category: product.category || 'Catalog'
+    };
+    if (!isUserAuthenticated()) {
+      toast.info('Please login to add items to cart.');
+      navigate('/login', { state: { from: location.pathname, addToCartPayload: payload } });
+      return;
+    }
     if (onAddToCart) {
-      onAddToCart({
-        ...product,
-        quantity: quantity,
-        selectedOptions: product.activeVariant && product.activeVariant.attributes
-          ? product.activeVariant.attributes
-          : { color: selectedColor, size: selectedSize }
-      });
+      onAddToCart(payload);
     }
   }, 1000);
 
   const handleBuyNow = useThrottledCallback(() => {
     if (!product) return;
+    const selectedOptions = product.activeVariant && product.activeVariant.attributes
+      ? product.activeVariant.attributes
+      : { color: selectedColor, size: selectedSize };
+    const checkoutPayload = {
+      productId: product.id || product._id || product.productId,
+      title: product.title,
+      price: Number(product.price ?? 0),
+      quantity: quantity,
+      image: product.image || (product.images && product.images[0]) || '',
+      selectedOptions,
+      isComboProduct: false,
+      includedProducts: [],
+      weight: Number(product.weight || 0),
+      category: product.category || 'Catalog'
+    };
+    if (!isUserAuthenticated()) {
+      toast.info('Please login to buy items.');
+      navigate('/login', { state: { from: '/checkout', directPurchasePayload: checkoutPayload } });
+      return;
+    }
     navigate('/checkout', {
       state: {
         directPurchase: true,
-        items: [
-          {
-            ...product,
-            quantity: quantity,
-            selectedOptions: product.activeVariant && product.activeVariant.attributes
-              ? product.activeVariant.attributes
-              : { color: selectedColor, size: selectedSize }
-          } 
-        ] 
+        items: [checkoutPayload] 
       } 
     }); 
   }, 1000);
@@ -529,6 +556,7 @@ useEffect(() => {
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCartPayload = {
       id: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
+      productId: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
       title: isFullComboSelected ? comboData.title : "Custom Pack Bundle Deal",
       price: finalComboPrice,
       quantity: 1, 
@@ -538,6 +566,7 @@ useEffect(() => {
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
       category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
+        productId: item.id,
         id: item.id,
         title: item.title,
         image: item.image,
@@ -546,6 +575,11 @@ useEffect(() => {
         category: item.category || ''
       }))
     };
+    if (!isUserAuthenticated()) {
+      toast.info('Please login to buy this combo bundle.');
+      navigate('/login', { state: { from: location.pathname, addToCartPayload: bundleCartPayload } });
+      return;
+    }
     console.log("Adding bundle to cart store:", bundleCartPayload);
     onAddToCart(bundleCartPayload);
     navigate('/cart');
@@ -556,6 +590,7 @@ useEffect(() => {
     const selectedItems = comboData.items.filter(item => selectedComboItemIds.includes(item.id));
     const bundleCheckoutPayload = {
       id: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
+      productId: isFullComboSelected ? comboData.id : `COMBO-CUSTOM-${Date.now()}`,
       title: isFullComboSelected ? comboData.title : "Custom Pack Bundle Deal",
       price: finalComboPrice,
       quantity: 1,
@@ -565,6 +600,7 @@ useEffect(() => {
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
       category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
+        productId: item.id,
         id: item.id,
         title: item.title,
         image: item.image,
@@ -573,6 +609,11 @@ useEffect(() => {
         category: item.category || ''
       }))
     };
+    if (!isUserAuthenticated()) {
+      toast.info('Please login to checkout this combo bundle.');
+      navigate('/login', { state: { from: '/checkout', directPurchaseBundlePayload: bundleCheckoutPayload } });
+      return;
+    }
     navigate('/checkout', { state: { directPurchaseBundle: bundleCheckoutPayload } });
   }, 1000);
 
