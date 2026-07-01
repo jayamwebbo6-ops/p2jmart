@@ -242,14 +242,36 @@ const ProductCard = ({
           <span className="text-gray-400 text-[13px] font-medium block truncate">Standard Pack</span>
         )}
 
-        <div className="flex items-center gap-1">
-          <div className="flex text-yellow-400 flex-shrink-0">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} size={13} fill={i < Math.floor(product.rating || 0) ? "currentColor" : "none"} strokeWidth={i < Math.floor(product.rating || 0) ? 0 : 1.5} className={i >= Math.floor(product.rating || 0) ? "text-gray-400" : ""} />
-            ))}
-          </div>
-          <span className="text-gray-500 text-[12px] ml-1 truncate">({product.reviews || 0})</span>
-        </div>
+      <div className="flex items-center gap-1">
+  <div className="flex text-yellow-400 flex-shrink-0">
+    {[...Array(5)].map((_, i) => {
+      // 1. Get the actual array length
+      const totalReviews = product.reviewList?.length || 0;
+      
+      // 2. Calculate the live rating dynamically from the database array
+      const liveRating = totalReviews > 0 
+        ? product.reviewList.reduce((acc, item) => (item.rating || 0) + acc, 0) / totalReviews 
+        : 0;
+
+      // 3. Determine if this specific star should fill up
+      const isFilled = liveRating > 0 && i < Math.floor(liveRating);
+      
+      return (
+        <Star 
+          key={i} 
+          size={13} 
+          fill={isFilled ? "currentColor" : "none"} 
+          strokeWidth={isFilled ? 0 : 1.5} 
+          className={isFilled ? "" : "text-gray-300 dark:text-gray-600"} 
+        />
+      );
+    })}
+  </div>
+  <span className="text-gray-500 text-[12px] ml-1 truncate">
+    ({product.reviewList?.length || 0})
+  </span>
+</div>
+
         
         {product.price !== null && product.price !== undefined && (
           <div className="mt-auto pt-0.5">

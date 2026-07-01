@@ -6,6 +6,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from '../../components/toast';
+import ProductReviews from '../../components/ProductReviews';
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -928,6 +929,12 @@ useEffect(() => {
             </div>
           </div>
         </div>
+
+         <ProductReviews
+          productId={product.id}
+          initialRating={product.rating}
+          initialReviewCount={product.reviews}
+        />
 
         {/* Combo Pack Section */}
         {comboData && (
