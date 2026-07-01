@@ -6,6 +6,11 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import ReviewModal from '../../components/ReviewModal';
 import { toast } from '../../components/toast';
 import logo from '../../../public/logo.png';
+import {
+  addProductReviewAPI,
+  getProductReviewsAPI,
+  deleteProductReviewAPI
+} from '../../api/productApi';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import OrderInvoice from '../../components/OrderInvoice';
@@ -312,7 +317,19 @@ const OrderDetails = () => {
   }
 
   return (
-    <div className="bg-[#fcf9f5] min-h-screen py-6 px-4 md:px-6 lg:px-8 font-['Inter'] print:bg-white print:py-0 print:px-0">
+    <div className="bg-[#fcf9f5] min-h-screen py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8 font-['Inter'] print:bg-white print:py-0 print:px-0">
+
+      <style dangerouslySetInnerHTML={{__html: `
+        :root {
+          --invoice-primary: ${invoiceColors.primary};
+          --invoice-secondary: ${invoiceColors.secondary};
+        }
+        @media print {
+          body * { visibility: hidden; }
+          #printable-invoice-area, #printable-invoice-area * { visibility: visible; }
+          #printable-invoice-area { position: absolute; left: 0; top: 0; width: 100%; padding: 20px !important; }
+        }
+      `}} />
 
       {/* Main Container Dashboard Card */}
       <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 print:hidden">
@@ -446,59 +463,64 @@ const OrderDetails = () => {
               </h3>
 
               <div className="space-y-4">
-                {order.items?.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
-                        <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
-                        {item.isComboProduct && (
-                          <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
-                            <Layers size={8} /> Combo
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800 text-sm mb-0.5">{item.title || item.name}</p>
-                        {item.isComboProduct ? (
-                          <>
-                            <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
-                              ✨ Combo Bundle Savings Deal
-                            </span>
-                            {item.includedProducts && item.includedProducts.length > 0 && (
-                              <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
-                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
-                                <div className="grid grid-cols-1 gap-1.5 max-w-md">
-                                  {item.includedProducts.map((incProd, idx) => (
-                                    <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
-                                      {incProd.image ? (
-                                        <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
-                                      ) : (
-                                        <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
-                                      )}
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
-                                        <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
+                {order.items?.map((item, index) => {
+                  const productId = resolveProductId(item);
+                  const hasReview = !!reviewStatusMap[productId];
+
+                  return (
+                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-start md:items-center gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
+                      <div className="flex items-start space-x-4 min-w-0 flex-1">
+                        <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
+                          <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
+                          {item.isComboProduct && (
+                            <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
+                              <Layers size={8} /> Combo
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-gray-800 text-sm mb-0.5 truncate">{item.title || item.name}</p>
+                          {item.isComboProduct ? (
+                            <>
+                              <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                                ✨ Combo Bundle Savings Deal
+                              </span>
+                              {item.includedProducts && item.includedProducts.length > 0 && (
+                                <div className="mt-2 space-y-1.5 border-t border-dashed border-gray-200 pt-2 mb-2">
+                                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Includes:</p>
+                                  <div className="grid grid-cols-1 gap-1.5 max-w-md">
+                                    {item.includedProducts.map((incProd, idx) => (
+                                      <div key={incProd.id || idx} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
+                                        {incProd.image ? (
+                                          <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-8 h-8 object-cover rounded border border-gray-200 flex-shrink-0" />
+                                        ) : (
+                                          <div className="w-8 h-8 bg-gray-100 rounded border border-gray-200 text-gray-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
+                                        )}
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-[10px] text-gray-700 font-bold truncate leading-tight" title={incProd.title}>{incProd.title}</p>
+                                          <p className="text-[9px] text-gray-400 font-semibold">₹{Number(incProd.price).toFixed(2)}</p>
+                                        </div>
                                       </div>
-                                    </div>
-                                  ))}
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
-                            {item.selectedOptions && Object.entries(item.selectedOptions)
-                              .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
-                              .map(([key, val]) => (
-                                <span key={key} className="capitalize">{key}: {val}</span>
-                              ))
-                            }
+                              )}
+                            </>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-x-3 text-[11px] font-medium text-gray-500 mb-1">
+                              {item.selectedOptions && Object.entries(item.selectedOptions)
+                                .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
+                                .map(([key, val]) => (
+                                  <span key={key} className="capitalize">{key}: {val}</span>
+                                ))
+                              }
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                            <span>Qty: {item.quantity || item.qty}</span>
+                            <span>•</span>
+                            <span>₹{Number(item.price).toFixed(2)} each</span>
                           </div>
-                        )}
-                        <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                          <span>Qty: {item.quantity || item.qty}</span>
-                          <span>•</span>
-                          <span>₹{Number(item.price).toFixed(2)} each</span>
                         </div>
                       </div>
                     </div>
@@ -543,6 +565,114 @@ const OrderDetails = () => {
         </div>
       </div>
 
+      {/* Printable Invoice View Layer */}
+      <div id="printable-invoice-area" className="hidden print:block bg-white text-black font-sans" style={{ fontSize: '11px', lineHeight: '1.4' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E5E7EB', paddingBottom: '20px' }}>
+          <div>
+            <h1 style={{ color: '#3b6094', fontSize: '32px', fontWeight: '800', margin: '0 0 5px 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>Invoice</h1>
+            <p style={{ margin: '0', color: '#334c6e', fontWeight: '500' }}>Official Order Bill Receipt</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <img src={logo} alt="Flora Flowers Logo" style={{ maxHeight: '75px', maxWidth: '200px', objectFit: 'contain' }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px' }}>
+          <div>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Your Information</h3>
+            <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>P2J Mart E-Commerce Inc.</p>
+            <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>123 Gift Street, Joy City</p>
+            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>support@p2jmart.com</p>
+            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>+91-999-888-7777</p>
+          </div>
+          <div>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Client Information</h3>
+            <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>{order.shippingAddress?.fullName || 'Valued Customer'}</p>
+            <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.streetAddress}</p>
+            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.postalCode}</p>
+            {order.shippingAddress?.phone && <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>PH: {order.shippingAddress.phone}</p>}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px', borderTop: '1px solid #E5E7EB', paddingTop: '15px' }}>
+          <div>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Issued On</h3>
+            <p style={{ margin: '0', fontWeight: '600', color: '#374151' }}>{formatDate(order.placedDate || order.createdAt)}</p>
+          </div>
+          <div>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Order ID</h3>
+            <p style={{ margin: '0', fontWeight: '700', color: '#374151' }}>{order.orderId || `ORD-${order._id.slice(-8).toUpperCase()}`}</p>
+          </div>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '30px', border: '1px solid #D1D5DB' }}>
+          <thead>
+            <tr style={{ backgroundColor: 'var(--invoice-primary)', color: '#FFFFFF' }}>
+              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '50px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>S.NO</th>
+              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', textAlign: 'left', borderRight: '1px solid #D1D5DB' }}>ITEM DESCRIPTION</th>
+              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '80px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>QUANTITY</th>
+              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '110px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>UNIT PRICE</th>
+              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '120px', textAlign: 'right' }}>TOTAL PRICE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.items?.map((item, index) => (
+              <tr key={index} style={{ backgroundColor: 'var(--invoice-secondary)', borderBottom: '1px solid #E5E7EB' }}>
+                <td style={{ padding: '12px 10px', textAlign: 'center', color: '#4B5563', borderRight: '1px solid #D1D5DB' }}>{index + 1}</td>
+                <td style={{ padding: '12px 10px', borderRight: '1px solid #D1D5DB' }}>
+                  <div style={{ fontWeight: '700', color: '#1F2937' }}>{item.title || item.name}</div>
+                  {item.selectedOptions && !item.isComboProduct && (
+                    <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>
+                      {Object.entries(item.selectedOptions)
+                        .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
+                        .map(([key, val]) => `${key}: ${val}`).join(', ')}
+                    </div>
+                  )}
+                </td>
+                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '600', color: '#1F2937', borderRight: '1px solid #D1D5DB' }}>{item.quantity || item.qty}</td>
+                <td style={{ padding: '12px 10px', textAlign: 'center', color: '#4B5563', borderRight: '1px solid #D1D5DB' }}>Rs. {Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#1F2937' }}>Rs. {(Number(item.price) * Number(item.quantity || item.qty || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '20px', paddingRight: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 100px', gap: '10px', textAlign: 'right', color: '#4B5563', fontSize: '13px' }}>
+            <span style={{ color: '#9CA3AF', fontWeight: '500' }}>Subtotal:</span>
+            <span style={{ fontWeight: '600', color: '#374151' }}>Rs. {Number(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            {order.gst > 0 && (
+              <>
+                <span style={{ color: '#9CA3AF', fontWeight: '500' }}>GST:</span>
+                <span style={{ fontWeight: '600', color: '#374151' }}>Rs. {Number(order.gst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              </>
+            )}
+            <span style={{ color: '#9CA3AF', fontWeight: '500' }}>Shipping:</span>
+            <span style={{ fontWeight: '600', color: '#374151' }}>{Number(order.shippingFee || 0) === 0 ? "Free" : `Rs. ${Number(order.shippingFee).toFixed(2)}`}</span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 120px', gap: '10px', textAlign: 'right', marginTop: '15px', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '800', color: '#132844' }}>Total Amount Due:</span>
+            <span style={{ fontSize: '15px', fontWeight: '800', color: '#2e75d8' }}>Rs. {Number(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '220px', textAlign: 'center' }}>
+            <div style={{ borderBottom: '1px solid #4B5563', marginBottom: '6px' }}></div>
+            <span style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Authorized Signature</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '60px', backgroundColor: 'var(--invoice-primary)', color: '#FFFFFF', padding: '14px 18px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <p style={{ margin: '0 0 6px 0', fontSize: '11px', fontWeight: '700', letterSpacing: '0.3px' }}>
+            Thank you for choosing P2J MART! We appreciate the opportunity to serve you.
+          </p>
+          <p style={{ margin: '0', fontSize: '10px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '400', lineHeight: '1.5' }}>
+            Please note that payment conditions apply based on terms of billing. If you have any questions or concerns regarding this invoice record statement, feel free to contact us at the provided support email address.
+          </p>
+        </div>
+      </div>
       {/* Off-screen container for rendering A4 invoice for PDF generation */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <OrderInvoice 
