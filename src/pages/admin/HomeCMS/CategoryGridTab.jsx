@@ -166,7 +166,10 @@ const CategoryGridTab = ({ cards, setCards, askConfirmation }) => {
                 <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
                   Category Image Asset
                 </label>
-                <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended size: 1:1 Aspect Ratio (Square, e.g. 500x500 px) for grid slot card preview.</span>
+                <div className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2.5 py-1.5 rounded-lg font-semibold mt-1 flex items-start gap-1">
+                  <span className="shrink-0">ℹ️</span>
+                  <span>Recommended size: 1:1 Aspect Ratio (Square, e.g. 500x500 px) for grid slot card preview.</span>
+                </div>
 
                 <div 
                   onClick={() => fileInputRefs.current[`cat-${card.id}`]?.click()}

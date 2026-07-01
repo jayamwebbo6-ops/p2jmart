@@ -133,6 +133,7 @@ const AddressBook = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+  
     if (!formData.fullName || !formData.phoneNumber || !formData.streetAddress || !formData.city || !formData.state || !formData.stateId || !formData.pincode) {
       toast.error('Please fill in all required fields.');
       return;

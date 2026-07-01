@@ -68,6 +68,56 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const [combos, setCombos] = useState([]);
   const [relatedProducts, setRelatedProducts] = useState([]);
 
+  // Synchronize options so they always target a valid variant combination
+  const handleColorChange = (colorName) => {
+    setSelectedColor(colorName);
+    if (loadedProduct && loadedProduct.variants) {
+      const hasCombo = loadedProduct.variants.some(v => {
+        const vColor = v.attributes?.color;
+        const vSize = v.attributes?.size;
+        return vColor === colorName && vSize === selectedSize;
+      });
+      if (!hasCombo) {
+        const match = loadedProduct.variants.find(v => v.attributes?.color === colorName);
+        if (match && match.attributes?.size) {
+          setSelectedSize(match.attributes.size);
+        }
+      }
+    }
+  };
+
+  const handleSizeChange = (sizeName) => {
+    setSelectedSize(sizeName);
+    if (loadedProduct && loadedProduct.variants) {
+      const hasCombo = loadedProduct.variants.some(v => {
+        const vColor = v.attributes?.color;
+        const vSize = v.attributes?.size;
+        return vColor === selectedColor && vSize === sizeName;
+      });
+      if (!hasCombo) {
+        const match = loadedProduct.variants.find(v => v.attributes?.size === sizeName);
+        if (match && match.attributes?.color) {
+          setSelectedColor(match.attributes.color);
+        }
+      }
+    }
+  };
+
+  // Pre-select first variant color and size on load
+  useEffect(() => {
+    if (loadedProduct && loadedProduct.variants && loadedProduct.variants.length > 0) {
+      const firstVariant = loadedProduct.variants[0];
+      if (firstVariant.attributes) {
+        if (firstVariant.attributes.color) {
+          setSelectedColor(firstVariant.attributes.color);
+        }
+        if (firstVariant.attributes.size) {
+          setSelectedSize(firstVariant.attributes.size);
+        }
+      }
+    }
+  }, [loadedProduct]);
+
   useEffect(() => {
     const fetchCombos = async () => {
       try {
@@ -273,7 +323,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     warranty: loadedProduct.warranty || '',
     returnPolicy: loadedProduct.returnPolicy || 'Select Return Days',
     deliveryMode: loadedProduct.deliveryMode || '',
-    freeShipping: loadedProduct.freeShipping || 'No'
+    freeShipping: loadedProduct.freeShipping || 'No',
+    activeVariant
   };
 }, [loadedProduct, selectedColor, selectedSize]);
 
@@ -425,10 +476,9 @@ useEffect(() => {
       onAddToCart({
         ...product,
         quantity: quantity,
-        selectedOptions: {
-          color: selectedColor,
-          size: selectedSize
-        }
+        selectedOptions: product.activeVariant && product.activeVariant.attributes
+          ? product.activeVariant.attributes
+          : { color: selectedColor, size: selectedSize }
       });
     }
   }, 1000);
@@ -442,10 +492,9 @@ useEffect(() => {
           {
             ...product,
             quantity: quantity,
-            selectedOptions: {
-              color: selectedColor,
-              size: selectedSize
-            }
+            selectedOptions: product.activeVariant && product.activeVariant.attributes
+              ? product.activeVariant.attributes
+              : { color: selectedColor, size: selectedSize }
           } 
         ] 
       } 
@@ -728,7 +777,7 @@ useEffect(() => {
                     return (
                       <button
                         key={color.name}
-                        onClick={() => setSelectedColor(color.name)}
+                        onClick={() => handleColorChange(color.name)}
                         title={cleanName}
                         className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${
                           isSelected 
@@ -751,7 +800,7 @@ useEffect(() => {
                   {product.sizes.map(size => (
                     <button
                       key={size}
-                      onClick={() => setSelectedSize(size)}
+                      onClick={() => handleSizeChange(size)}
                       className={`px-3 sm:px-4 py-1 text-xs sm:text-sm rounded-md font-bold border transition-colors shadow-sm ${
                         selectedSize === size ? 'border-primary text-primary bg-primary/5' : 'border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-800'
                       }`}

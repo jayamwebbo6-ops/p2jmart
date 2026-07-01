@@ -320,6 +320,65 @@ const Checkout = ({ cart = [], setCart }) => {
     setPaymentStage('gateway_modal');
   }, 1000);
 
+  const [paymentSuccess, setPaymentSuccess] = useState(true);
+
+  const finalizeFailedPayment = async () => {
+    setLoading(true);
+    try {
+      const orderPayload = {
+        items: checkoutItems.map(item => ({
+          productId: item.productId || item.id || item._id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image || (item.images && item.images[0]) || '',
+          selectedOptions: item.customization 
+            ? { ...item.selectedOptions, customization: item.customization }
+            : (item.selectedOptions || {}),
+          isComboProduct: !!item.isComboProduct,
+          includedProducts: item.includedProducts || [],
+          weight: item.weight || 0
+        })),
+        shippingAddress: {
+          fullName: selectedAddress.fullName,
+          phoneNumber: selectedAddress.phoneNumber,
+          streetAddress: selectedAddress.streetAddress,
+          apartment: selectedAddress.apartment || '',
+          city: selectedAddress.city,
+          state: selectedAddress.state,
+          pincode: selectedAddress.pincode
+        },
+        paymentMethod: 'UPI/Card (Simulated)',
+        paymentStatus: 'unpaid',
+        subtotal: Number(subtotal),
+        gst: Number(gstAmount),
+        shippingFee: Number(shippingFee),
+        total: Number(total),
+        isDirectPurchase: isDirectPurchase
+      };
+
+      const res = await createOrderAPI(orderPayload);
+      if (res && res.success) {
+        toast.error('Payment failed. Order placed as unpaid.');
+        setPlacedOrder(res.data);
+
+        if (!isDirectPurchase) {
+          dispatch(fetchCart());
+          setCart([]);
+        }
+        setStep(3);
+      } else {
+        toast.error(res.message || 'Failed to place order');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error creating unpaid order');
+    } finally {
+      setPaymentStage('idle');
+      setLoading(false);
+    }
+  };
+
   const finalizeSuccessfulPayment = async () => {
     setLoading(true);
     try {
@@ -378,30 +437,41 @@ const Checkout = ({ cart = [], setCart }) => {
     }
   };
 
-
-
   useEffect(() => {
     if (paymentStage === 'bank_redirect') {
       const timer = setTimeout(() => {
-        finalizeSuccessfulPayment();
+        if (paymentSuccess) {
+          finalizeSuccessfulPayment();
+        } else {
+          finalizeFailedPayment();
+        }
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [paymentStage]);
+  }, [paymentStage, paymentSuccess]);
 
   if (step === 3 && placedOrder) {
+    const isPaid = placedOrder.paymentStatus === 'paid';
     return (
       <div className="max-w-4xl mx-auto py-10 px-4 font-sans flex flex-col items-center">
         <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center">
-          <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mb-6 border-4 border-green-100 shadow-inner">
-            <Check size={40} strokeWidth={3} className="animate-bounce" />
-          </div>
+          {isPaid ? (
+            <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mb-6 border-4 border-green-100 shadow-inner">
+              <Check size={40} strokeWidth={3} className="animate-bounce" />
+            </div>
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-6 border-4 border-amber-100 shadow-inner">
+              <Clock size={40} strokeWidth={3} className="animate-pulse" />
+            </div>
+          )}
           
           <h2 className="text-2xl md:text-4xl font-black text-primary leading-tight mb-2">
-            Order Placed Successfully!
+            {isPaid ? 'Order Placed Successfully!' : 'Payment Failed / Pending'}
           </h2>
           <p className="text-gray-500 text-sm md:text-base max-w-md mb-8">
-            Thank you for your purchase. We have received your order, and our team is preparing it for delivery.
+            {isPaid 
+              ? 'Thank you for your purchase. We have received your order, and our team is preparing it for delivery.'
+              : 'Your payment was not completed. The stock for your items has been temporarily reserved for 15 minutes. Please complete payment within this window, or the order will be cancelled automatically.'}
           </p>
 
           <hr className="w-full border-gray-100 mb-6" />
@@ -430,8 +500,8 @@ const Checkout = ({ cart = [], setCart }) => {
               </div>
               <div className="md:col-span-2 border-t border-gray-200 pt-3 flex justify-between items-center">
                 <div>
-                  <p className="text-gray-400 font-medium">Total Paid</p>
-                  <p className="text-xs text-gray-400 font-normal">via Cash / Card / UPI</p>
+                  <p className="text-gray-400 font-medium">{isPaid ? 'Total Paid' : 'Total Amount Due'}</p>
+                  <p className="text-xs text-gray-400 font-normal">{isPaid ? 'via Cash / Card / UPI' : 'Temporary Hold: 15 mins'}</p>
                 </div>
                 <p className="text-2xl font-black text-primary">₹{placedOrder.total.toFixed(2)}</p>
               </div>
@@ -964,7 +1034,10 @@ const Checkout = ({ cart = [], setCart }) => {
               <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => setPaymentStage('bank_redirect')}
+                  onClick={() => {
+                    setPaymentSuccess(true);
+                    setPaymentStage('bank_redirect');
+                  }}
                   className="w-full bg-primary hover:bg-secondary text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm flex items-center justify-center gap-2 shadow-xs border-0"
                 >
                   <span>Simulate Payment Success</span>
@@ -973,7 +1046,10 @@ const Checkout = ({ cart = [], setCart }) => {
                 
                 <button
                   type="button"
-                  onClick={() => setPaymentStage('idle')}
+                  onClick={() => {
+                    setPaymentSuccess(false);
+                    setPaymentStage('bank_redirect');
+                  }}
                   className="w-full bg-rose-50/50 hover:bg-rose-50 text-rose-700 font-semibold py-3 px-4 rounded-xl border border-rose-100 transition-all cursor-pointer text-sm flex items-center justify-center gap-2"
                 >
                   <span>Simulate Payment Failure</span>

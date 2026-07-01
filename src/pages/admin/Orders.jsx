@@ -26,9 +26,9 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/a
 const formatImageUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
-  const base = BACKEND_URL.replace(/\/api$/, '');
-  return `${base}/${path.replace(/^\//, '')}`;
+  return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
 };
+
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
@@ -739,6 +739,26 @@ const OrderManagement = () => {
                           </td>
                            <td className="py-3 px-4 max-w-[180px]">
                             <div className="text-red-600 font-bold truncate">{item.title}</div>
+                            {item.isComboProduct && item.includedProducts && item.includedProducts.length > 0 && (
+                              <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
+                                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Combo Pack Items:</div>
+                                <div className="space-y-1.5">
+                                  {item.includedProducts.map((incProd, idx) => (
+                                    <div key={incProd.id || idx} className="flex items-center gap-2 bg-slate-50/80 p-1.5 rounded-lg border border-slate-100">
+                                      {incProd.image ? (
+                                        <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-7 h-7 object-cover rounded border border-slate-100 flex-shrink-0" />
+                                      ) : (
+                                        <div className="w-7 h-7 bg-slate-100 rounded border border-slate-200 text-slate-400 text-[8px] flex items-center justify-center flex-shrink-0">N/A</div>
+                                      )}
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-[10px] text-slate-700 font-semibold truncate leading-tight" title={incProd.title}>{incProd.title}</div>
+                                        <div className="text-[9px] text-slate-400 font-medium">₹{Number(incProd.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             {/* Custom Specs */}
                             {(item.selectedOptions?.customImage || item.selectedOptions?.customText || item.selectedOptions?.customization) && (
                               <div className="mt-1.5 p-2 bg-pink-50/50 border border-pink-100 rounded text-[10px] space-y-1">
