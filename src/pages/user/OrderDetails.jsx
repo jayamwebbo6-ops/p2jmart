@@ -5,7 +5,6 @@ import { getOrderByIdAPI, cancelOrderAPI } from '../../api/orderApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import ReviewModal from '../../components/ReviewModal';
 import { toast } from '../../components/toast';
-import logo from '../../../public/logo.png';
 import {
   addProductReviewAPI,
   getProductReviewsAPI,
@@ -511,7 +510,7 @@ const OrderDetails = () => {
                               {item.selectedOptions && Object.entries(item.selectedOptions)
                                 .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
                                 .map(([key, val]) => (
-                                  <span key={key} className="capitalize">{key}: {val}</span>
+                                  <span key={key} className="capitalize">{key}: {formatOptionValue(val)}</span>
                                 ))
                               }
                             </div>
@@ -573,117 +572,8 @@ const OrderDetails = () => {
           </div>
         </div>
       </div>
-
-      {/* Printable Invoice View Layer */}
-      <div id="printable-invoice-area" className="hidden print:block bg-white text-black font-sans" style={{ fontSize: '11px', lineHeight: '1.4' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #E5E7EB', paddingBottom: '20px' }}>
-          <div>
-            <h1 style={{ color: '#3b6094', fontSize: '32px', fontWeight: '800', margin: '0 0 5px 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>Invoice</h1>
-            <p style={{ margin: '0', color: '#334c6e', fontWeight: '500' }}>Official Order Bill Receipt</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <img src={logo} alt="Flora Flowers Logo" style={{ maxHeight: '75px', maxWidth: '200px', objectFit: 'contain' }} />
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px' }}>
-          <div>
-            <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Your Information</h3>
-            <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>P2J Mart E-Commerce Inc.</p>
-            <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>123 Gift Street, Joy City</p>
-            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>support@p2jmart.com</p>
-            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>+91-999-888-7777</p>
-          </div>
-          <div>
-            <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Client Information</h3>
-            <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>{order.shippingAddress?.fullName || 'Valued Customer'}</p>
-            <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.streetAddress}</p>
-            <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.postalCode}</p>
-            {order.shippingAddress?.phone && <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>PH: {order.shippingAddress.phone}</p>}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px', borderTop: '1px solid #E5E7EB', paddingTop: '15px' }}>
-          <div>
-            <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Issued On</h3>
-            <p style={{ margin: '0', fontWeight: '600', color: '#374151' }}>{formatDate(order.placedDate || order.createdAt)}</p>
-          </div>
-          <div>
-            <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Order ID</h3>
-            <p style={{ margin: '0', fontWeight: '700', color: '#374151' }}>{order.orderId || `ORD-${order._id.slice(-8).toUpperCase()}`}</p>
-          </div>
-        </div>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '30px', border: '1px solid #D1D5DB' }}>
-          <thead>
-            <tr style={{ backgroundColor: 'var(--invoice-primary)', color: '#FFFFFF' }}>
-              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '50px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>S.NO</th>
-              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', textAlign: 'left', borderRight: '1px solid #D1D5DB' }}>ITEM DESCRIPTION</th>
-              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '80px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>QUANTITY</th>
-              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '110px', textAlign: 'center', borderRight: '1px solid #D1D5DB' }}>UNIT PRICE</th>
-              <th style={{ padding: '10px', fontSize: '10px', fontWeight: '700', width: '120px', textAlign: 'right' }}>TOTAL PRICE</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items?.map((item, index) => (
-              <tr key={index} style={{ backgroundColor: 'var(--invoice-secondary)', borderBottom: '1px solid #E5E7EB' }}>
-                <td style={{ padding: '12px 10px', textAlign: 'center', color: '#4B5563', borderRight: '1px solid #D1D5DB' }}>{index + 1}</td>
-                <td style={{ padding: '12px 10px', borderRight: '1px solid #D1D5DB' }}>
-                  <div style={{ fontWeight: '700', color: '#1F2937' }}>{item.title || item.name}</div>
-                  {item.selectedOptions && !item.isComboProduct && (
-                    <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>
-                      {Object.entries(item.selectedOptions)
-                        .filter(([key]) => !['customImage', 'customText', 'customization'].includes(key))
-                        .map(([key, val]) => `${key}: ${val}`).join(', ')}
-                    </div>
-                  )}
-                </td>
-                <td style={{ padding: '12px 10px', textAlign: 'center', fontWeight: '600', color: '#1F2937', borderRight: '1px solid #D1D5DB' }}>{item.quantity || item.qty}</td>
-                <td style={{ padding: '12px 10px', textAlign: 'center', color: '#4B5563', borderRight: '1px solid #D1D5DB' }}>Rs. {Number(item.price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '700', color: '#1F2937' }}>Rs. {(Number(item.price) * Number(item.quantity || item.qty || 1)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', marginTop: '20px', paddingRight: '10px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 100px', gap: '10px', textAlign: 'right', color: '#4B5563', fontSize: '13px' }}>
-            <span style={{ color: '#9CA3AF', fontWeight: '500' }}>Subtotal:</span>
-            <span style={{ fontWeight: '600', color: '#374151' }}>Rs. {Number(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-            {order.gst > 0 && (
-              <>
-                <span style={{ color: '#9CA3AF', fontWeight: '500' }}>GST:</span>
-                <span style={{ fontWeight: '600', color: '#374151' }}>Rs. {Number(order.gst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </>
-            )}
-            <span style={{ color: '#9CA3AF', fontWeight: '500' }}>Shipping:</span>
-            <span style={{ fontWeight: '600', color: '#374151' }}>{Number(order.shippingFee || 0) === 0 ? "Free" : `Rs. ${Number(order.shippingFee).toFixed(2)}`}</span>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '150px 120px', gap: '10px', textAlign: 'right', marginTop: '15px', borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '800', color: '#132844' }}>Total Amount Due:</span>
-            <span style={{ fontSize: '15px', fontWeight: '800', color: '#2e75d8' }}>Rs. {Number(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '50px', display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '220px', textAlign: 'center' }}>
-            <div style={{ borderBottom: '1px solid #4B5563', marginBottom: '6px' }}></div>
-            <span style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Authorized Signature</span>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '60px', backgroundColor: 'var(--invoice-primary)', color: '#FFFFFF', padding: '14px 18px', borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-          <p style={{ margin: '0 0 6px 0', fontSize: '11px', fontWeight: '700', letterSpacing: '0.3px' }}>
-            Thank you for choosing P2J MART! We appreciate the opportunity to serve you.
-          </p>
-          <p style={{ margin: '0', fontSize: '10px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '400', lineHeight: '1.5' }}>
-            Please note that payment conditions apply based on terms of billing. If you have any questions or concerns regarding this invoice record statement, feel free to contact us at the provided support email address.
-          </p>
-        </div>
-      </div>
-      {/* Off-screen container for rendering A4 invoice for PDF generation */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      {/* Off-screen container for rendering A4 invoice for PDF generation & printing */}
+      <div id="printable-invoice-area" className="hidden print:block" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <OrderInvoice 
           order={order} 
           invoiceColors={invoiceColors} 

@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { User, ShieldCheck } from 'lucide-react';
 import { isUserAuthenticated, getUserProfile, updateUserProfile } from '../../api/userApi';
 import { toast } from '../../components/toast';
+import { addCartItem } from '../../redux/cartSlice';
 
 const CompleteProfile = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useDispatch();
+
+  const from = location.state?.from || '/';
+  const checkoutState = location.state?.checkoutState || null;
+  const addToCartPayload = location.state?.addToCartPayload || null;
+  const directPurchasePayload = location.state?.directPurchasePayload || null;
+  const directPurchaseBundlePayload = location.state?.directPurchaseBundlePayload || null;
 
   useEffect(() => {
     // If not authenticated at all, redirect to login
@@ -69,7 +79,38 @@ const CompleteProfile = () => {
       if (response && response.success) {
         toast.success('Profile completed successfully!');
         window.dispatchEvent(new Event('userLoginStateChange'));
-        navigate('/');
+
+        if (addToCartPayload) {
+          try {
+            await dispatch(addCartItem(addToCartPayload)).unwrap();
+            toast.success(`"${addToCartPayload.title}" added to Cart!`);
+            navigate('/cart');
+            return;
+          } catch (err) {
+            console.error('Failed to auto-add item to cart:', err);
+          }
+        }
+
+        if (directPurchasePayload) {
+          navigate('/checkout', {
+            state: {
+              directPurchase: true,
+              items: [directPurchasePayload]
+            }
+          });
+          return;
+        }
+
+        if (directPurchaseBundlePayload) {
+          navigate('/checkout', {
+            state: {
+              directPurchaseBundle: directPurchaseBundlePayload
+            }
+          });
+          return;
+        }
+
+        navigate(from, { state: checkoutState });
       } else {
         toast.error(response.message || 'Failed to update profile');
       }
