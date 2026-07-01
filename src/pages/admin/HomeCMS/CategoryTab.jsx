@@ -349,7 +349,10 @@ const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
                         <ImageIcon size={12} />
                         Promotion Banner (Right Side)
                       </h3>
-                      <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended: 2:3 Aspect Ratio (Portrait, e.g. 350x520 px) for correct layout display.</span>
+                      <div className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2.5 py-1.5 rounded-lg font-semibold mt-1 flex items-start gap-1">
+                        <span className="shrink-0">ℹ️</span>
+                        <span>Recommended: 2:3 Aspect Ratio (Portrait, e.g. 350x520 px) for correct layout display.</span>
+                      </div>
                     </div>
 
                     <div className="w-full h-48 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl overflow-hidden relative flex flex-col items-center justify-center group hover:bg-slate-100/50 hover:border-slate-300 transition-all">
@@ -375,7 +378,10 @@ const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
                           <div className="text-center p-4 flex flex-col items-center gap-2 pointer-events-none">
                             <Upload size={20} className="text-slate-400" />
                             <span className="text-[11px] font-bold text-slate-700">Upload Banner Image</span>
-                            <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 inline-flex items-center gap-1 w-max">ℹ️ Recommended size: 2:3 Aspect Ratio (Portrait, e.g., 350x520 px) for optimal sidebar layout.</span>
+                            <div className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2.5 py-1.5 rounded-lg font-semibold mt-1 flex items-start gap-1">
+                              <span className="shrink-0">ℹ️</span>
+                              <span>Recommended size: 2:3 Aspect Ratio (Portrait, e.g., 350x520 px) for optimal sidebar layout.</span>
+                            </div>
                           </div>
                           <input 
                             type="file" 

@@ -16,8 +16,7 @@ const Footer = () => {
         setIsLoading(true);
         const res = await getHomeCMS();
         
-        console.log("Footer CMS Raw Response:", res);
-
+      
         // Extract object out of data envelope or assign directly
         if (res && res.data && res.data.contactSetting) {
           setContactData(res.data.contactSetting);
