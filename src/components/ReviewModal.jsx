@@ -97,7 +97,7 @@ export default function ReviewModal({ isOpen, onClose, item, formatImageUrl, onS
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn overflow-y-auto">
       <div className="w-full max-w-4xl mt-50 overflow-hidden rounded-2xl shadow-2xl border border-gray-100 bg-white text-gray-800 flex flex-col max-h-[92vh]">
 
         {/* Header */}

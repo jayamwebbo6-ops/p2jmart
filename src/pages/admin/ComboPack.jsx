@@ -39,6 +39,14 @@ const getProductStock = (p) => {
   return p.stock || 0;
 };
 
+const returnPolicyOptions = [
+  'Select Return Days',
+  'No Return Policy',
+  '1 day', '2 days', '3 days', '4 days', '5 days', '6 days', '7 days',
+  '8 days', '9 days', '10 days', '11 days', '12 days', '13 days', '14 days', '15 days',
+  '30 days', '45 days', '60 days'
+];
+
 const ComboPacks = () => {
   const getComboVariantDetails = (combo, prod) => {
     if (!prod) return { title: '', price: 0, stock: 0, image: '', weight: 0 };
@@ -99,7 +107,8 @@ const ComboPacks = () => {
     offerPrice: '',
     description: '',
     selectedItemIds: [],
-    selectedVariants: []
+    selectedVariants: [],
+    returnPolicy: 'Select Return Days'
   });
 
   const tableHeaders = [
@@ -202,7 +211,8 @@ const ComboPacks = () => {
       offerPrice: '',
       description: '',
       selectedItemIds: [],
-      selectedVariants: []
+      selectedVariants: [],
+      returnPolicy: 'Select Return Days'
     });
     setIsFormModalOpen(true);
   };
@@ -230,7 +240,8 @@ const ComboPacks = () => {
       offerPrice: combo.offerPrice,
       description: combo.description || '',
       selectedItemIds: (combo.selectedItemIds || []).map(p => p._id || p.id || p),
-      selectedVariants: loadedVariants
+      selectedVariants: loadedVariants,
+      returnPolicy: combo.returnPolicy || 'No Return Policy'
     });
     setIsFormModalOpen(true);
   };
@@ -258,7 +269,8 @@ const ComboPacks = () => {
         offerPrice: cleanOfferPrice,
         description: formData.description,
         selectedItemIds: formData.selectedItemIds,
-        selectedVariants: formData.selectedVariants
+        selectedVariants: formData.selectedVariants,
+        returnPolicy: formData.returnPolicy
       };
 
       if (isEditMode && currentCombo) {
@@ -541,6 +553,22 @@ const ComboPacks = () => {
                     ))}
                   </select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-primary font-bold">Return Policy *</label>
+                  <select 
+                    value={formData.returnPolicy}
+                    onChange={(e) => setFormData({...formData, returnPolicy: e.target.value})}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-primary font-semibold outline-none bg-white cursor-pointer"
+                  >
+                    {returnPolicyOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  <span className="text-[10px] text-gray-400 italic">
+                    Number of days customer can return the combo pack after delivery
+                  </span>
+                </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -630,6 +658,10 @@ const ComboPacks = () => {
                 <div>
                   <span className="text-gray-400 block">Original Sum</span>
                   <span className="text-sm font-bold text-gray-500 line-through">₹{currentCombo.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-400 block">Return Policy</span>
+                  <span className="text-xs font-bold text-primary">{currentCombo.returnPolicy || 'No Return Policy'}</span>
                 </div>
               </div>
               <div className="space-y-2">

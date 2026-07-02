@@ -19,7 +19,13 @@ import {
 import AdminTable from '../../components/AdminTable'; 
 import PageHeader from '../../components/PageHeader';
 import { ViewBtn } from '../../components/AdminButtons';
-import { adminGetAllOrdersAPI, adminUpdateOrderStatusAPI } from '../../api/orderApi';
+import { 
+  adminGetAllOrdersAPI, 
+  adminUpdateOrderStatusAPI,
+  adminReviewReturnAPI,
+  adminReceiveParcelAPI,
+  adminRefundItemAPI
+} from '../../api/orderApi';
 import { toast } from '../../components/toast';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
@@ -27,6 +33,13 @@ const formatImageUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('blob:')) return path;
   return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
+};
+
+const getDisplayStatus = (order) => {
+  if (!order) return '';
+  const hasRefunded = order.items?.some(item => item.returnStatus === 'Returned & Refunded');
+  if (hasRefunded) return 'Refunded';
+  return order.fulfillmentStatus || order.status || 'Pending';
 };
 
 
@@ -45,12 +58,161 @@ const OrderManagement = () => {
   const [fullscreenImage, setFullscreenImage] = useState(null);
   const [copiedText, setCopiedText] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // Tracking modal states
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
   const [trackingOrderId, setTrackingOrderId] = useState('');
   const [trackingId, setTrackingId] = useState('');
   const [trackingLink, setTrackingLink] = useState('');
+
+  const handleReviewReturn = async (orderId, itemId, action) => {
+    try {
+      const res = await adminReviewReturnAPI(orderId, itemId, action);
+      if (res.success) {
+        toast.success(`Return request ${action}ed successfully`);
+        const updatedRaw = res.data;
+        const mappedOrder = {
+          ...updatedRaw,
+          id: updatedRaw.orderId,
+          _id: updatedRaw._id,
+          productName: updatedRaw.items?.[0]
+            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
+            : 'No Items',
+          productType: updatedRaw.items?.some(item => item.isComboProduct)
+            ? 'combo'
+            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
+          image: updatedRaw.items?.[0]?.image || '',
+          storeName: 'Joy Gift House',
+          customerName: updatedRaw.user?.name || 'Guest User',
+          customerEmail: updatedRaw.user?.email || 'N/A',
+          customerPhone: updatedRaw.user?.phone || 'N/A',
+          shippingAddress: updatedRaw.shippingAddress || 'N/A',
+          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          rawDate: new Date(updatedRaw.createdAt),
+          fulfillmentStatus: updatedRaw.status,
+          paymentStatus: updatedRaw.paymentStatus,
+          paymentMethod: updatedRaw.paymentMethod,
+          amount: updatedRaw.total,
+          items: updatedRaw.items
+        };
+
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(mappedOrder);
+        }
+      } else {
+        toast.error(res.message || 'Failed to review return request');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error reviewing return');
+    }
+  };
+
+  const handleReceiveParcel = async (orderId, itemId) => {
+    try {
+      const res = await adminReceiveParcelAPI(orderId, itemId);
+      if (res.success) {
+        toast.success('Parcel marked as received');
+        const updatedRaw = res.data;
+        const mappedOrder = {
+          ...updatedRaw,
+          id: updatedRaw.orderId,
+          _id: updatedRaw._id,
+          productName: updatedRaw.items?.[0]
+            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
+            : 'No Items',
+          productType: updatedRaw.items?.some(item => item.isComboProduct)
+            ? 'combo'
+            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
+          image: updatedRaw.items?.[0]?.image || '',
+          storeName: 'Joy Gift House',
+          customerName: updatedRaw.user?.name || 'Guest User',
+          customerEmail: updatedRaw.user?.email || 'N/A',
+          customerPhone: updatedRaw.user?.phone || 'N/A',
+          shippingAddress: updatedRaw.shippingAddress || 'N/A',
+          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          rawDate: new Date(updatedRaw.createdAt),
+          fulfillmentStatus: updatedRaw.status,
+          paymentStatus: updatedRaw.paymentStatus,
+          paymentMethod: updatedRaw.paymentMethod,
+          amount: updatedRaw.total,
+          items: updatedRaw.items
+        };
+
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(mappedOrder);
+        }
+      } else {
+        toast.error(res.message || 'Failed to mark parcel as received');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error marking parcel received');
+    }
+  };
+
+  const handleRefundItem = async (orderId, itemId) => {
+    try {
+      const res = await adminRefundItemAPI(orderId, itemId);
+      if (res.success) {
+        toast.success('Refund processed and stock updated successfully');
+        const updatedRaw = res.data;
+        const mappedOrder = {
+          ...updatedRaw,
+          id: updatedRaw.orderId,
+          _id: updatedRaw._id,
+          productName: updatedRaw.items?.[0]
+            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
+            : 'No Items',
+          productType: updatedRaw.items?.some(item => item.isComboProduct)
+            ? 'combo'
+            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
+          image: updatedRaw.items?.[0]?.image || '',
+          storeName: 'Joy Gift House',
+          customerName: updatedRaw.user?.name || 'Guest User',
+          customerEmail: updatedRaw.user?.email || 'N/A',
+          customerPhone: updatedRaw.user?.phone || 'N/A',
+          shippingAddress: updatedRaw.shippingAddress || 'N/A',
+          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          rawDate: new Date(updatedRaw.createdAt),
+          fulfillmentStatus: updatedRaw.status,
+          paymentStatus: updatedRaw.paymentStatus,
+          paymentMethod: updatedRaw.paymentMethod,
+          amount: updatedRaw.total,
+          items: updatedRaw.items
+        };
+
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(mappedOrder);
+        }
+      } else {
+        toast.error(res.message || 'Failed to issue refund');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error issuing refund');
+    }
+  };
+
+  const getReturnStatusBadge = (status) => {
+    switch (status) {
+      case 'Return Requested':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100">Return Requested</span>;
+      case 'Return Approved':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">Return Approved</span>;
+      case 'Return Rejected':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-100">Return Rejected</span>;
+      case 'Returned & Refunded':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Returned & Refunded</span>;
+      default:
+        return null;
+    }
+  };
 
   const tableHeaders = [
     { key: 'id', label: 'Order Identity', sortable: true, align: 'left' },
@@ -131,6 +293,10 @@ const OrderManagement = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, timeFilter, productTypeFilter]);
 
   const handleRefresh = () => {
     setSearchQuery('');
@@ -287,6 +453,10 @@ const OrderManagement = () => {
     }
   });
 
+  const totalPages = Math.ceil(sortedOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = sortedOrders.slice(startIndex, startIndex + itemsPerPage);
+
   const headingFilteredOrders = orders.filter(o => checkTimeScope(o.timestamp, headingTimeframe));
   const totalOrdersCount = headingFilteredOrders.length; 
   
@@ -305,19 +475,47 @@ const OrderManagement = () => {
       <td className="py-3 px-2.5 font-bold text-blue-600 select-all">{order.id}</td>
       <td className="py-3 px-2.5">
         <div className="flex items-center gap-3">
-          {order.image ? (
-            <img src={formatImageUrl(order.image)} alt={order.productName} className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
+          {order.items && order.items.length > 1 ? (
+            <div className="flex -space-x-3 hover:-space-x-1.5 transition-all duration-300">
+              {order.items.slice(0, 3).map((item, idx) => (
+                item.image ? (
+                  <img
+                    key={idx}
+                    src={formatImageUrl(item.image)}
+                    alt={item.title}
+                    className="w-10 h-10 object-cover rounded-lg ring-2 ring-white border border-slate-100 flex-shrink-0 shadow-sm"
+                  />
+                ) : (
+                  <div key={idx} className="w-10 h-10 bg-slate-100 border border-slate-200 ring-2 ring-white rounded-lg text-slate-400 font-bold text-[8px] flex items-center justify-center flex-shrink-0 shadow-sm">N/A</div>
+                )
+              ))}
+              {order.items.length > 3 && (
+                <div className="w-10 h-10 bg-slate-800 ring-2 ring-white text-white font-extrabold text-[9px] rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                  +{order.items.length - 3}
+                </div>
+              )}
+            </div>
           ) : (
-            <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 font-bold text-[10px] flex items-center justify-center flex-shrink-0">N/A</div>
+            order.image ? (
+              <img src={formatImageUrl(order.image)} alt={order.productName} className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 font-bold text-[10px] flex items-center justify-center flex-shrink-0" />
+            )
           )}
-          <div className="max-w-[160px]">
-            <div className="font-bold text-slate-800 truncate flex items-center gap-1.5">
-              {order.productName}
+          <div className="max-w-[180px]">
+            <div className="font-bold text-slate-800 truncate flex items-center gap-1.5" title={order.items?.[0]?.title || order.productName}>
+              {order.items?.[0]?.title || order.productName}
               {order.productType === 'custom' && (
                 <span className="bg-pink-50 text-pink-600 text-[8px] font-extrabold uppercase px-1 rounded border border-pink-100">Custom</span>
               )}
             </div>
-            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{order.storeName}</div>
+            {order.items && order.items.length > 1 ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[9px] font-bold border border-blue-100 mt-0.5">
+                {order.items.length} Items
+              </span>
+            ) : (
+              <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{order.storeName}</div>
+            )}
           </div>
         </div>
       </td>
@@ -330,20 +528,22 @@ const OrderManagement = () => {
       <td className="py-3 px-2.5 text-slate-500 font-normal whitespace-nowrap">{order.timestamp}</td>
       <td className="py-3 px-2.5">
         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-          order.fulfillmentStatus === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-          order.fulfillmentStatus === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' :
-          order.fulfillmentStatus === 'Shipped' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-          order.fulfillmentStatus === 'Pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+          getDisplayStatus(order) === 'Delivered' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+          getDisplayStatus(order) === 'Cancelled' ? 'bg-red-50 text-red-600 border border-red-100' :
+          getDisplayStatus(order) === 'Shipped' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+          getDisplayStatus(order) === 'Pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+          getDisplayStatus(order) === 'Refunded' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
           'bg-yellow-50 text-yellow-600 border border-yellow-100'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${
-            order.fulfillmentStatus === 'Delivered' ? 'bg-emerald-500' : 
-            order.fulfillmentStatus === 'Cancelled' ? 'bg-red-500' : 
-            order.fulfillmentStatus === 'Shipped' ? 'bg-blue-500' : 
-            order.fulfillmentStatus === 'Pending' ? 'bg-amber-500' : 
+            getDisplayStatus(order) === 'Delivered' ? 'bg-emerald-500' : 
+            getDisplayStatus(order) === 'Cancelled' ? 'bg-red-500' : 
+            getDisplayStatus(order) === 'Shipped' ? 'bg-blue-500' : 
+            getDisplayStatus(order) === 'Pending' ? 'bg-amber-500' : 
+            getDisplayStatus(order) === 'Refunded' ? 'bg-purple-500' : 
             'bg-yellow-500'
           }`} />
-          {order.fulfillmentStatus}
+          {getDisplayStatus(order)}
         </span>
       </td>
       <td className="py-3 px-2.5">
@@ -364,16 +564,17 @@ const OrderManagement = () => {
           />
           <div className="relative">
             <select
-              value={order.fulfillmentStatus}
+              value={getDisplayStatus(order)}
               onChange={(e) => handleFulfillmentChange(order._id, e.target.value)}
-              disabled={order.fulfillmentStatus === 'Cancelled' || order.fulfillmentStatus === 'Delivered'}
+              disabled={getDisplayStatus(order) === 'Cancelled' || getDisplayStatus(order) === 'Delivered' || getDisplayStatus(order) === 'Refunded'}
               className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 pr-7 rounded-lg appearance-none focus:outline-none transition-all cursor-pointer shadow-2xs disabled:bg-slate-50 disabled:cursor-not-allowed"
             >
               <option value="Pending" disabled={order.fulfillmentStatus !== 'Pending'}>Pending</option>
               <option value="Processing" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing'}>Processing</option>
-              <option value="Shipped" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing' && order.fulfillmentStatus !== 'Shipped'}>Shipped</option>
-              <option value="Delivered" disabled={order.fulfillmentStatus !== 'Pending' && order.fulfillmentStatus !== 'Processing' && order.fulfillmentStatus !== 'Shipped' && order.fulfillmentStatus !== 'Delivered'}>Delivered</option>
-              {order.fulfillmentStatus === 'Cancelled' && <option value="Cancelled">Cancelled</option>}
+              <option value="Shipped" disabled={order.fulfillmentStatus !== 'Processing' && order.fulfillmentStatus !== 'Shipped'}>Shipped</option>
+              <option value="Delivered" disabled={order.fulfillmentStatus !== 'Shipped' && order.fulfillmentStatus !== 'Delivered'}>Delivered</option>
+              {getDisplayStatus(order) === 'Cancelled' && <option value="Cancelled">Cancelled</option>}
+              {getDisplayStatus(order) === 'Refunded' && <option value="Refunded">Refunded</option>}
             </select>
             <ChevronDown size={12} className="absolute right-2 top-2.5 text-slate-400 pointer-events-none" />
           </div>
@@ -529,7 +730,7 @@ const OrderManagement = () => {
 
           <AdminTable
             headers={tableHeaders}
-            data={sortedOrders}
+            data={paginatedOrders}
             renderRow={renderOrderRow}
             onSort={handleSort}
             sortConfig={sortConfig}
@@ -542,13 +743,47 @@ const OrderManagement = () => {
           {/* PAGINATION PANEL MODULE */}
           <div className="bg-white border border-slate-200/80 rounded-2xl px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
             <span className="text-xs font-medium text-slate-400">
-              Showing <span className="font-bold text-slate-700">1</span> to <span className="font-bold text-slate-700">{sortedOrders.length}</span> of <span className="font-bold text-slate-700">{orders.length}</span> orders
+              Showing <span className="font-bold text-slate-700">{sortedOrders.length > 0 ? startIndex + 1 : 0}</span> to <span className="font-bold text-slate-700">{Math.min(startIndex + itemsPerPage, sortedOrders.length)}</span> of <span className="font-bold text-slate-700">{sortedOrders.length}</span> orders
             </span>
             <div className="flex items-center gap-1.5">
-              <button type="button" className="border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 bg-slate-50 cursor-not-allowed" disabled>Previous</button>
-              <button type="button" className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#002B49] text-white">1</button>
-              <button type="button" className="border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">2</button>
-              <button type="button" className="border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer">Next</button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className={`border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  currentPage === 1
+                    ? 'text-slate-400 bg-slate-50 cursor-not-allowed'
+                    : 'text-slate-600 hover:bg-slate-50 cursor-pointer'
+                }`}
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  type="button"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    currentPage === pageNum
+                      ? 'bg-[#002B49] text-white'
+                      : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages || totalPages <= 1}
+                className={`border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  currentPage === totalPages || totalPages <= 1
+                    ? 'text-slate-400 bg-slate-50 cursor-not-allowed'
+                    : 'text-slate-600 hover:bg-slate-50 cursor-pointer'
+                }`}
+              >
+                Next
+              </button>
             </div>
           </div>
 
@@ -573,10 +808,18 @@ const OrderManagement = () => {
                 </div>
                 <div>
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-black uppercase tracking-wider ${
-                    selectedOrder.fulfillmentStatus === 'Returned' ? 'bg-purple-50 border-purple-200 text-purple-700' : 'bg-amber-50 border-amber-200 text-amber-700'
+                    getDisplayStatus(selectedOrder) === 'Refunded' ? 'bg-purple-50 border-purple-200 text-purple-700' :
+                    getDisplayStatus(selectedOrder) === 'Delivered' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                    getDisplayStatus(selectedOrder) === 'Cancelled' ? 'bg-red-50 border-red-200 text-red-700' :
+                    'bg-amber-50 border-amber-200 text-amber-700'
                   }`}>
-                    <Clock size={12} strokeWidth={2.5} className={selectedOrder.fulfillmentStatus === 'Returned' ? 'text-purple-700' : 'text-amber-700'} />
-                    {selectedOrder.fulfillmentStatus}
+                    <Clock size={12} strokeWidth={2.5} className={
+                      getDisplayStatus(selectedOrder) === 'Refunded' ? 'text-purple-700' :
+                      getDisplayStatus(selectedOrder) === 'Delivered' ? 'text-emerald-700' :
+                      getDisplayStatus(selectedOrder) === 'Cancelled' ? 'text-red-700' :
+                      'text-amber-700'
+                    } />
+                    {getDisplayStatus(selectedOrder)}
                   </span>
                 </div>
               </div>
@@ -725,6 +968,7 @@ const OrderManagement = () => {
                         <th className="py-3 px-4 text-center">Quantity</th>
                         <th className="py-3 px-4 text-right">Price</th>
                         <th className="py-3 px-4 text-right">Total</th>
+                        <th className="py-3 px-4 text-center">Return Status & Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -794,6 +1038,83 @@ const OrderManagement = () => {
                           <td className="py-3 px-4 text-center font-bold text-slate-800">{item.quantity}</td>
                           <td className="py-3 px-4 text-right">₹{item.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                           <td className="py-3 px-4 text-right font-bold text-slate-900">₹{(item.price * item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-3 px-4 text-center border-l border-slate-100">
+                            {(!item.returnStatus || item.returnStatus === 'None') ? (
+                              <span className="text-slate-400 italic text-[10px]">None</span>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1.5 min-w-[120px]">
+                                {getReturnStatusBadge(item.returnStatus)}
+                                
+                                {item.returnReason && (
+                                  <div className="text-[10px] text-slate-600 bg-slate-50 border border-slate-100 rounded p-1 max-w-[150px] break-words text-left">
+                                    <span className="font-bold text-slate-450 uppercase text-[8px] block">Reason:</span>
+                                    {item.returnReason}
+                                  </div>
+                                )}
+
+                                {item.returnPhoto && (
+                                  <div className="mt-1">
+                                    <span className="font-bold text-slate-450 uppercase text-[8px] block mb-0.5">Proof Image:</span>
+                                    <div 
+                                      onClick={() => setFullscreenImage(formatImageUrl(item.returnPhoto))}
+                                      className="relative group cursor-pointer w-10 h-10 rounded border border-slate-200 overflow-hidden bg-white shadow-2xs hover:border-blue-400 transition-colors"
+                                    >
+                                      <img src={formatImageUrl(item.returnPhoto)} alt="Proof preview" className="w-full h-full object-cover" />
+                                      <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[7px] font-bold">Zoom</div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {item.returnStatus === 'Return Requested' && (
+                                  <div className="flex gap-1.5 mt-1">
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleReviewReturn(selectedOrder._id, item._id || item.productId, 'approve')}
+                                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-bold transition-all cursor-pointer shadow-2xs"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button 
+                                      type="button"
+                                      onClick={() => handleReviewReturn(selectedOrder._id, item._id || item.productId, 'reject')}
+                                      className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[9px] font-bold transition-all cursor-pointer shadow-2xs"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+
+                                {item.returnStatus === 'Return Approved' && (
+                                  <div className="mt-1 w-full">
+                                    {!item.parcelReceived ? (
+                                      <button 
+                                        type="button"
+                                        onClick={() => handleReceiveParcel(selectedOrder._id, item._id || item.productId)}
+                                        className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[9px] font-bold transition-all cursor-pointer shadow-2xs"
+                                      >
+                                        Mark Parcel Received
+                                      </button>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        <span className="inline-block text-[9px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Parcel Received</span>
+                                        <button 
+                                          type="button"
+                                          onClick={() => handleRefundItem(selectedOrder._id, item._id || item.productId)}
+                                          className="w-full px-2 py-1 bg-[#002B49] hover:bg-blue-900 text-white text-9px font-bold rounded transition-all cursor-pointer shadow-2xs"
+                                        >
+                                          Issue Refund
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {item.returnStatus === 'Returned & Refunded' && (
+                                  <span className="inline-block text-[9px] text-slate-700 font-bold bg-slate-100 px-2 py-0.5 rounded border border-slate-200">Returned & Refunded</span>
+                                )}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, XCircle, Calendar, MapPin, Package, Phone, Download, Loader, Layers, Copy, Check, Star } from 'lucide-react';
-import { getOrderByIdAPI, cancelOrderAPI } from '../../api/orderApi';
+import { getOrderByIdAPI, cancelOrderAPI, requestItemReturnAPI } from '../../api/orderApi';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import ReviewModal from '../../components/ReviewModal';
 import { toast } from '../../components/toast';
@@ -30,8 +30,126 @@ const OrderDetails = () => {
   // productId -> myReview (or null), used to label buttons before opening the modal
   const [reviewStatusMap, setReviewStatusMap] = useState({});
 
+  // Return System States
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [selectedReturnItem, setSelectedReturnItem] = useState(null);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnPhotos, setReturnPhotos] = useState([]);
+  const [submittingReturn, setSubmittingReturn] = useState(false);
+
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const isReturnWindowOpen = (item, deliveredAt) => {
+    if (!item.returnPolicy || item.returnPolicy === 'No Return Policy' || item.returnPolicy === 'Select Return Days') {
+      return false;
+    }
+    const match = item.returnPolicy.match(/^(\d+)\s+day/i);
+    if (!match) return false;
+    const returnWindowDays = parseInt(match[1], 10);
+    const deliveredTime = deliveredAt || order?.statusDate || order?.updatedAt;
+    if (!deliveredTime) return false;
+    const elapsedDays = (Date.now() - new Date(deliveredTime).getTime()) / (1000 * 60 * 60 * 24);
+    return elapsedDays <= returnWindowDays;
+  };
+
+  const getReturnStatusBadge = (status) => {
+    switch (status) {
+      case 'Return Requested':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">Return Requested</span>;
+      case 'Return Approved':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Return Approved (Awaiting Parcel)</span>;
+      case 'Return Rejected':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">Return Rejected</span>;
+      case 'Returned & Refunded':
+        return <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">Returned & Refunded</span>;
+      default:
+        return null;
+    }
+  };
+
+  const handlePhotoChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (returnPhotos.length + files.length > 3) {
+      toast.error('You can upload a maximum of 3 proof photos');
+      return;
+    }
+
+    const newPhotos = [];
+    for (const file of files) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(`Image "${file.name}" size must be less than 2MB`);
+        continue;
+      }
+      try {
+        const base64 = await fileToBase64(file);
+        newPhotos.push(base64);
+      } catch (err) {
+        toast.error(`Failed to process image "${file.name}"`);
+      }
+    }
+    if (newPhotos.length > 0) {
+      setReturnPhotos(prev => [...prev, ...newPhotos].slice(0, 3));
+    }
+    e.target.value = '';
+  };
+
+  const handleReturnSubmit = async (e) => {
+    e.preventDefault();
+    if (!returnReason.trim()) {
+      toast.error('Please specify a return reason');
+      return;
+    }
+    if (returnPhotos.length === 0) {
+      toast.error('Please upload at least one product photo proof');
+      return;
+    }
+
+    try {
+      setSubmittingReturn(true);
+      const res = await requestItemReturnAPI(order._id, selectedReturnItem._id, {
+        returnReason,
+        returnPhoto: returnPhotos
+      });
+      if (res.success) {
+        toast.success('Return request submitted successfully');
+        setIsReturnModalOpen(false);
+        setReturnReason('');
+        setReturnPhotos([]);
+        if (res.data) {
+          setOrder(res.data);
+        } else {
+          fetchOrderDetails();
+        }
+      } else {
+        toast.error(res.message || 'Failed to submit return request');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to submit return request');
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
   const resolveProductId = (item) =>
     item.productId?._id || item.productId || item.id || item._id;
+
+  const formatOptionValue = (val) => {
+    if (val === null || val === undefined) return '';
+    if (typeof val === 'object') {
+      return val.name || val.value || JSON.stringify(val);
+    }
+    return String(val);
+  };
 
   const invoiceColors = {
     primary: '#003147',    // Brand primary color (Deep Navy Blue)
@@ -467,7 +585,7 @@ const OrderDetails = () => {
                   const hasReview = !!reviewStatusMap[productId];
 
                   return (
-                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between sm:items-start md:items-center gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
+                    <div key={index} className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
                       <div className="flex items-start space-x-4 min-w-0 flex-1">
                         <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
                           <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
@@ -523,15 +641,35 @@ const OrderDetails = () => {
                         </div>
                       </div>
 
-                      {order.status === 'Delivered' && (
-                        <button
-                          onClick={() => openReviewModal(item)}
-                          className="flex items-center justify-center space-x-1 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-500 hover:text-white hover:border-amber-500 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all shadow-sm cursor-pointer w-full sm:w-auto flex-shrink-0"
-                        >
-                          <Star size={11} className="fill-current" />
-                          <span>{hasReview ? 'Edit Review' : 'Review Product'}</span>
-                        </button>
-                      )}
+                      <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0">
+                        {order.status === 'Delivered' && (
+                          <button
+                            onClick={() => openReviewModal(item)}
+                            className="flex items-center justify-center space-x-1 border border-amber-200 text-amber-700 bg-amber-50 hover:bg-amber-500 hover:text-white hover:border-amber-500 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all shadow-sm cursor-pointer w-full sm:w-auto flex-shrink-0"
+                          >
+                            <Star size={11} className="fill-current" />
+                            <span>{hasReview ? 'Edit Review' : 'Review Product'}</span>
+                          </button>
+                        )}
+
+                        {item.returnStatus && item.returnStatus !== 'None' ? (
+                          <div className="flex-shrink-0">
+                            {getReturnStatusBadge(item.returnStatus)}
+                          </div>
+                        ) : (
+                          order.status === 'Delivered' && isReturnWindowOpen(item, order.deliveredAt || order.statusDate) && (
+                            <button
+                              onClick={() => {
+                                setSelectedReturnItem(item);
+                                setIsReturnModalOpen(true);
+                              }}
+                              className="flex items-center justify-center border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-500 hover:text-white hover:border-rose-500 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all shadow-sm cursor-pointer w-full sm:w-auto flex-shrink-0"
+                            >
+                              Return Product
+                            </button>
+                          )
+                        )}
+                      </div>
                     </div>
                   );
                 })}
@@ -601,6 +739,123 @@ const OrderDetails = () => {
         onSubmit={handleReviewSubmit}
         onDelete={handleReviewDelete}
       />
+
+      {/* Return Request Modal */}
+      {isReturnModalOpen && selectedReturnItem && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-fadeIn">
+            <button
+              onClick={() => setIsReturnModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XCircle size={20} />
+            </button>
+            <h3 className="text-lg font-bold text-[#001E3C] mb-4">Request Item Return</h3>
+            <div className="flex items-center space-x-3 bg-gray-50 p-3 rounded-xl mb-4 border border-gray-100">
+              <img
+                src={formatImageUrl(selectedReturnItem.image || (selectedReturnItem.includedProducts && selectedReturnItem.includedProducts[0]?.image))}
+                alt={selectedReturnItem.title}
+                className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+              />
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold text-[#001E3C] truncate">{selectedReturnItem.title}</h4>
+                <p className="text-[10px] text-gray-500 mt-0.5">Policy: {selectedReturnItem.returnPolicy}</p>
+              </div>
+            </div>
+
+            {selectedReturnItem.isComboProduct && selectedReturnItem.includedProducts && selectedReturnItem.includedProducts.length > 0 && (
+              <div className="mb-4 bg-amber-50/70 border border-amber-200/60 p-3 rounded-xl">
+                <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider block mb-1.5">
+                  Combo Pack Items (All will be returned together):
+                </span>
+                <div className="space-y-1.5">
+                  {selectedReturnItem.includedProducts.map((incProd, idx) => (
+                    <div key={incProd.id || idx} className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-white rounded border border-gray-150 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        {incProd.image ? (
+                          <img src={formatImageUrl(incProd.image)} alt={incProd.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <Layers size={10} className="text-gray-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] text-gray-700 font-bold truncate block">{incProd.title}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleReturnSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5">
+                  Reason for Return
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  placeholder="Why are you returning this item?"
+                  className="w-full border border-gray-200 p-2.5 text-xs rounded-xl focus:ring-1 focus:ring-blue-500 outline-none bg-white font-medium resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
+                  <span>Proof Photo Upload (Max 2MB per photo)</span>
+                  <span className="text-gray-400 font-bold">{returnPhotos.length} / 3</span>
+                </label>
+
+                {/* Uploaded thumbnails grid */}
+                {returnPhotos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {returnPhotos.map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square border border-gray-200 rounded-xl overflow-hidden bg-slate-50 flex items-center justify-center p-1">
+                        <img src={photo} alt={`Proof preview ${idx + 1}`} className="w-full h-full object-cover rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => setReturnPhotos(prev => prev.filter((_, i) => i !== idx))}
+                          className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 shadow hover:bg-rose-700 transition-colors"
+                          title="Remove photo"
+                        >
+                          <XCircle size={14} className="fill-current text-white bg-rose-600 rounded-full" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Dashed upload box */}
+                {returnPhotos.length < 3 && (
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50/50 transition-all relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePhotoChange}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div className="flex flex-col items-center py-2 text-gray-400">
+                      <Layers size={20} className="mb-1" />
+                      <span className="text-xs font-medium">Select or drag proof photo</span>
+                      <span className="text-[10px] mt-0.5">JPEG, PNG only (Up to 3 photos)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={submittingReturn}
+                className="w-full bg-[#001E3C] hover:bg-[#002d5a] text-white text-xs font-bold py-3 rounded-xl transition-all shadow-md flex items-center justify-center space-x-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                {submittingReturn && <Loader size={12} className="animate-spin" />}
+                <span>{submittingReturn ? 'Submitting...' : 'Submit Return Request'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
