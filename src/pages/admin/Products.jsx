@@ -63,7 +63,7 @@ const Products = () => {
   const [availableAttributes, setAvailableAttributes] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
-const productsPerPage = 20;
+  const productsPerPage = 20;
   
   // Active selections
   const [selectedCatId, setSelectedCatId] = useState('');
