@@ -248,7 +248,7 @@ const ComboPacks = () => {
       totalPrice: combo.totalPrice,
       offerPrice: combo.offerPrice,
       description: combo.description || '',
-      selectedItemIds: loadedVariants.map(v => v.productId),
+      selectedItemIds: (combo.selectedItemIds || []).map(p => p._id || p.id || p),
       selectedVariants: loadedVariants,
       returnPolicy: combo.returnPolicy || 'No Return Policy'
     });
@@ -326,9 +326,10 @@ const ComboPacks = () => {
 
   const renderComboRow = (combo, index) => {
     const sNo = index + 1;
-const comboVariantItems = getComboVariantItems(combo, availableProducts);
-const firstVariantItem = comboVariantItems[0];
-const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.image) : '';
+    const internalProducts = combo.selectedItemIds || [];
+    const firstProd = internalProducts[0];
+    const firstVarDetails = firstProd ? getComboVariantDetails(combo, firstProd) : null;
+    const previewImage = firstVarDetails?.image ? formatImageUrl(firstVarDetails.image) : '';
     
     return (
       <tr key={combo._id || combo.id} className="hover:bg-slate-50/50 transition-colors font-medium">
@@ -346,22 +347,17 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
           <div className="text-primary opacity-50 text-[11px] line-through">₹{combo.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
         </td>
         <td className="py-4 px-4">
-  <div className="flex items-center gap-1 flex-wrap">
-    {comboVariantItems.map((item) => (
-      <span
-        key={item.key}
-        className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${
-          item.stock === 0
-            ? 'bg-red-50 text-red-500 border-red-200'
-            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-        }`}
-        title={item.title}
-      >
-        {item.stock}
-      </span>
-    ))}
-  </div>
-</td>
+          <div className="flex items-center gap-1 flex-wrap">
+            {internalProducts.map((p) => {
+              const varDetails = getComboVariantDetails(combo, p);
+              return (
+                <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
+                  {varDetails.stock}
+                </span>
+              );
+            })}
+          </div>
+        </td>
         <td className="py-4 px-4">
           <label className="relative inline-flex items-center cursor-pointer select-none">
             <input type="checkbox" checked={combo.status} onChange={() => toggleStatus(combo._id || combo.id)} className="sr-only peer" />
@@ -482,14 +478,14 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
         return sum + (found ? found.price : 0);
       }, 0);
 
-    return {
-      ...prev,
-      selectedVariants: updatedVariants,
-      selectedItemIds: updatedProductIds,
-      totalPrice: collectiveSum > 0 ? collectiveSum : ''
-    };
-  });
-};
+      return {
+        ...prev,
+        selectedVariants: updatedVariants,
+        selectedItemIds: updatedProductIds,
+        totalPrice: collectiveSum > 0 ? collectiveSum : ''
+      };
+    });
+  };
 
   return (
     <div className="w-full font-sans text-primary antialiased">
