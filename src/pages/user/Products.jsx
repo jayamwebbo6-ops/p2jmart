@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect, useCallback, memo } from 'react';
-import { VariableSizeList as List } from 'react-window';
 import { Link } from 'react-router-dom';
 import { useNavigate } from "react-router-dom";
 
@@ -159,10 +158,6 @@ HeaderRow.displayName = 'HeaderRow';
 const Products = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [headerHeight, setHeaderHeight] = useState(80); // Default guess
-  const listRef = useRef(null);
 
   // Sync Categories with Live Backend API Stream Array
   useEffect(() => {
@@ -183,55 +178,6 @@ const Products = () => {
     fetchLiveCatalogData();
   }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowHeight(window.innerHeight);
-      setWindowWidth(window.innerWidth);
-      if (listRef.current) {
-        listRef.current.resetAfterIndex(0);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleHeaderHeightChange = useCallback((height) => {
-    setHeaderHeight((prev) => {
-      if (prev !== height) {
-        setTimeout(() => {
-          if (listRef.current) listRef.current.resetAfterIndex(0);
-        }, 0);
-        return height;
-      }
-      return prev;
-    });
-  }, []);
-
-  // Define dynamic sizes for items
-  const getItemSize = useCallback((index) => {
-    if (index === 0) return headerHeight;
-    return windowWidth < 768 ? 270 : 330;
-  }, [headerHeight, windowWidth]);
-
-  // Render individual virtualized row
-  const Row = useCallback(({ index, style }) => {
-    if (index === 0) {
-      return (
-        <div style={style}>
-          <HeaderRow setHeaderHeight={handleHeaderHeightChange} />
-        </div>
-      );
-    }
-
-    return (
-      <div style={style}>
-        <div className="pb-10">
-          <CategoryRow category={categories[index - 1]} />
-        </div>
-      </div>
-    );
-  }, [categories, handleHeaderHeightChange]);
-
   return (
     <div className="min-h-screen flex flex-col">
       <style>{`
@@ -241,29 +187,34 @@ const Products = () => {
       `}</style>
       <div className="max-w-7xl mx-auto w-full flex flex-col h-full px-4">
 
-        {/* Virtualized Categories List Container */}
-        <div className="flex-1 w-full">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
+          <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
+            <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+            <span className="mx-1.5 font-bold">&gt;</span>
+            <span className="text-gray-600">Categories</span>
+          </div>
+        </div>
+
+        {/* Categories List */}
+        <div className="flex-1 w-full pb-10">
           {loading ? (
             <div className="w-full py-20 flex items-center justify-center text-sm font-semibold text-gray-400">
               Syncing marketplace structures...
             </div>
           ) : categories.length === 0 ? (
             <div className="w-full py-20 flex flex-col items-center justify-center text-sm font-semibold text-gray-400">
-              <HeaderRow setHeaderHeight={handleHeaderHeightChange} />
-              <p className="mt-10">No categories found in the system registry.</p>
+              <p>No categories found in the system registry.</p>
             </div>
           ) : (
-            <List
-              ref={listRef}
-              height={windowHeight - 80} 
-              itemCount={categories.length + 1}
-              itemSize={getItemSize}
-              width="100%"
-              className="scrollbar-hide"
-              style={{ overflowX: 'hidden' }}
-            >
-              {Row}
-            </List>
+            <div className="space-y-10">
+              {categories.map((category) => (
+                <div key={category._id || category.id} className="pb-4">
+                  <CategoryRow category={category} />
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

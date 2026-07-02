@@ -31,18 +31,31 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
     if (!product || matchedCombos.length === 0) return [];
 
     return matchedCombos.map(matchedCombo => {
-      const items = (matchedCombo.selectedItemIds || []).map(item => {
+      // Loop over selectedVariants if available, otherwise fallback to selectedItemIds
+      const variantList = (matchedCombo.selectedVariants && matchedCombo.selectedVariants.length > 0)
+        ? matchedCombo.selectedVariants
+        : (matchedCombo.selectedItemIds || []).map(item => ({
+            productId: item._id || item.id || item,
+            variantId: 'default'
+          }));
+
+      const items = variantList.map((sv, idx) => {
+        const prodId = sv.productId?._id || sv.productId?.id || sv.productId;
+        const item = (matchedCombo.selectedItemIds || []).find(
+          p => p && (p._id || p.id || p) === prodId
+        );
         if (!item) return null;
+
         const isCurrent = (item._id || item.id) === product.id;
-        const itemIdStr = item._id || item.id;
-        const sv = matchedCombo.selectedVariants?.find(v => (v.productId?._id || v.productId?.id || v.productId || v) === itemIdStr);
+        
         let resolvedPrice = item.price || 0;
         let resolvedWeight = item.weight || 0;
         let resolvedImage = item.image || '';
         let resolvedTitle = item.title;
 
-        if (sv && item.variants && item.variants.length > 0) {
-          const variant = item.variants.find(v => v.id === sv.variantId);
+        // Try to match the exact variant
+        if (item.variants && item.variants.length > 0) {
+          const variant = item.variants.find(v => v.id === sv.variantId) || item.variants[0];
           if (variant) {
             resolvedPrice = variant.price || item.price || 0;
             resolvedWeight = variant.weight ?? item.weight ?? 0;
@@ -53,16 +66,16 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
               .join(' / ');
             resolvedTitle = attrStr ? `${item.title} (${attrStr})` : item.title;
           }
-        } else if (item.variants && item.variants.length > 0) {
-          const variant = item.variants[0];
-          resolvedPrice = variant.price || item.price || 0;
-          resolvedWeight = variant.weight ?? item.weight ?? 0;
-          resolvedImage = variant.image || item.image || '';
         }
 
+        // Generate a unique key for selection tracking
+        const uniqueKey = `${prodId}-${sv.variantId || 'default'}-${idx}`;
+
         return {
+          uniqueKey,
           id: item._id || item.id,
-          title: isCurrent ? `${resolvedTitle} (${selectedColor} / ${selectedSize}) (This Item)` : resolvedTitle,
+          variantId: sv.variantId || 'default',
+          title: isCurrent ? `${resolvedTitle} (This Item)` : resolvedTitle,
           price: resolvedPrice,
           image: resolvedImage,
           weight: resolvedWeight,
@@ -105,27 +118,27 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
     if (activeCombo && !selectionsByCombo[activeCombo.id]) {
       setSelectionsByCombo(prev => ({
         ...prev,
-        [activeCombo.id]: activeCombo.items.map(item => item.id)
+        [activeCombo.id]: activeCombo.items.map(item => item.uniqueKey)
       }));
     }
   }, [activeCombo, selectionsByCombo]);
 
-  const selectedComboItemIds = activeCombo ? (selectionsByCombo[activeCombo.id] || []) : [];
+  const selectedComboUniqueKeys = activeCombo ? (selectionsByCombo[activeCombo.id] || []) : [];
 
-  const toggleComboItem = (itemId, isCurrent) => {
+  const toggleComboItem = (uniqueKey, isCurrent) => {
     if (isCurrent || !activeCombo) return;
     setSelectionsByCombo(prev => {
       const current = prev[activeCombo.id] || [];
-      const next = current.includes(itemId)
-        ? current.filter(i => i !== itemId)
-        : [...current, itemId];
+      const next = current.includes(uniqueKey)
+        ? current.filter(i => i !== uniqueKey)
+        : [...current, uniqueKey];
       return { ...prev, [activeCombo.id]: next };
     });
   };
 
-  const isFullComboSelected = activeCombo ? selectedComboItemIds.length === activeCombo.items.length : false;
+  const isFullComboSelected = activeCombo ? selectedComboUniqueKeys.length === activeCombo.items.length : false;
   const regularComboSum = (activeCombo?.items || [])
-    .filter(item => selectedComboItemIds.includes(item.id))
+    .filter(item => selectedComboUniqueKeys.includes(item.uniqueKey))
     .reduce((sum, item) => sum + item.price, 0);
 
   const finalComboPrice = isFullComboSelected
@@ -135,7 +148,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
   const totalComboSavings = regularComboSum - finalComboPrice;
 
   const buildBundlePayload = () => {
-    const selectedItems = activeCombo.items.filter(item => selectedComboItemIds.includes(item.id));
+    const selectedItems = activeCombo.items.filter(item => selectedComboUniqueKeys.includes(item.uniqueKey));
     return {
       id: isFullComboSelected ? activeCombo.id : `COMBO-CUSTOM-${Date.now()}`,
       productId: isFullComboSelected ? activeCombo.id : `COMBO-CUSTOM-${Date.now()}`,
@@ -150,6 +163,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
       includedProducts: selectedItems.map(item => ({
         productId: item.id,
         id: item.id,
+        variantId: item.variantId,
         title: item.title,
         image: item.image,
         price: item.price,
@@ -255,13 +269,13 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
                     className="w-full"
                   >
                     {activeCombo.items.map((item, idx) => (
-                      <SwiperSlide key={item.id} className="py-1">
+                      <SwiperSlide key={item.uniqueKey} className="py-1">
                         <div
-                          onClick={() => toggleComboItem(item.id, item.isCurrent)}
+                          onClick={() => toggleComboItem(item.uniqueKey, item.isCurrent)}
                           className={`w-full bg-white border rounded-xl p-4 flex flex-col items-center gap-3 transition-all relative ${
                             item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
                           } ${
-                            selectedComboItemIds.includes(item.id)
+                            selectedComboUniqueKeys.includes(item.uniqueKey)
                               ? 'border-blue-500 shadow-xs'
                               : 'opacity-40 border-gray-200 grayscale scale-95 hover:opacity-70'
                           }`}
@@ -269,7 +283,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
                           <div className="absolute top-2 left-2 z-10">
                             <input
                               type="checkbox"
-                              checked={selectedComboItemIds.includes(item.id)}
+                              checked={selectedComboUniqueKeys.includes(item.uniqueKey)}
                               onChange={() => {}}
                               disabled={item.isCurrent}
                               className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
@@ -318,7 +332,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
               </h4>
               <div className="space-y-2 text-xs text-gray-600">
                 <div className="flex justify-between">
-                  <span>Selected Items ({selectedComboItemIds.length}):</span>
+                  <span>Selected Items ({selectedComboUniqueKeys.length}):</span>
                   <span className="font-medium text-gray-900">₹{regularComboSum}</span>
                 </div>
                 {isFullComboSelected ? (
@@ -420,7 +434,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
                     {/* Miniature Horizontal Item Preview Row */}
                     <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none flex-1 min-w-0">
                       {combo.items.map((item, idx) => (
-                        <React.Fragment key={item.id}>
+                        <React.Fragment key={item.uniqueKey}>
                           <div className={`flex items-center gap-2 bg-gray-50 border rounded-lg p-2 shrink-0 max-w-[160px] ${item.isCurrent ? 'border-blue-200 bg-blue-50/20' : 'border-gray-150'}`}>
                             <div className="w-10 h-10 bg-white border border-gray-100 rounded flex-shrink-0 p-0.5 flex items-center justify-center">
                               <img 
