@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import useThrottledCallback from '../../hooks/useThrottledCallback';
+import useThrottledCallback from '../../hooks/useThrottledCallback.js';
 import { ShoppingCart, Heart, Star, Share2, ShoppingBag, Eye, Plus } from 'lucide-react';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from '../../components/toast';
 import ProductReviews from '../../components/ProductReviews';
+import ComboSection from '../user/ComboSection';
 
 import "swiper/css";
 import "swiper/css/pagination";
@@ -977,179 +978,14 @@ useEffect(() => {
           initialReviewCount={product.reviews}
         />
 
-        {/* Combo Pack Section */}
-        {comboData && (
-          <div className="w-full mt-10 bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
-              <div>
-                <span className="bg-primary-100 text-green-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase">
-                  Limited Time Bundle Offer
-                </span>
-                <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-1.5 flex flex-wrap items-center gap-2">
-                  <span>Frequently Bought Together (Combo Deal)</span>
-                  <span className="flex items-center gap-1 text-xs bg-amber-50 border border-amber-250 text-amber-700 px-2 py-0.5 rounded-full font-bold">
-                    ★ {(matchedCombo?.rating || 5.0).toFixed(1)} ({matchedCombo?.reviewCount || 0})
-                  </span>
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Get an extra <span className="text-red-600 font-bold">{comboData.discountPercent}% OFF</span> on the entire setup when purchased collectively!
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center">
-              {/* Left Column Grid Items (Swiper Slider) */}
-              <div className={`min-w-0 w-full relative px-8 flex items-center bg-white border border-gray-150 rounded-xl p-4 shadow-2xs ${
-                comboData.items.length === 1 ? 'max-w-[220px]' :
-                comboData.items.length === 2 ? 'max-w-[420px]' :
-                comboData.items.length === 3 ? 'max-w-[620px]' : 'max-w-[820px] flex-1'
-              }`}>
-                {comboData.items.length > 0 && (
-                  <>
-                    <button className="combo-prev-btn absolute left-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
-                      <ChevronLeft size={18} className="text-gray-700" />
-                    </button>
-                    
-                    <Swiper
-                      modules={[Navigation]}
-                      navigation={{
-                        prevEl: '.combo-prev-btn',
-                        nextEl: '.combo-next-btn',
-                      }}
-                      spaceBetween={16}
-                      slidesPerView={Math.min(4, comboData.items.length)}
-                      breakpoints={{
-                        320: {
-                          slidesPerView: Math.min(1.2, comboData.items.length),
-                          spaceBetween: 10
-                        },
-                        480: {
-                          slidesPerView: Math.min(2, comboData.items.length),
-                          spaceBetween: 12
-                        },
-                        768: {
-                          slidesPerView: Math.min(3, comboData.items.length),
-                          spaceBetween: 14
-                        },
-                        1200: {
-                          slidesPerView: Math.min(4, comboData.items.length),
-                          spaceBetween: 16
-                        }
-                      }}
-                      className="w-full h-full"
-                    >
-                      {comboData.items.map((item, idx) => (
-                        <SwiperSlide key={item.id} className="py-1">
-                          <div 
-                            onClick={() => toggleComboItem(item.id, item.isCurrent)}
-                            className={`w-full bg-white border rounded-xl p-3.5 flex flex-col items-center gap-3 transition-all relative ${
-                              item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
-                            } ${
-                              selectedComboItemIds.includes(item.id) 
-                                ? 'border-blue-500 shadow-xs' 
-                                : 'opacity-50 border-gray-200 grayscale scale-95 hover:opacity-80'
-                            }`}
-                          >
-                            <div className="absolute top-2 left-2 z-10 pointer-events-none">
-                              <input 
-                                type="checkbox" 
-                                checked={selectedComboItemIds.includes(item.id)} 
-                                readOnly
-                                disabled={item.isCurrent}
-                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
-                              />
-                            </div>
-
-                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-gray-50 border border-gray-100 flex items-center justify-center">
-                              <img 
-                                src={formatImageUrl(item.image)} 
-                                alt={item.title} 
-                                className="w-full h-full object-cover" 
-                                onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=No+Image"; }}
-                              />
-                            </div>
-
-                            <div className="text-center min-w-0 w-full">
-                              <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug h-8">
-                                {item.title}
-                              </h4>
-                              <p className="text-sm font-black text-gray-900 mt-1">
-                                ₹{item.price}
-                              </p>
-                            </div>
-
-                            {/* Floating Plus bubble connecting items */}
-                            {idx < comboData.items.length - 1 && (
-                              <div className="absolute right-[-14px] top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden sm:flex">
-                                <Plus size={10} strokeWidth={3} />
-                              </div>
-                            )}
-                          </div>
-                        </SwiperSlide>
-                      ))}
-                    </Swiper>
-
-                    <button className="combo-next-btn absolute right-1 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
-                      <ChevronRight size={18} className="text-gray-700" />
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Right Summary Calculations Block */}
-              <div className="w-full md:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm shrink-0">
-                <div>
-                  <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
-                    Bundle Price Calculation
-                  </h4>
-                  <div className="space-y-2 text-xs text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Selected Items ({selectedComboItemIds.length}):</span>
-                      <span className="font-medium text-gray-900">₹{regularComboSum}</span>
-                    </div>
-                    {isFullComboSelected ? (
-                      <div className="flex justify-between text-green-600 font-medium">
-                        <span>Combo Promotion Pack Discount:</span>
-                        <span>-{comboData.discountPercent}%</span>
-                      </div>
-                    ) : (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
-                        💡 Select all components to qualify for the bundle discount structure.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="flex justify-between items-baseline mb-4">
-                    <span className="text-sm font-bold text-gray-800">Total Price:</span>
-                    <div className="text-right">
-                      <span className="text-xl font-black text-gray-900">₹{finalComboPrice}</span>
-                      {totalComboSavings > 0 && (
-                        <p className="text-[11px] font-bold text-green-600">Save ₹{totalComboSavings}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button 
-                      onClick={handleAddBundleToCart}
-                      className="w-full border border-gray-300 py-2 text-xs rounded-md font-bold hover:bg-gray-50 transition-colors"
-                    >
-                      Bundle to Cart
-                    </button>
-                    <button 
-                      onClick={handleAddBundleToBuy}
-                      className="w-full bg-blue-900 text-white py-2 text-xs rounded-md font-bold hover:opacity-90 transition-opacity"
-                    >
-                      Buy Bundle Set
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
+        <ComboSection
+  product={product}
+  combos={combos}
+  selectedColor={selectedColor}
+  selectedSize={selectedSize}
+  onAddToCart={onAddToCart}
+  formatImageUrl={formatImageUrl}
+/>
 
         {/* You May Also Like Section */}
         {relatedProducts.length > 0 && (
