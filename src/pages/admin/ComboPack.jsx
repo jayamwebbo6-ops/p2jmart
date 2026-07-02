@@ -80,6 +80,52 @@ const ComboPacks = () => {
     };
   };
 
+
+  const getComboVariantItems = (combo, products = availableProducts) => {
+  if (!combo?.selectedVariants || !Array.isArray(combo.selectedVariants)) return [];
+
+  return combo.selectedVariants.map((sv, index) => {
+    const productId = sv.productId?._id || sv.productId?.id || sv.productId;
+    const product =
+      products.find(p => (p._id || p.id) === productId) ||
+      (combo.selectedItemIds || []).find(p => (p?._id || p?.id) === productId);
+
+    if (!product) {
+      return {
+        key: `${productId}-${sv.variantId}-${index}`,
+        productId,
+        variantId: sv.variantId,
+        title: 'Unknown Product',
+        price: 0,
+        stock: 0,
+        image: '',
+        weight: 0
+      };
+    }
+
+    const variant =
+      product.variants?.find(v => v.id === sv.variantId) || null;
+
+    const attrStr = variant
+      ? Object.values(variant.attributes || {})
+          .filter(val => val && val !== 'Default')
+          .map(val => (val.includes('|') ? val.split('|')[0] : val))
+          .join(' / ')
+      : '';
+
+    return {
+      key: `${productId}-${sv.variantId}-${index}`,
+      productId,
+      variantId: sv.variantId,
+      title: attrStr ? `${product.title} (${attrStr})` : product.title,
+      price: variant?.price ?? product.price ?? 0,
+      stock: variant?.stock ?? product.stock ?? 0,
+      image: variant?.image || product.image || '',
+      weight: variant?.weight ?? product.weight ?? 0
+    };
+  });
+};
+
   const [combos, setCombos] = useState([]);
   const [availableProducts, setAvailableProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -239,7 +285,7 @@ const ComboPacks = () => {
       totalPrice: combo.totalPrice,
       offerPrice: combo.offerPrice,
       description: combo.description || '',
-      selectedItemIds: (combo.selectedItemIds || []).map(p => p._id || p.id || p),
+      selectedItemIds: loadedVariants.map(v => v.productId),
       selectedVariants: loadedVariants,
       returnPolicy: combo.returnPolicy || 'No Return Policy'
     });
@@ -317,10 +363,9 @@ const ComboPacks = () => {
 
   const renderComboRow = (combo, index) => {
     const sNo = index + 1;
-    const internalProducts = combo.selectedItemIds || [];
-    const firstProd = internalProducts[0];
-    const firstVarDetails = firstProd ? getComboVariantDetails(combo, firstProd) : null;
-    const previewImage = firstVarDetails?.image ? formatImageUrl(firstVarDetails.image) : '';
+const comboVariantItems = getComboVariantItems(combo, availableProducts);
+const firstVariantItem = comboVariantItems[0];
+const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.image) : '';
     
     return (
       <tr key={combo._id || combo.id} className="hover:bg-slate-50/50 transition-colors font-medium">
@@ -338,17 +383,22 @@ const ComboPacks = () => {
           <div className="text-primary opacity-50 text-[11px] line-through">₹{combo.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
         </td>
         <td className="py-4 px-4">
-          <div className="flex items-center gap-1 flex-wrap">
-            {internalProducts.map((p) => {
-              const varDetails = getComboVariantDetails(combo, p);
-              return (
-                <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
-                  {varDetails.stock}
-                </span>
-              );
-            })}
-          </div>
-        </td>
+  <div className="flex items-center gap-1 flex-wrap">
+    {comboVariantItems.map((item) => (
+      <span
+        key={item.key}
+        className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${
+          item.stock === 0
+            ? 'bg-red-50 text-red-500 border-red-200'
+            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        }`}
+        title={item.title}
+      >
+        {item.stock}
+      </span>
+    ))}
+  </div>
+</td>
         <td className="py-4 px-4">
           <label className="relative inline-flex items-center cursor-pointer select-none">
             <input type="checkbox" checked={combo.status} onChange={() => toggleStatus(combo._id || combo.id)} className="sr-only peer" />
@@ -441,31 +491,39 @@ const ComboPacks = () => {
   });
 
   const handleVariantSelectionToggle = (productId, variantId) => {
-    setFormData(prev => {
-      const isSelected = prev.selectedVariants.some(sv => sv.productId === productId && sv.variantId === variantId);
-      
-      let updatedVariants;
-      if (isSelected) {
-        updatedVariants = prev.selectedVariants.filter(sv => !(sv.productId === productId && sv.variantId === variantId));
-      } else {
-        updatedVariants = [...prev.selectedVariants, { productId, variantId }];
-      }
+  setFormData(prev => {
+    const isSelected = prev.selectedVariants.some(
+      sv => sv.productId === productId && sv.variantId === variantId
+    );
 
-      const updatedProductIds = [...new Set(updatedVariants.map(sv => sv.productId))];
+    let updatedVariants;
+    if (isSelected) {
+      updatedVariants = prev.selectedVariants.filter(
+        sv => !(sv.productId === productId && sv.variantId === variantId)
+      );
+    } else {
+      updatedVariants = [...prev.selectedVariants, { productId, variantId }];
+    }
 
-      const collectiveSum = updatedVariants.reduce((sum, sv) => {
-        const found = allVariantsList.find(v => v.productId === sv.productId && v.variantId === sv.variantId);
-        return sum + (found ? found.price : 0);
-      }, 0);
+    // IMPORTANT:
+    // allow same product multiple times if different variants are selected
+    const updatedProductIds = updatedVariants.map(sv => sv.productId);
 
-      return {
-        ...prev,
-        selectedVariants: updatedVariants,
-        selectedItemIds: updatedProductIds,
-        totalPrice: collectiveSum > 0 ? collectiveSum : ''
-      };
-    });
-  };
+    const collectiveSum = updatedVariants.reduce((sum, sv) => {
+      const found = allVariantsList.find(
+        v => v.productId === sv.productId && v.variantId === sv.variantId
+      );
+      return sum + (found ? Number(found.price || 0) : 0);
+    }, 0);
+
+    return {
+      ...prev,
+      selectedVariants: updatedVariants,
+      selectedItemIds: updatedProductIds,
+      totalPrice: collectiveSum > 0 ? collectiveSum : ''
+    };
+  });
+};
 
   return (
     <div className="w-full font-sans text-primary antialiased">
@@ -636,63 +694,32 @@ const ComboPacks = () => {
         </div>
       )}
 
-      {isViewModalOpen && currentCombo && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-primary">Composition Summary Details</h2>
-              <button onClick={() => setIsViewModalOpen(false)} className="text-primary opacity-60 hover:opacity-100"><X size={16} /></button>
-            </div>
-            <div className="p-6 space-y-4 text-xs overflow-y-auto max-h-[80vh] custom-scrollbar">
-              <div>
-                <h3 className="text-base font-bold text-primary">{currentCombo.name}</h3>
-                {currentCombo.description && (
-                  <p className="text-gray-500 mt-1">{currentCombo.description}</p>
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
-                <div>
-                  <span className="text-gray-400 block">Offer Price</span>
-                  <span className="text-sm font-bold text-emerald-600">₹{currentCombo.offerPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div>
-                  <span className="text-gray-400 block">Original Sum</span>
-                  <span className="text-sm font-bold text-gray-500 line-through">₹{currentCombo.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-gray-400 block">Return Policy</span>
-                  <span className="text-xs font-bold text-primary">{currentCombo.returnPolicy || 'No Return Policy'}</span>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <span className="font-bold text-primary uppercase block tracking-wider text-[10px]">Bundled Variants</span>
-                <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 overflow-hidden">
-                  {currentCombo.selectedItemIds?.map((prod) => {
-                    const varDetails = getComboVariantDetails(currentCombo, prod);
-                    return (
-                      <div key={prod._id || prod.id} className="flex items-center gap-3 p-3 bg-white">
-                        {varDetails.image ? (
-                          <img src={formatImageUrl(varDetails.image)} className="w-10 h-10 object-cover rounded border border-gray-100" />
-                        ) : (
-                          <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">N/A</div>
-                        )}
-                        <div className="flex-grow">
-                          <span className="font-bold text-primary block">{varDetails.title}</span>
-                          <span className="text-gray-400 text-[10px]">Stock: {varDetails.stock}</span>
-                        </div>
-                        <span className="font-bold text-primary">₹{varDetails.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="flex justify-end pt-2">
-                <button onClick={() => setIsViewModalOpen(false)} className="bg-[#003147] hover:bg-[#009EDB] text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Close View</button>
-              </div>
-            </div>
-          </div>
+      {getComboVariantItems(currentCombo, availableProducts).map((item) => {
+  return (
+    <div key={item.key} className="flex items-center gap-3 p-3 bg-white">
+      {item.image ? (
+        <img
+          src={formatImageUrl(item.image)}
+          className="w-10 h-10 object-cover rounded border border-gray-100"
+          alt={item.title}
+        />
+      ) : (
+        <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">
+          N/A
         </div>
       )}
+
+      <div className="flex-grow">
+        <span className="font-bold text-primary block">{item.title}</span>
+        <span className="text-gray-400 text-[10px]">Stock: {item.stock}</span>
+      </div>
+
+      <span className="font-bold text-primary">
+        ₹{Number(item.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+      </span>
+    </div>
+  );
+})}
       
       <ConfirmationModal
         isOpen={comboToDelete !== null}
