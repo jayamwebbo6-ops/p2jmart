@@ -27,6 +27,7 @@ import {
 import { getAllShippingAPI } from '../../api/shippingApi';
 import { getAllGstAPI } from '../../api/gstApi';
 import { createOrderAPI } from '../../api/orderApi';
+import { applyCouponAPI } from '../../api/couponApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
@@ -87,6 +88,13 @@ const Checkout = ({ cart = [], setCart }) => {
   // Saved placed order details for Success Screen
   const [placedOrder, setPlacedOrder] = useState(null);
 
+  // Coupon System State
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
   // Selected address object
   const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
 
@@ -146,7 +154,7 @@ const Checkout = ({ cart = [], setCart }) => {
     return acc + ((item.price * item.quantity) * (rate / 100));
   }, 0);
 
-  const total = subtotal + gstAmount + shippingFee;
+  const total = Math.max(0, subtotal - couponDiscount + gstAmount + shippingFee);
 
   // Load addresses, shipping states, and GST configurations from database
   const loadCheckoutData = async () => {
@@ -212,6 +220,41 @@ const Checkout = ({ cart = [], setCart }) => {
       navigate('/cart');
     }
   }, [checkoutItems, step, navigate, paymentStage]);
+
+  const handleApplyCoupon = async (e) => {
+    if (e) e.preventDefault();
+    if (!couponCode.trim()) {
+      toast.error('Please enter a coupon code.');
+      return;
+    }
+    setApplyingCoupon(true);
+    setCouponError('');
+    try {
+      const res = await applyCouponAPI({ code: couponCode.trim().toUpperCase(), subtotal });
+      if (res && res.success) {
+        setAppliedCoupon(res.data);
+        setCouponDiscount(res.data.discountAmount);
+        toast.success(res.message || 'Coupon applied successfully!');
+      }
+    } catch (err) {
+      console.error(err);
+      const errMsg = err.response?.data?.message || 'Invalid or expired coupon code.';
+      setCouponError(errMsg);
+      toast.error(errMsg);
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode('');
+    setCouponError('');
+    toast.info('Coupon removed.');
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -359,6 +402,8 @@ const Checkout = ({ cart = [], setCart }) => {
         subtotal: Number(subtotal),
         gst: Number(gstAmount),
         shippingFee: Number(shippingFee),
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: Number(couponDiscount),
         total: Number(total),
         isDirectPurchase: isDirectPurchase
       };
@@ -416,6 +461,8 @@ const Checkout = ({ cart = [], setCart }) => {
         subtotal: Number(subtotal),
         gst: Number(gstAmount),
         shippingFee: Number(shippingFee),
+        couponCode: appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: Number(couponDiscount),
         total: Number(total),
         isDirectPurchase: isDirectPurchase
       };
@@ -786,11 +833,72 @@ const Checkout = ({ cart = [], setCart }) => {
             ))}
           </div>
 
+          {/* Coupon Code Input Area */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3 font-sans">
+            <h4 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-1.5">
+              <span>🎟️ Apply Promo Code / Coupon</span>
+            </h4>
+            {!appliedCoupon ? (
+              <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter Coupon Code (e.g. FURN5000)"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs sm:text-sm uppercase bg-gray-50/50 font-semibold"
+                />
+                <button
+                  type="submit"
+                  disabled={applyingCoupon}
+                  className="bg-primary hover:bg-secondary text-white font-bold px-4 py-2.5 rounded-xl transition-all text-xs cursor-pointer select-none active:scale-95 disabled:opacity-50"
+                >
+                  {applyingCoupon ? 'Applying...' : 'Apply'}
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200/80 rounded-xl p-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                    <Check size={14} strokeWidth={3} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-black text-emerald-800 tracking-wider">
+                      {appliedCoupon.code} APPLIED!
+                    </p>
+                    <p className="text-[10px] font-semibold text-emerald-600">
+                      Savings of ₹{couponDiscount.toFixed(2)} applied to subtotal
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleRemoveCoupon}
+                  className="text-xs font-bold text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer p-1"
+                  title="Remove Coupon"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {couponError && (
+              <p className="text-[10px] text-red-500 font-bold tracking-wide mt-1">
+                ⚠️ {couponError}
+              </p>
+            )}
+          </div>
+
           <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3">
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
               <span>Subtotal</span>
               <span className="text-gray-900 font-bold">₹{subtotal.toFixed(2)}</span>
             </div>
+
+            {couponDiscount > 0 && (
+              <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-emerald-600">
+                <span>Coupon Discount ({appliedCoupon?.code})</span>
+                <span className="font-bold">-₹{couponDiscount.toFixed(2)}</span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
               <span>GST Tax</span>

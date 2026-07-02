@@ -1,19 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { getMyOrdersAPI } from '../../api/orderApi';
 import { Package, Calendar, Loader, ChevronRight } from 'lucide-react';
 import { toast } from '../../components/toast';
 
 const Orders = () => {
+  const { searchQuery = '', statusFilter = 'All Orders' } = useOutletContext() || {};
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
+  const filteredOrders = orders.filter(order => {
+    // 1. Search Query check (matches orderId/orderCode or product names)
+    const matchesSearch = searchQuery.trim() === '' || 
+      (order.orderId && order.orderId.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (order._id && order._id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (order.items && order.items.some(item => item.title && item.title.toLowerCase().includes(searchQuery.toLowerCase())));
+
+    // 2. Status Filter check
+    const matchesStatus = statusFilter === 'All Orders' || 
+      (order.status && order.status.toLowerCase() === statusFilter.toLowerCase());
+
+    return matchesSearch && matchesStatus;
+  });
+
   const itemsPerPage = 10;
   const indexOfLastOrder = currentPage * itemsPerPage;
   const indexOfFirstOrder = indexOfLastOrder - itemsPerPage;
-  const currentOrders = orders.slice(indexOfFirstOrder, indexOfLastOrder);
-  const totalPages = Math.ceil(orders.length / itemsPerPage);
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -109,48 +128,56 @@ const Orders = () => {
     <div className="flex-1 bg-white h-full p-4 sm:p-8 font-['Inter']">
       <h1 className="text-lg sm:text-2xl font-bold text-[#003147] mb-6">Order History</h1>
       <div className="space-y-4">
-        {currentOrders.map((order) => {
-          const orderId = order._id || order.id;
-          const firstItem = order.items?.[0];
-          return (
-            <Link 
-              key={orderId}
-              to={`/my-account/order/${orderId}`}
-              className="border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-[#009EDB]/30 hover:shadow-md transition-all bg-white block relative group"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 p-1 flex-shrink-0">
-                  <img 
-                    src={formatImageUrl(firstItem?.image)} 
-                    alt={firstItem?.title || "Product"} 
-                    className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300" 
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-bold text-gray-800 text-sm">
-                      {order.orderId || `Order #${orderId.slice(-8).toUpperCase()}`}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColorClass(order.status)}`}>
-                      {order.status}
-                    </span>
+        {filteredOrders.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50/40 rounded-2xl border border-dashed border-gray-200">
+            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" strokeWidth={1.5} />
+            <h3 className="text-sm font-bold text-gray-700 mb-1">No Matching Orders</h3>
+            <p className="text-xs text-gray-400 max-w-xs mx-auto">We couldn't find any orders matching your search query or status selection.</p>
+          </div>
+        ) : (
+          currentOrders.map((order) => {
+            const orderId = order._id || order.id;
+            const firstItem = order.items?.[0];
+            return (
+              <Link 
+                key={orderId}
+                to={`/my-account/order/${orderId}`}
+                className="border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:border-[#009EDB]/30 hover:shadow-md transition-all bg-white block relative group"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-gray-50 rounded-xl overflow-hidden border border-gray-100 p-1 flex-shrink-0">
+                    <img 
+                      src={formatImageUrl(firstItem?.image)} 
+                      alt={firstItem?.title || "Product"} 
+                      className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300" 
+                    />
                   </div>
-                  <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-1.5">
-                    <Calendar size={13} className="text-gray-400" />
-                    Placed on {formatDate(order.placedDate || order.createdAt)}
-                  </p>
-                  <p className="text-[#003147] font-bold text-xs sm:text-sm mt-1">
-                    Total: ₹{Number(order.total || 0).toFixed(2)} ({order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'items'})
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-bold text-gray-800 text-sm">
+                        {order.orderId || `Order #${orderId.slice(-8).toUpperCase()}`}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColorClass(order.status)}`}>
+                        {order.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-500 text-xs sm:text-sm flex items-center gap-1.5">
+                      <Calendar size={13} className="text-gray-400" />
+                      Placed on {formatDate(order.placedDate || order.createdAt)}
+                    </p>
+                    <p className="text-[#003147] font-bold text-xs sm:text-sm mt-1">
+                      Total: ₹{Number(order.total || 0).toFixed(2)} ({order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'items'})
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-end self-end sm:self-center gap-1 text-[#003147] group-hover:text-[#009EDB] transition-colors text-xs font-semibold">
-                <span>View Details</span>
-                <ChevronRight size={16} />
-              </div>
-            </Link>
-          );
-        })}
+                <div className="flex items-center justify-end self-end sm:self-center gap-1 text-[#003147] group-hover:text-[#009EDB] transition-colors text-xs font-semibold">
+                  <span>View Details</span>
+                  <ChevronRight size={16} />
+                </div>
+              </Link>
+            );
+          })
+        )}
       </div>
 
       {totalPages > 1 && (

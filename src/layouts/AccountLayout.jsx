@@ -4,6 +4,8 @@ import { User, Package,Ticket, MapPin, Heart, ShoppingCart, LogOut, Home, Chevro
 
 const AccountLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Orders');
   const location = useLocation();
 
   const navLinks = [
@@ -33,6 +35,14 @@ const AccountLayout = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Reset filters when navigating away from orders
+  useEffect(() => {
+    if (currentPage !== 'orders') {
+      setSearchQuery('');
+      setStatusFilter('All Orders');
+    }
+  }, [currentPage]);
+
   return (
     <div className="min-h-screen bg-[#fcf9f5] font-sans py-6 md:py-8">
       <div className="max-w-7xl mx-auto px-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -53,13 +63,21 @@ const AccountLayout = () => {
             <input 
               type="text" 
               placeholder="Search by Order ID..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary w-full md:w-64 bg-white"
             />
-            <select className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white cursor-pointer">
-              <option>All Orders</option>
-              <option>Delivered</option>
-              <option>Processing</option>
-              <option>Cancelled</option>
+            <select 
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-white cursor-pointer"
+            >
+              <option value="All Orders">All Orders</option>
+              <option value="Pending">Pending</option>
+              <option value="Processing">Processing</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
         )}
@@ -126,7 +144,7 @@ const AccountLayout = () => {
 
         {/* Main Content Area */}
         <div className="flex-1 bg-white rounded-lg shadow-sm overflow-hidden border border-gray-50">
-          <Outlet />
+          <Outlet context={{ searchQuery, statusFilter }} />
         </div>
 
       </div>
