@@ -14,7 +14,8 @@ import {
   LogOut,
   XCircle,
   Ticket,
-  Layers
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 
 import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
@@ -159,9 +160,9 @@ const AdminLayout = () => {
             <ShoppingBag size={18} className="flex-shrink-0" />
             <span className="text-sm">Orders</span>
           </Link>
-          <Link to="/admin/cancel-requests" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/cancel-requests')}`}>
-            <XCircle size={18} className="flex-shrink-0" />
-            <span className="text-sm">Cancel Requests (Buyer)</span>
+          <Link to="/admin/return-requests" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/return-requests')}`}>
+            <RefreshCw size={18} className="flex-shrink-0" />
+            <span className="text-sm">Return Requests (Buyer)</span>
           </Link>
           <Link to="/admin/shippingCost" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/shippingCost')}`}>
             <Truck size={18} className="flex-shrink-0" />

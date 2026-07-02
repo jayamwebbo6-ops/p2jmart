@@ -49,7 +49,9 @@ export const useCart = () => {
       isComboProduct: Boolean(product.isComboProduct),
       includedProducts: product.includedProducts || [],
       weight: Number(product.weight || 0),
-      category: product.category || 'Catalog'
+      category: typeof product.category === 'object'
+        ? (product.category.name || product.category.title || product.category.id || 'Catalog')
+        : (product.category || 'Catalog')
     };
 
     try {

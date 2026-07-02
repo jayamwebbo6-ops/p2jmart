@@ -37,5 +37,35 @@ export const adminUpdateOrderStatusAPI = async (id, status, trackingData = {}) =
   return response.data;
 };
 
+// User: Submit return request for an item
+export const requestItemReturnAPI = async (orderId, itemId, returnData) => {
+  const response = await userApi.put(`/orders/${orderId}/items/${itemId}/return-request`, returnData);
+  return response.data;
+};
+
+// Admin: Approve or Reject a return request
+export const adminReviewReturnAPI = async (orderId, itemId, action) => {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { action });
+  return response.data;
+};
+
+// Admin: Mark returned item parcel as received
+export const adminReceiveParcelAPI = async (orderId, itemId) => {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/receive-parcel`);
+  return response.data;
+};
+
+// Admin: Process refund and finalize return for an item
+export const adminRefundItemAPI = async (orderId, itemId) => {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/refund-item`);
+  return response.data;
+};
+
+// Admin: Get all return requests
+export const adminGetReturnRequestsAPI = async () => {
+  const response = await api.get('/orders/admin/return-requests');
+  return response.data;
+};
+
 
 

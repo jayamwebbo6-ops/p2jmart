@@ -49,8 +49,8 @@ const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 const AdminAttributes = lazy(() => import('./pages/admin/Attributes'));
 const AdminEnquiries = lazy(() => import('./pages/admin/Enquiries'));
 const ShippingCostPage = lazy(() => import('./pages/admin/ShippingCostManager'));
-const CancelRequests = lazy(() => import('./pages/admin/CancelRequests'));
 const ComboPack = lazy(() => import('./pages/admin/ComboPack'));
+const ReturnRequests = lazy(() => import('./pages/admin/ReturnRequests'));
 
 // Lazy loading subcategory page
 const Subcategory = lazy(() => import('./pages/user/Subcategory'));
@@ -232,7 +232,7 @@ function App() {
             <Route path="shippingCost" element={<ShippingCostPage />} />
             <Route path="combo-pack" element={<ComboPack />} />
             <Route path="admin-coupons" element={<AdminCoupons/>} />
-            <Route path="cancel-requests" element={<CancelRequests />} />
+            <Route path="return-requests" element={<ReturnRequests />} />
 
             <Route path="attributes" element={<AdminAttributes />} />
             <Route path="enquiries" element={<AdminEnquiries />} />
