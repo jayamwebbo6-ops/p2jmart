@@ -31,90 +31,41 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '../../components/toast';
 import PageHeader from '../../components/PageHeader';
 import { getProductsAPI, updateProductAPI } from '../../api/productApi';
+import { adminGetAllOrdersAPI } from '../../api/orderApi';
+import { adminGetAllCustomersAPI } from '../../api/userApi';
 
-// 16 seeded mock orders to sum to exactly ₹17,648 and have 16 total orders
-const SEED_ORDERS = [
-  {
-    id: '#ORD-2026-025',
-    customerName: 'jayamweb.designer2',
-    email: 'jayamweb.designer2@gmail.com',
-    amount: 1500,
-    status: 'processing',
-    date: new Date(Date.now() - 3600000 * 1).toISOString()
-  },
-  {
-    id: '#ORD-2026-024',
-    customerName: 'jayamweb.designer2',
-    email: 'jayamweb.designer2@gmail.com',
-    amount: 1500,
-    status: 'cancelled',
-    date: new Date(Date.now() - 3600000 * 3).toISOString()
-  },
-  {
-    id: '#ORD-2026-023',
-    customerName: 'Mani Kandan R',
-    email: 'manikandan110305@gmail.com',
-    amount: 444,
-    status: 'processing',
-    date: new Date(Date.now() - 3600000 * 12).toISOString()
-  },
-  {
-    id: '#ORD-2026-022',
-    customerName: 'Mani Kandan R',
-    email: 'manikandan110305@gmail.com',
-    amount: 555,
-    status: 'shipped',
-    date: new Date(Date.now() - 3600000 * 24).toISOString()
-  },
-  {
-    id: '#ORD-2026-021',
-    customerName: 'Mani Kandan R',
-    email: 'manikandan110305@gmail.com',
-    amount: 599,
-    status: 'processing',
-    date: new Date(Date.now() - 3600000 * 30).toISOString()
-  },
-  { id: '#ORD-2026-020', customerName: 'Sridhar J', email: 'jayamproj@gmail.com', amount: 2000, status: 'shipped', date: '2026-06-12' },
-  { id: '#ORD-2026-019', customerName: 'Joy gift House', email: 'joygifthouse29@gmail.com', amount: 1200, status: 'processing', date: '2026-06-10' },
-  { id: '#ORD-2026-018', customerName: 'joytraders29', email: 'joytraders29@gmail.com', amount: 1500, status: 'shipped', date: '2026-06-08' },
-  { id: '#ORD-2026-017', customerName: 'Ananya Sharma', email: 'ananya.s@example.com', amount: 800, status: 'shipped', date: '2026-06-06' },
-  { id: '#ORD-2026-016', customerName: 'Rahul Verma', email: 'rahul.v@example.com', amount: 950, status: 'processing', date: '2026-06-05' },
-  { id: '#ORD-2026-015', customerName: 'Mani Kandan R', email: 'manikandan110305@gmail.com', amount: 1100, status: 'shipped', date: '2026-06-03' },
-  { id: '#ORD-2026-014', customerName: 'Sridhar J', email: 'jayamproj@gmail.com', amount: 1250, status: 'shipped', date: '2026-06-02' },
-  { id: '#ORD-2026-013', customerName: 'Joy gift House', email: 'joygifthouse29@gmail.com', amount: 1350, status: 'processing', date: '2026-05-30' },
-  { id: '#ORD-2026-012', customerName: 'joytraders29', email: 'joytraders29@gmail.com', amount: 900, status: 'shipped', date: '2026-05-28' },
-  { id: '#ORD-2026-011', customerName: 'Ananya Sharma', email: 'ananya.s@example.com', amount: 1000, status: 'shipped', date: '2026-05-25' },
-  { id: '#ORD-2026-010', customerName: 'Rahul Verma', email: 'rahul.v@example.com', amount: 1000, status: 'shipped', date: '2026-05-22' }
-];
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [orders, setOrders] = useState([]);
-  const [activeProductsCount, setActiveProductsCount] = useState(79);
-  const [storeCustomersCount, setStoreCustomersCount] = useState(6);
+
+  // All orders fetched from backend
+  const [allOrders, setAllOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+
+  const [activeProductsCount, setActiveProductsCount] = useState(0);
+  const [storeCustomersCount, setStoreCustomersCount] = useState(0);
 
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('Month');
-  const [revenueOverride, setRevenueOverride] = useState(null);
-  const [ordersOverride, setOrdersOverride] = useState(null);
 
-  // New Inventory / Low Stock Alert States
+  // Inventory / Low Stock Alert States
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [lowStockThreshold, setLowStockThreshold] = useState(() => {
     const saved = localStorage.getItem('p2j_mart_threshold');
     return saved ? parseInt(saved, 10) : 5;
   });
-  const [activeDashboardTab, setActiveDashboardTab] = useState('overview'); // 'overview' | 'low-stock'
+  const [activeDashboardTab, setActiveDashboardTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
-  const [stockFilterType, setStockFilterType] = useState('all'); // 'all' | 'out' | 'low'
-  
+  const [stockFilterType, setStockFilterType] = useState('all');
+
   // Inputs for restocking
-  const [restockInputs, setRestockInputs] = useState({}); // { [variantKey]: string }
-  const [restockLoading, setRestockLoading] = useState({}); // { [variantKey]: boolean }
+  const [restockInputs, setRestockInputs] = useState({});
+  const [restockLoading, setRestockLoading] = useState({});
   const [bulkRestockQty, setBulkRestockQty] = useState('20');
-  const [selectedItems, setSelectedItems] = useState([]); // Array of variantKeys
-  
+  const [selectedItems, setSelectedItems] = useState([]);
+
   // Persistent supplier notes and logs
   const [notes, setNotes] = useState(() => {
     const saved = localStorage.getItem('p2j_mart_supplier_notes');
@@ -125,26 +76,26 @@ const Dashboard = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const simulatePeriodChange = (period) => {
-    if (period === 'Today') {
-      setRevenueOverride(1500);
-      setOrdersOverride(1);
-    } else if (period === 'Yesterday') {
-      setRevenueOverride(1500);
-      setOrdersOverride(1);
-    } else if (period === 'Week') {
-      setRevenueOverride(4598);
-      setOrdersOverride(5);
-    } else if (period === 'Month') {
-      setRevenueOverride(null);
-      setOrdersOverride(null);
-    } else if (period === 'Year') {
-      setRevenueOverride(84590);
-      setOrdersOverride(82);
-    } else if (period === 'Custom') {
-      setRevenueOverride(12400);
-      setOrdersOverride(12);
-    }
+  // ─── Period filter helper ───────────────────────────────────────────────
+  const getFilteredOrders = (period, orders) => {
+    const now = new Date();
+    return orders.filter(ord => {
+      const placed = new Date(ord.placedDate || ord.createdAt);
+      if (period === 'Today') {
+        return placed.toDateString() === now.toDateString();
+      } else if (period === 'Yesterday') {
+        const y = new Date(now); y.setDate(y.getDate() - 1);
+        return placed.toDateString() === y.toDateString();
+      } else if (period === 'Week') {
+        const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
+        return placed >= weekAgo;
+      } else if (period === 'Month') {
+        return placed.getMonth() === now.getMonth() && placed.getFullYear() === now.getFullYear();
+      } else if (period === 'Year') {
+        return placed.getFullYear() === now.getFullYear();
+      }
+      return true; // 'All' / fallback
+    });
   };
 
   const fetchProductsData = async () => {
@@ -252,36 +203,31 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // 1. Load or seed orders
-    const storedOrders = localStorage.getItem('p2j_mart_orders');
-    if (storedOrders) {
+    // 1. Fetch real orders from backend
+    const fetchOrders = async () => {
+      setLoadingOrders(true);
       try {
-        const parsed = JSON.parse(storedOrders);
-        if (parsed.length > 0) {
-          setOrders(parsed);
-        } else {
-          setOrders(SEED_ORDERS);
-          localStorage.setItem('p2j_mart_orders', JSON.stringify(SEED_ORDERS));
-        }
-      } catch (e) {
-        setOrders(SEED_ORDERS);
-        localStorage.setItem('p2j_mart_orders', JSON.stringify(SEED_ORDERS));
+        const res = await adminGetAllOrdersAPI();
+        if (res && res.success) setAllOrders(res.data || []);
+      } catch (err) {
+        console.error('Dashboard: failed to load orders', err);
+      } finally {
+        setLoadingOrders(false);
       }
-    } else {
-      setOrders(SEED_ORDERS);
-      localStorage.setItem('p2j_mart_orders', JSON.stringify(SEED_ORDERS));
-    }
+    };
 
-    // 2. Count customers dynamically
-    const storedCustomers = localStorage.getItem('p2j_mart_customers');
-    if (storedCustomers) {
+    // 2. Fetch real customers from backend
+    const fetchCustomers = async () => {
       try {
-        const parsed = JSON.parse(storedCustomers);
-        setStoreCustomersCount(parsed.length || 6);
-      } catch (e) {}
-    }
+        const res = await adminGetAllCustomersAPI();
+        if (res && res.success) setStoreCustomersCount((res.data || []).length);
+      } catch (err) {
+        console.error('Dashboard: failed to load customers', err);
+      }
+    };
 
-    // 3. Load product database
+    fetchOrders();
+    fetchCustomers();
     fetchProductsData();
   }, []);
 
@@ -680,8 +626,14 @@ const Dashboard = () => {
     }).format(value);
   };
 
-  const totalRevenueVal = revenueOverride !== null ? revenueOverride : orders.reduce((sum, ord) => sum + (ord.amount || ord.total || 0), 0);
-  const totalOrdersVal = ordersOverride !== null ? ordersOverride : orders.length;
+  // Compute stats from real filtered orders
+  const filteredOrders = getFilteredOrders(dateFilter, allOrders);
+  const totalRevenueVal = filteredOrders.reduce((sum, ord) => sum + (ord.total || 0), 0);
+  const totalOrdersVal = filteredOrders.length;
+  // Most recent 5 for the activity table
+  const recentOrders = [...allOrders]
+    .sort((a, b) => new Date(b.placedDate || b.createdAt) - new Date(a.placedDate || a.createdAt))
+    .slice(0, 5);
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen bg-[#f4f5f8] p-4 -m-4">
@@ -720,7 +672,6 @@ const Dashboard = () => {
                       onClick={() => {
                         setDateFilter(opt);
                         setIsFilterDropdownOpen(false);
-                        simulatePeriodChange(opt);
                       }}
                       className={`w-full text-left px-4 py-2.5 rounded-2xl text-xs font-bold transition-all ${
                         isActive 
@@ -745,9 +696,9 @@ const Dashboard = () => {
           <div className="flex flex-col">
             <span className="text-xs font-bold text-slate-500">Total Revenue</span>
             <span className="text-[28px] font-black text-slate-900 mt-2 tracking-tight">
-              {formatCurrency(totalRevenueVal || 17648)}
+              {loadingOrders ? '...' : formatCurrency(totalRevenueVal)}
             </span>
-            <span className="text-[11px] font-semibold text-gray-400 mt-2">Based on selected period</span>
+            <span className="text-[11px] font-semibold text-gray-400 mt-2">{dateFilter} — live from database</span>
           </div>
           <div className="w-12 h-12 rounded-[16px] border border-gray-250 flex items-center justify-center text-slate-700 shrink-0">
             <Wallet size={20} strokeWidth={1.5} />
@@ -759,9 +710,9 @@ const Dashboard = () => {
           <div className="flex flex-col">
             <span className="text-xs font-bold text-purple-500">Total Orders</span>
             <span className="text-[28px] font-black text-slate-900 mt-2 tracking-tight">
-              {totalOrdersVal || 16}
+              {loadingOrders ? '...' : totalOrdersVal}
             </span>
-            <span className="text-[11px] font-semibold text-gray-400 mt-2">Based on selected period</span>
+            <span className="text-[11px] font-semibold text-gray-400 mt-2">{dateFilter} — live from database</span>
           </div>
           <div className="w-12 h-12 rounded-[16px] bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
             <ShoppingBag size={20} strokeWidth={1.5} />
@@ -866,33 +817,44 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50/50">
-                    {orders.slice(0, 5).map((ord) => {
-                      const isProcessing = ord.status.toLowerCase() === 'processing';
-                      const isCancelled = ord.status.toLowerCase() === 'cancelled';
-                      const isShipped = ord.status.toLowerCase() === 'shipped';
-                      
-                      let badgeClass = 'bg-slate-50 text-slate-500';
-                      if (isProcessing) badgeClass = 'bg-[#edf2fe] text-[#2b6cb0]';
-                      if (isCancelled) badgeClass = 'bg-[#f7fafc] text-[#718096]';
-                      if (isShipped) badgeClass = 'bg-[#edf2fe] text-[#2b6cb0]';
-                      
+                    {loadingOrders ? (
+                      <tr><td colSpan="5" className="text-center py-10">
+                        <div className="flex items-center justify-center gap-2 text-gray-400">
+                          <RefreshCw size={14} className="animate-spin" />
+                          <span className="text-xs font-semibold">Loading orders...</span>
+                        </div>
+                      </td></tr>
+                    ) : recentOrders.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center py-8 text-gray-400 font-medium">No orders found in database.</td></tr>
+                    ) : recentOrders.map((ord) => {
+                      const statusLower = (ord.status || '').toLowerCase();
+                      const badgeColorMap = {
+                        processing: 'bg-yellow-50 text-yellow-700',
+                        pending:    'bg-amber-50 text-amber-700',
+                        shipped:    'bg-blue-50 text-blue-700',
+                        delivered:  'bg-green-50 text-green-700',
+                        cancelled:  'bg-red-50 text-red-500',
+                      };
+                      const badgeClass = badgeColorMap[statusLower] || 'bg-slate-50 text-slate-500';
+                      const customerName = ord.shippingAddress?.fullName || 'Customer';
+                      const customerPhone = ord.shippingAddress?.phoneNumber || '';
                       return (
-                        <tr key={ord.id} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="py-4 font-bold text-slate-900">{ord.id}</td>
+                        <tr key={ord._id} className="hover:bg-slate-50/30 transition-colors">
+                          <td className="py-4 font-bold text-slate-900 font-mono text-[11px]">{ord.orderId}</td>
                           <td className="py-4">
                             <div className="flex flex-col">
-                              <span className="font-extrabold text-slate-900">{ord.customerName}</span>
-                              <span className="text-[10px] text-gray-400 mt-0.5">{ord.email}</span>
+                              <span className="font-extrabold text-slate-900">{customerName}</span>
+                              <span className="text-[10px] text-gray-400 mt-0.5">{customerPhone}</span>
                             </div>
                           </td>
-                          <td className="py-4 font-extrabold text-slate-900">{formatCurrency(ord.amount)}</td>
+                          <td className="py-4 font-extrabold text-slate-900">{formatCurrency(ord.total || 0)}</td>
                           <td className="py-4 text-center">
-                            <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold lowercase tracking-normal ${badgeClass}`}>
+                            <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-[10px] font-bold tracking-normal ${badgeClass}`}>
                               {ord.status}
                             </span>
                           </td>
                           <td className="py-4 text-center">
-                            <button 
+                            <button
                               onClick={() => navigate('/admin/orders')}
                               className="w-7 h-7 rounded-full bg-slate-50 border border-gray-150 hover:bg-slate-100 text-slate-400 hover:text-slate-650 flex items-center justify-center transition-colors mx-auto"
                               title="View Order"
@@ -903,11 +865,6 @@ const Dashboard = () => {
                         </tr>
                       );
                     })}
-                    {orders.length === 0 && (
-                      <tr>
-                        <td colSpan="5" className="text-center py-8 text-gray-400 font-medium">No recent activity found.</td>
-                      </tr>
-                    )}
                   </tbody>
                 </table>
               </div>

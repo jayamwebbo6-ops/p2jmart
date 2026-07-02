@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Ticket, 
   CheckCircle2, 
@@ -11,57 +11,30 @@ import {
   UserCheck,
   RefreshCw
 } from 'lucide-react';
-
-// Adjusted Data Object schema matching your admin backend fields precisely
-const INITIAL_COUPONS = [
-  {
-    id: 'CPN-7729',
-    code: 'FURN5000',
-    status: 'Active',
-    discountType: 'Fixed Amount (₹)',
-    discountValue: 5000,
-    maxDiscountAmount: 0, 
-    minOrderAmount: 45000,
-    validityFrom: '2026-06-01',
-    validityTo: '2026-06-30',
-    title: 'Flat ₹5,000 Off on Premium Velvet Furniture',
-    applicableForActiveUsersOnly: true, // Auto background flag
-    isSingleUse: true // Auto background flag
-  },
-  {
-    id: 'CPN-1094',
-    code: 'TECHMAX10',
-    status: 'Active',
-    discountType: 'Percentage (%)',
-    discountValue: 10,
-    maxDiscountAmount: 2000,
-    minOrderAmount: 15000,
-    validityFrom: '2026-06-25',
-    validityTo: '2026-07-05',
-    title: '10% Off on Smart Devices up to ₹2,000',
-    applicableForActiveUsersOnly: true,
-    isSingleUse: true
-  },
-  {
-    id: 'CPN-4412',
-    code: 'OLDDEAL',
-    status: 'Inactive',
-    discountType: 'Fixed Amount (₹)',
-    discountValue: 200,
-    maxDiscountAmount: 0,
-    minOrderAmount: 999,
-    validityFrom: '2026-01-01',
-    validityTo: '2026-03-31',
-    title: 'Extra ₹200 Off on your store order',
-    applicableForActiveUsersOnly: true,
-    isSingleUse: true
-  }
-];
+import { getAllCouponsAPI } from '../../api/couponApi';
 
 const Coupons = () => {
-  const [coupons] = useState(INITIAL_COUPONS);
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all'); // tabs: all, active, inactive
   const [copiedId, setCopiedId] = useState(null);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        setLoading(true);
+        const res = await getAllCouponsAPI();
+        if (res && res.success) {
+          setCoupons(res.data);
+        }
+      } catch (err) {
+        console.error('Error fetching coupons:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCoupons();
+  }, []);
 
   const handleCopyCode = (id, code) => {
     navigator.clipboard.writeText(code);
@@ -78,6 +51,7 @@ const Coupons = () => {
   });
 
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return new Date(dateString).toLocaleDateString('en-IN', options);
   };
@@ -126,7 +100,7 @@ const Coupons = () => {
 
               return (
                 <div 
-                  key={coupon.id} 
+                  key={coupon._id} 
                   className={`bg-white rounded-2xl flex border transition-all duration-300 relative shadow-2xs group ${
                     !isCouponActive ? 'opacity-65 grayscale border-slate-200' : 'border-slate-200 hover:border-slate-300 hover:shadow-xs'
                   }`}
@@ -180,7 +154,7 @@ const Coupons = () => {
                         <button
                           type="button"
                           disabled={!isCouponActive}
-                          onClick={() => handleCopyCode(coupon.id, coupon.code)}
+                          onClick={() => handleCopyCode(coupon._id, coupon.code)}
                           className={`bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 select-none transition-all group/code ${
                             isCouponActive ? 'hover:bg-slate-100 active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-50'
                           }`}
@@ -188,7 +162,7 @@ const Coupons = () => {
                           <span className="font-mono text-xs font-black text-slate-700 tracking-wide">
                             {coupon.code}
                           </span>
-                          {copiedId === coupon.id ? (
+                          {copiedId === coupon._id ? (
                             <span className="text-[9px] text-emerald-600 font-bold animate-fadeIn">Copied!</span>
                           ) : (
                             isCouponActive && <Copy size={11} className="text-slate-400 group-hover/code:text-slate-600" />

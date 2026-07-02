@@ -792,8 +792,14 @@ const OrderManagement = () => {
 
       {/* OVERLAY COMPLETE DETAILED MODAL POPUP VIEW */}
       {isModalOpen && selectedOrder && (
-        <div className="fixed inset-0 pt-79 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-40 transition-opacity overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-100 overflow-hidden my-8 flex flex-col">
+        <div 
+          onClick={() => setIsModalOpen(false)}
+          className="fixed inset-0 pt-79 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-40 transition-opacity overflow-y-auto"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-100 overflow-hidden my-8 flex flex-col"
+          >
             
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-800">Order Details</h2>
@@ -1154,12 +1160,18 @@ const OrderManagement = () => {
 
       {/* FULLSCREEN ZOOM POPUP */}
       {fullscreenImage && (
-        <div className="fixed inset-0 bg-slate-950/95 flex flex-col items-center justify-center z-50 p-4">
-          <div className="absolute top-4 right-4 flex items-center gap-3">
+        <div 
+          onClick={() => setFullscreenImage(null)}
+          className="fixed inset-0 bg-slate-950/95 flex flex-col items-center justify-center z-50 p-4"
+        >
+          <div className="absolute top-4 right-4 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
             <button type="button" onClick={() => handleDownloadAsset(fullscreenImage, 'fullscreen-custom-asset.jpg')} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors"><Download size={20} /></button>
             <button type="button" onClick={() => setFullscreenImage(null)} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors"><X size={20} /></button>
           </div>
-          <div className="max-w-3xl max-h-[80vh] overflow-hidden rounded-xl border border-slate-800 bg-black flex items-center justify-center">
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-3xl max-h-[80vh] overflow-hidden rounded-xl border border-slate-800 bg-black flex items-center justify-center"
+          >
             <img src={fullscreenImage} alt="Fullscreen View" className="max-w-full max-h-[80vh] object-contain" />
           </div>
         </div>
@@ -1167,8 +1179,14 @@ const OrderManagement = () => {
 
       {/* TRACKING DETAILS MODAL */}
       {isTrackingModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden flex flex-col">
+        <div 
+          onClick={() => setIsTrackingModalOpen(false)}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl w-full max-w-md shadow-2xl border border-slate-100 overflow-hidden flex flex-col"
+          >
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-800">Enter Shipping & Tracking Details</h2>
               <button onClick={() => setIsTrackingModalOpen(false)} type="button" className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"><X size={18} /></button>
