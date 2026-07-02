@@ -10,32 +10,14 @@ export default function ReviewModal({ isOpen, onClose, item, formatImageUrl, onS
   const [isEditable, setIsEditable] = useState(true);
   const [timeWarning, setTimeWarning] = useState('');
 
-  // Inside ReviewModal Component...
 
-// 1. Safe extraction logic for review payloads on Combos and Regular products
-const myReview = item?.existingReview || 
-                 item?.myReview || 
-                 (item?.reviews && Array.isArray(item.reviews) ? item.reviews.find(r => r.isCurrentUser) : null) || 
-                 (item?.reviewList && Array.isArray(item.reviewList) ? item.reviewList.find(r => r.user === userObjectId) : null) ||
-                 null;
+const myReview = item?.existingReview || item?.myReview || null;
 
-// Combos use schema 'reviews' as the array field; Products use 'reviewList'. Let's group them:
-const allReviews = item?.productReviews || 
-                   item?.productId?.reviews || 
-                   item?.reviewList ||
-                   (Array.isArray(item?.reviews) ? item.reviews : []) || 
-                   [];
+const allReviews = Array.isArray(item?.productReviews) ? item.productReviews : [];
 
-// 2. Identify if target represents a compound combo pack item
-const isComboItem = !!(
-  item?.isComboProduct ||
-  (Array.isArray(item?.includedProducts) && item.includedProducts.length > 0) ||
-  item?.selectedItemIds ||
-  item?.selectedVariants
-);
+const isComboItem = !!item?.isComboProduct;
 
-const resolveItemId = () =>
-  item.itemId || item.productId?._id || item.productId || item.id || item._id;
+const resolveItemId = () => item?.itemId || item?.productId?._id || item?.productId;
 
 const handleSubmit = async (e) => {
   e.preventDefault();
@@ -49,11 +31,13 @@ const handleSubmit = async (e) => {
   setSubmitting(true);
   try {
     await onSubmit({
-      itemId: resolveItemId(),
-      rating,
-      description,
-      isCombo: isComboItem // 
-    });
+  itemId: resolveItemId(),
+  orderId: item.orderId,
+  orderItemId: item.orderItemId || item._id,
+  rating,
+  description,
+  isCombo: isComboItem
+});
     onClose();
   } catch (error) {
     console.error("Failed to submit review:", error);
@@ -105,7 +89,12 @@ const handleSubmit = async (e) => {
     if (!window.confirm("Delete your review? This cannot be undone.")) return;
     setDeleting(true);
     try {
-      await onDelete(resolveItemId());
+      await onDelete({
+  productId: resolveItemId(),
+  orderId: item.orderId,
+  orderItemId: item.orderItemId || item._id,
+  isCombo: isComboItem
+});
     } catch (error) {
       console.error("Failed to delete review:", error);
     } finally {

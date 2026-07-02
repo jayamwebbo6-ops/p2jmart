@@ -206,90 +206,125 @@ const OrderDetails = () => {
   // status so the buttons correctly say "Edit Review" vs "Review Product"
   // without waiting for the user to open the modal first.
   useEffect(() => {
-    const loadReviewStatuses = async () => {
-      if (!order || order.status !== 'Delivered' || !order.items?.length) return;
+  const loadReviewStatuses = async () => {
+    if (!order || order.status !== "Delivered" || !order.items?.length) return;
 
-      const uniqueProductIds = [...new Set(order.items.map(resolveProductId))].filter(Boolean);
+    const entries = await Promise.all(
+      order.items.map(async (item) => {
+        const productId = resolveProductId(item);
+        const orderItemId = item._id;
 
-      const entries = await Promise.all(
-        uniqueProductIds.map(async (pid) => {
-          try {
-            const res = await getProductReviewsAPI(pid);
-            return [pid, res.success ? res.data.myReview : null];
-          } catch (err) {
-            return [pid, null];
-          }
-        })
-      );
+        try {
+          const res = await getProductReviewsAPI(
+            productId,
+            order._id,
+            orderItemId,
+            item.isComboProduct
+          );
 
-      setReviewStatusMap(Object.fromEntries(entries));
-    };
+          return [orderItemId, res.success ? res.data.myReview : null];
+        } catch (err) {
+          return [orderItemId, null];
+        }
+      })
+    );
 
-    loadReviewStatuses();
-  }, [order]);
+    setReviewStatusMap(Object.fromEntries(entries));
+  };
+
+  loadReviewStatuses();
+}, [order]);
 
   const openReviewModal = async (item) => {
-    const productId = resolveProductId(item);
-    setSelectedReviewItem({ ...item, itemId: productId });
-    setIsReviewModalOpen(true);
+  const productId = resolveProductId(item);
+  const orderItemId = item._id;
 
-    try {
-      const res = await getProductReviewsAPI(productId);
-      if (res.success) {
-        setSelectedReviewItem(prev => ({
-          ...prev,
-          productReviews: res.data.reviews,
-          existingReview: res.data.myReview
-        }));
-        setReviewStatusMap(prev => ({ ...prev, [productId]: res.data.myReview }));
-      }
-    } catch (err) {
-      console.error("Failed to load reviews:", err);
-      toast.error("Could not load review details.");
+ setSelectedReviewItem({
+  ...item,
+  itemId: productId,
+  orderId: order._id,
+  orderItemId: item._id,
+  isComboProduct: item.isComboProduct
+});
+
+  setIsReviewModalOpen(true);
+
+  try {
+    const res = await getProductReviewsAPI(
+      productId,
+      order._id,
+      orderItemId,
+      item.isComboProduct
+    );
+
+    if (res.success) {
+      setSelectedReviewItem(prev => ({
+        ...prev,
+        productReviews: res.data.reviews,
+        existingReview: res.data.myReview
+      }));
+
+      setReviewStatusMap(prev => ({
+        ...prev,
+        [orderItemId]: res.data.myReview
+      }));
     }
-  };
+  } catch (err) {
+    console.error("Failed to load reviews:", err);
+    toast.error("Could not load review details.");
+  }
+};
 
-  const handleReviewSubmit = async (reviewPayload) => {
-    try {
-      const response = await addProductReviewAPI({
-        productId: reviewPayload.itemId,
-        rating: reviewPayload.rating,
-        description: reviewPayload.description
-      });
+ const handleReviewSubmit = async (reviewPayload) => {
+  try {
+    const response = await addProductReviewAPI({
+      productId: reviewPayload.itemId,
+      orderId: reviewPayload.orderId,
+      orderItemId: reviewPayload.orderItemId,
+      rating: reviewPayload.rating,
+      description: reviewPayload.description,
+      isCombo: reviewPayload.isCombo
+    });
 
-      if (response.success) {
-        toast.success(response.message || "Review posted successfully!");
-        // Refresh this product's status so the button label updates immediately
-        setReviewStatusMap(prev => ({
-          ...prev,
-          [reviewPayload.itemId]: {
-            rating: reviewPayload.rating,
-            description: reviewPayload.description,
-            createdAt: new Date().toISOString()
-          }
-        }));
-      }
-    } catch (error) {
-      console.error("Review Submission Error:", error);
-      toast.error(error.response?.data?.message || "Could not submit your review.");
-      throw error;
+    if (response.success) {
+      toast.success(response.message || "Review posted successfully!");
+
+      setReviewStatusMap(prev => ({
+        ...prev,
+        [reviewPayload.orderItemId]: response.data || {
+          rating: reviewPayload.rating,
+          description: reviewPayload.description,
+          createdAt: new Date().toISOString()
+        }
+      }));
     }
-  };
+  } catch (error) {
+    console.error("Review Submission Error:", error);
+    toast.error(error.response?.data?.message || "Could not submit your review.");
+    throw error;
+  }
+};
 
-  const handleReviewDelete = async (productId) => {
-    try {
-      const response = await deleteProductReviewAPI(productId);
-      if (response.success) {
-        toast.success("Review deleted.");
-        setReviewStatusMap(prev => ({ ...prev, [productId]: null }));
-        setIsReviewModalOpen(false);
-        setSelectedReviewItem(null);
-      }
-    } catch (error) {
-      console.error("Review Delete Error:", error);
-      toast.error(error.response?.data?.message || "Could not delete your review.");
+  const handleReviewDelete = async ({ productId, orderId, orderItemId, isCombo }) => {
+  try {
+    const response = await deleteProductReviewAPI({
+      productId,
+      orderId,
+      orderItemId,
+      isCombo
+    });
+
+    if (response.success) {
+      toast.success("Review deleted.");
+      setReviewStatusMap(prev => ({ ...prev, [orderItemId]: null }));
+      setIsReviewModalOpen(false);
+      setSelectedReviewItem(null);
     }
-  };
+  } catch (error) {
+    console.error("Review Delete Error:", error);
+    toast.error(error.response?.data?.message || "Could not delete your review.");
+  }
+};
 
   const handleCancelConfirm = async () => {
     try {
@@ -581,8 +616,9 @@ const OrderDetails = () => {
 
               <div className="space-y-4">
                 {order.items?.map((item, index) => {
-                  const productId = resolveProductId(item);
-                  const hasReview = !!reviewStatusMap[productId];
+                 const productId = resolveProductId(item);
+                 const orderItemId = item._id;
+                 const hasReview = !!reviewStatusMap[orderItemId];
 
                   return (
                     <div key={index} className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
@@ -730,7 +766,7 @@ const OrderDetails = () => {
         confirmText="Cancel Order"
         isDanger={true}
       />
-
+       
       <ReviewModal
         isOpen={isReviewModalOpen}
         onClose={() => { setIsReviewModalOpen(false); setSelectedReviewItem(null); }}
