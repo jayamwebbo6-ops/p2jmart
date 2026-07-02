@@ -40,26 +40,35 @@ export const toggleProductStatusAPI = async (id) => {
 // 🌟 Post a product review safely through your initialized API module instance
 
 export const addProductReviewAPI = async (reviewData) => {
-  // Expects reviewData: { productId, rating, description, isCombo }
   const response = await userApi.post('/reviews/add', reviewData);
   return response.data;
 };
 
-// 2. Edit Existing Review
+
 export const editProductReviewAPI = async (reviewData) => {
   const response = await userApi.put('/reviews/edit', reviewData);
   return response.data;
 };
 
-// 3. Delete Review
-export const deleteProductReviewAPI = async (productId, isCombo = false) => {
-  const response = await userApi.delete('/reviews/delete', { 
-    data: { productId, isCombo } 
+export const deleteProductReviewAPI = async ({ productId, orderId, orderItemId, isCombo = false }) => {
+  const response = await userApi.delete('/reviews/delete', {
+    data: {
+      productId,
+      orderId,
+      orderItemId,
+      isCombo
+    }
   });
   return response.data;
 };
 
-export const getProductReviewsAPI = async (productId) => {
-  const response = await userApi.get(`/reviews/${productId}`);
+export const getProductReviewsAPI = async (productId, orderId, orderItemId, isCombo = false) => {
+  const response = await userApi.get(`/reviews/${productId}`, {
+    params: {
+      orderId,
+      orderItemId,
+      isCombo
+    }
+  });
   return response.data;
 };
