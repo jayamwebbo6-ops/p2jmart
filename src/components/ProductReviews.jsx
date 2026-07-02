@@ -92,14 +92,18 @@ export default function ProductReviews({ productId, initialRating = 0, initialRe
               <span className="text-4xl font-black text-gray-900">{stats.average.toFixed(1)}</span>
               <div>
                 <div className="flex text-amber-400 mb-1">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={16}
-                      fill={i < Math.round(stats.average) ? "currentColor" : "none"}
-                      className={i < Math.round(stats.average) ? '' : 'text-gray-300'}
-                    />
-                  ))}
+                  {[1, 2, 3, 4, 5].map((starValue) => {
+                    const isFull = stats.average >= starValue;
+                    const isHalf = !isFull && stats.average >= starValue - 0.5;
+                    return (
+                      <Star
+                        key={starValue}
+                        size={16}
+                        fill={isFull ? "currentColor" : "none"}
+                        className={isFull ? "text-amber-400" : isHalf ? "text-amber-400 opacity-50" : "text-gray-300"}
+                      />
+                    );
+                  })}
                 </div>
                 <p className="text-xs text-gray-500 font-medium">
                   {displayTotal} Customer Review{displayTotal !== 1 ? 's' : ''}
@@ -141,6 +145,8 @@ export default function ProductReviews({ productId, initialRating = 0, initialRe
                   .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                   .map((rev, index) => {
                     const name = rev.name || rev.userName || rev.user?.name || 'Verified Buyer';
+                    const currentRating = rev.rating || 0;
+
                     return (
                       <div key={rev._id || index} className="border border-gray-100 rounded-xl p-4 hover:border-gray-200 transition-colors">
                         <div className="flex items-start gap-3">
@@ -160,9 +166,15 @@ export default function ProductReviews({ productId, initialRating = 0, initialRe
                               </span>
                             </div>
 
-                            <div className="flex items-center gap-0.5 text-amber-400 mt-1.5 mb-2">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={13} className={i < (rev.rating || 0) ? 'fill-current' : 'text-gray-200'} />
+                            {/* FIXED: Individual Real Data Stars Loop */}
+                            <div className="flex items-center text-amber-400 mt-1.5 mb-2">
+                              {[1, 2, 3, 4, 5].map((starValue) => (
+                                <Star 
+                                  key={starValue} 
+                                  size={13} 
+                                  fill={starValue <= currentRating ? 'currentColor' : 'none'} 
+                                  className={starValue <= currentRating ? 'text-amber-400' : 'text-gray-200'} 
+                                />
                               ))}
                             </div>
 
