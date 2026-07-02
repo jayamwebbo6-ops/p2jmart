@@ -48,19 +48,28 @@ const returnPolicyOptions = [
 ];
 
 const ComboPacks = () => {
-  const getComboVariantDetails = (combo, prod) => {
+  // specificVariantId: when provided, resolves that exact variant instead of the first match
+  const getComboVariantDetails = (combo, prod, specificVariantId = null) => {
     if (!prod) return { title: '', price: 0, stock: 0, image: '', weight: 0 };
     const prodId = prod._id || prod.id;
-    const sv = combo?.selectedVariants?.find(svRef => (svRef.productId?._id || svRef.productId?.id || svRef.productId) === prodId);
-    
-    if (sv && prod.variants && prod.variants.length > 0) {
-      const variant = prod.variants.find(v => v.id === sv.variantId);
+
+    // Determine which variantId to use
+    let resolvedVariantId = specificVariantId;
+    if (!resolvedVariantId) {
+      // Fall back to the first sv match for this product (legacy / table row usage)
+      const sv = combo?.selectedVariants?.find(
+        svRef => (svRef.productId?._id || svRef.productId?.id || svRef.productId) === prodId
+      );
+      resolvedVariantId = sv?.variantId;
+    }
+
+    if (resolvedVariantId && prod.variants && prod.variants.length > 0) {
+      const variant = prod.variants.find(v => v.id === resolvedVariantId);
       if (variant) {
         const attrStr = Object.values(variant.attributes || {})
           .filter(val => val && val !== 'Default')
           .map(val => val.includes('|') ? val.split('|')[0] : val)
           .join(' / ');
-        
         return {
           title: attrStr ? `${prod.title} (${attrStr})` : prod.title,
           price: variant.price || prod.price || 0,
@@ -70,7 +79,7 @@ const ComboPacks = () => {
         };
       }
     }
-    
+
     return {
       title: prod.title || prod.name || '',
       price: prod.variants?.[0]?.price || prod.price || 0,
@@ -79,52 +88,6 @@ const ComboPacks = () => {
       weight: prod.weight || 0
     };
   };
-
-
-  const getComboVariantItems = (combo, products = availableProducts) => {
-  if (!combo?.selectedVariants || !Array.isArray(combo.selectedVariants)) return [];
-
-  return combo.selectedVariants.map((sv, index) => {
-    const productId = sv.productId?._id || sv.productId?.id || sv.productId;
-    const product =
-      products.find(p => (p._id || p.id) === productId) ||
-      (combo.selectedItemIds || []).find(p => (p?._id || p?.id) === productId);
-
-    if (!product) {
-      return {
-        key: `${productId}-${sv.variantId}-${index}`,
-        productId,
-        variantId: sv.variantId,
-        title: 'Unknown Product',
-        price: 0,
-        stock: 0,
-        image: '',
-        weight: 0
-      };
-    }
-
-    const variant =
-      product.variants?.find(v => v.id === sv.variantId) || null;
-
-    const attrStr = variant
-      ? Object.values(variant.attributes || {})
-          .filter(val => val && val !== 'Default')
-          .map(val => (val.includes('|') ? val.split('|')[0] : val))
-          .join(' / ')
-      : '';
-
-    return {
-      key: `${productId}-${sv.variantId}-${index}`,
-      productId,
-      variantId: sv.variantId,
-      title: attrStr ? `${product.title} (${attrStr})` : product.title,
-      price: variant?.price ?? product.price ?? 0,
-      stock: variant?.stock ?? product.stock ?? 0,
-      image: variant?.image || product.image || '',
-      weight: variant?.weight ?? product.weight ?? 0
-    };
-  });
-};
 
   const [combos, setCombos] = useState([]);
   const [availableProducts, setAvailableProducts] = useState([]);
@@ -491,30 +454,33 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
   });
 
   const handleVariantSelectionToggle = (productId, variantId) => {
-  setFormData(prev => {
-    const isSelected = prev.selectedVariants.some(
-      sv => sv.productId === productId && sv.variantId === variantId
-    );
-
-    let updatedVariants;
-    if (isSelected) {
-      updatedVariants = prev.selectedVariants.filter(
-        sv => !(sv.productId === productId && sv.variantId === variantId)
+    setFormData(prev => {
+      const isSelected = prev.selectedVariants.some(
+        sv => sv.productId === productId && sv.variantId === variantId
       );
-    } else {
-      updatedVariants = [...prev.selectedVariants, { productId, variantId }];
-    }
 
-    // IMPORTANT:
-    // allow same product multiple times if different variants are selected
-    const updatedProductIds = updatedVariants.map(sv => sv.productId);
+      let updatedVariants;
+      if (isSelected) {
+        // Remove this specific variant
+        updatedVariants = prev.selectedVariants.filter(
+          sv => !(sv.productId === productId && sv.variantId === variantId)
+        );
+      } else {
+        // Add this variant — same product can appear multiple times with different variantIds
+        updatedVariants = [...prev.selectedVariants, { productId, variantId }];
+      }
 
-    const collectiveSum = updatedVariants.reduce((sum, sv) => {
-      const found = allVariantsList.find(
-        v => v.productId === sv.productId && v.variantId === sv.variantId
-      );
-      return sum + (found ? Number(found.price || 0) : 0);
-    }, 0);
+      // selectedItemIds keeps ONE entry per productId (for backend compatibility)
+      // but selectedVariants is the authoritative list for bundle composition
+      const updatedProductIds = [...new Set(updatedVariants.map(sv => sv.productId))];
+
+      // Auto-sum total price from all selected variants
+      const collectiveSum = updatedVariants.reduce((sum, sv) => {
+        const found = allVariantsList.find(
+          v => v.productId === sv.productId && v.variantId === sv.variantId
+        );
+        return sum + (found ? found.price : 0);
+      }, 0);
 
     return {
       ...prev,
@@ -647,7 +613,22 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
               
               <div className="md:col-span-7 flex flex-col border border-gray-100 rounded-xl overflow-hidden bg-white shadow-2xs">
                 <div className="p-3 bg-gray-50 border-b border-gray-100 font-bold text-primary flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <span>Select Variants to Bundle</span>
+                  <div className="flex flex-col">
+                    <span>Select Variants to Bundle</span>
+                    {formData.selectedVariants.length > 0 && (
+                      <span className="text-[10px] font-semibold text-emerald-600 mt-0.5">
+                        ✓ {formData.selectedVariants.length} variant{formData.selectedVariants.length > 1 ? 's' : ''} selected
+                        {(() => {
+                          const sameProdCount = formData.selectedVariants.reduce((acc, sv) => {
+                            acc[sv.productId] = (acc[sv.productId] || 0) + 1;
+                            return acc;
+                          }, {});
+                          const multiCount = Object.values(sameProdCount).filter(c => c > 1).length;
+                          return multiCount > 0 ? ` (${multiCount} product${multiCount > 1 ? 's' : ''} with multiple variants)` : '';
+                        })()}
+                      </span>
+                    )}
+                  </div>
                   <input 
                     type="text"
                     placeholder="Search variants..."
@@ -660,14 +641,28 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
                   <table className="w-full text-left text-xs font-semibold">
                     <tbody className="divide-y divide-gray-100">
                       {filteredVariantsForBundle.map((v) => {
-                        const isChecked = formData.selectedVariants.some(sv => sv.productId === v.productId && sv.variantId === v.variantId);
+                        const isChecked = formData.selectedVariants.some(
+                          sv => sv.productId === v.productId && sv.variantId === v.variantId
+                        );
+                        // Check if another variant of THIS same product is already selected
+                        const sameProductSelectedCount = formData.selectedVariants.filter(
+                          sv => sv.productId === v.productId
+                        ).length;
+                        const hasSiblingSelected = sameProductSelectedCount > 0 && !isChecked;
+
                         return (
-                          <tr key={`${v.productId}-${v.variantId}`} className="hover:bg-slate-50/60">
+                          <tr
+                            key={`${v.productId}-${v.variantId}`}
+                            className={`hover:bg-slate-50/60 ${
+                              isChecked ? 'bg-emerald-50/50' : hasSiblingSelected ? 'bg-blue-50/30' : ''
+                            }`}
+                          >
                             <td className="py-3 px-3">
                               <input 
                                 type="checkbox" 
                                 checked={isChecked} 
                                 onChange={() => handleVariantSelectionToggle(v.productId, v.variantId)} 
+                                className="accent-primary cursor-pointer w-3.5 h-3.5"
                               />
                             </td>
                             <td className="py-3 px-3">
@@ -678,7 +673,19 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
                               )}
                             </td>
                             <td className="py-3 px-3">
-                              <div className="font-bold text-primary">{v.title}</div>
+                              <div className="font-bold text-primary flex items-center gap-1.5">
+                                {v.title}
+                                {hasSiblingSelected && (
+                                  <span className="text-[8px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-bold">
+                                    +add more
+                                  </span>
+                                )}
+                                {isChecked && (
+                                  <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold">
+                                    ✓ selected
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[10px] text-gray-400 font-normal">Stock: {v.stock}</div>
                             </td>
                             <td className="py-3 px-3 text-right font-bold text-primary">₹{v.price.toFixed(2)}</td>
@@ -694,32 +701,92 @@ const previewImage = firstVariantItem?.image ? formatImageUrl(firstVariantItem.i
         </div>
       )}
 
-      {getComboVariantItems(currentCombo, availableProducts).map((item) => {
-  return (
-    <div key={item.key} className="flex items-center gap-3 p-3 bg-white">
-      {item.image ? (
-        <img
-          src={formatImageUrl(item.image)}
-          className="w-10 h-10 object-cover rounded border border-gray-100"
-          alt={item.title}
-        />
-      ) : (
-        <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">
-          N/A
+      {isViewModalOpen && currentCombo && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-sm font-bold text-primary">Composition Summary Details</h2>
+              <button onClick={() => setIsViewModalOpen(false)} className="text-primary opacity-60 hover:opacity-100"><X size={16} /></button>
+            </div>
+            <div className="p-6 space-y-4 text-xs overflow-y-auto max-h-[80vh] custom-scrollbar">
+              <div>
+                <h3 className="text-base font-bold text-primary">{currentCombo.name}</h3>
+                {currentCombo.description && (
+                  <p className="text-gray-500 mt-1">{currentCombo.description}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-xl">
+                <div>
+                  <span className="text-gray-400 block">Offer Price</span>
+                  <span className="text-sm font-bold text-emerald-600">₹{currentCombo.offerPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Original Sum</span>
+                  <span className="text-sm font-bold text-gray-500 line-through">₹{currentCombo.totalPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-400 block">Return Policy</span>
+                  <span className="text-xs font-bold text-primary">{currentCombo.returnPolicy || 'No Return Policy'}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <span className="font-bold text-primary uppercase block tracking-wider text-[10px]">Bundled Variants</span>
+                <div className="border border-gray-100 rounded-lg divide-y divide-gray-50 overflow-hidden">
+                  {currentCombo.selectedVariants && currentCombo.selectedVariants.length > 0
+                    ? currentCombo.selectedVariants.map((sv, idx) => {
+                        // Resolve the product object from populated selectedItemIds
+                        const prodId = sv.productId?._id || sv.productId?.id || sv.productId;
+                        const prod = currentCombo.selectedItemIds?.find(
+                          p => (p._id || p.id || p) === prodId
+                        );
+                        // Pass sv.variantId so the correct variant image/title is used
+                        const varDetails = getComboVariantDetails(
+                          currentCombo,
+                          prod || { _id: prodId },
+                          sv.variantId
+                        );
+                        return (
+                          <div key={`${prodId}-${sv.variantId}-${idx}`} className="flex items-center gap-3 p-3 bg-white">
+                            {varDetails.image ? (
+                              <img src={formatImageUrl(varDetails.image)} className="w-10 h-10 object-cover rounded border border-gray-100" alt={varDetails.title} />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">N/A</div>
+                            )}
+                            <div className="flex-grow">
+                              <span className="font-bold text-primary block">{varDetails.title}</span>
+                              <span className="text-gray-400 text-[10px]">Stock: {varDetails.stock}</span>
+                            </div>
+                            <span className="font-bold text-primary">₹{varDetails.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        );
+                      })
+                    : currentCombo.selectedItemIds?.map((prod) => {
+                        const varDetails = getComboVariantDetails(currentCombo, prod);
+                        return (
+                          <div key={prod._id || prod.id} className="flex items-center gap-3 p-3 bg-white">
+                            {varDetails.image ? (
+                              <img src={formatImageUrl(varDetails.image)} className="w-10 h-10 object-cover rounded border border-gray-100" />
+                            ) : (
+                              <div className="w-10 h-10 bg-gray-50 rounded flex items-center justify-center text-[9px] text-gray-400">N/A</div>
+                            )}
+                            <div className="flex-grow">
+                              <span className="font-bold text-primary block">{varDetails.title}</span>
+                              <span className="text-gray-400 text-[10px]">Stock: {varDetails.stock}</span>
+                            </div>
+                            <span className="font-bold text-primary">₹{varDetails.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                          </div>
+                        );
+                      })
+                  }
+                </div>
+              </div>
+              <div className="flex justify-end pt-2">
+                <button onClick={() => setIsViewModalOpen(false)} className="bg-[#003147] hover:bg-[#009EDB] text-white px-5 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Close View</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="flex-grow">
-        <span className="font-bold text-primary block">{item.title}</span>
-        <span className="text-gray-400 text-[10px]">Stock: {item.stock}</span>
-      </div>
-
-      <span className="font-bold text-primary">
-        ₹{Number(item.price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-      </span>
-    </div>
-  );
-})}
       
       <ConfirmationModal
         isOpen={comboToDelete !== null}

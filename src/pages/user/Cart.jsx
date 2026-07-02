@@ -155,7 +155,7 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
                     <div className="flex flex-col gap-2">
                       {item.includedProducts.map((subItem, index) => (
                         <div 
-                          key={subItem.id || index} 
+                          key={`${subItem.id || subItem.productId}-${subItem.variantId || 'default'}-${index}`} 
                           className="flex items-center justify-between gap-3 bg-white border border-slate-100 p-1.5 rounded-lg hover:border-blue-200 transition-colors shadow-sm"
                         >
                           {/* Thumbnail + Title Group */}
