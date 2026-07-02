@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useDebounce from '../../hooks/useDebounce';
+import ProductReviews from './ProductReviews'; // adjust path if needed
 import { 
   Plus, 
   Trash2, 
@@ -44,6 +45,7 @@ import { getProductsAPI, deleteProductAPI, toggleProductStatusAPI } from '../../
 
 const Products = () => {
   const navigate = useNavigate();
+  const [selectedReviewProduct, setSelectedReviewProduct] = useState(null);
   
   const getProductDisplayImage = (prod) => {
     if (prod.variants && prod.variants.length > 0) {
@@ -55,8 +57,13 @@ const Products = () => {
     return 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
   };
 
+
+
   const [catalog, setCatalog] = useState([]);
   const [availableAttributes, setAvailableAttributes] = useState([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+const productsPerPage = 20;
   
   // Active selections
   const [selectedCatId, setSelectedCatId] = useState('');
@@ -122,6 +129,15 @@ const Products = () => {
     });
     return map;
   };
+
+  const handleOpenProductReviews = (prod) => {
+  setSelectedReviewProduct({
+    ...prod,
+    name: prod.title, // because ProductReviews page is using activeCombo.name
+    reviewCount: prod.reviews || 0,
+    reviews: prod.reviewList || []
+  });
+};
 
   // Load Categories & Attributes on mount
   const loadCatalogData = async () => {
@@ -225,6 +241,17 @@ const Products = () => {
   const filteredProducts = activeProducts.filter(p => 
     p.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
   );
+
+  const totalProductPages = Math.ceil(filteredProducts.length / productsPerPage);
+const productStartIndex = (currentPage - 1) * productsPerPage;
+const productEndIndex = productStartIndex + productsPerPage;
+
+const paginatedProducts = filteredProducts.slice(productStartIndex, productEndIndex);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [selectedSubId, debouncedSearchQuery, isExpanded]);
+
 
   // Total stats calculators
   const totalCategoriesCount = catalog.length;
@@ -537,6 +564,16 @@ const Products = () => {
     }
   };
 
+
+  if (selectedReviewProduct) {
+  return (
+    <ProductReviews
+      combo={selectedReviewProduct}
+      onBack={() => setSelectedReviewProduct(null)}
+    />
+  );
+}
+
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">
       {/* Page Header */}
@@ -732,281 +769,340 @@ const Products = () => {
 
           {/* Products List Grid / Table */}
           {isExpanded ? (
-            <AdminTable
-              headers={[
-                { label: 'Product' },
-                { label: 'Category' },
-                { label: 'Variants' },
-                { label: 'Total Qty', align: 'center' },
-                { label: 'Availability', align: 'center' },
-                { label: 'Status', align: 'center' },
-                { label: 'Reviews', align: 'center' },
-                { label: 'Actions', align: 'center' }
-              ]}
-              data={filteredProducts}
-              maxHeight="500px"
-              containerClassName="border-0 shadow-none rounded-none"
-              emptyMessage={
-                <div className="flex flex-col items-center gap-2 justify-center">
-                  <Package size={24} className="text-gray-300" />
-                  <span>
-                    {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
-                  </span>
-                </div>
-              }
-              renderRow={(prod) => {
-                const subcategoryName = activeSubcategory?.name || "Standard";
-                return (
-                  <tr key={prod.id} className="hover:bg-gray-50/40 transition-colors">
-                    {/* Product */}
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
-                          {getProductDisplayImage(prod) ? (
-                            <img src={getProductDisplayImage(prod)} alt={prod.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>No Image</span>
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-900 leading-tight">{prod.title}</h4>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{subcategoryName}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="py-4 px-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
-                        {activeCategory?.name || "Category"}
-                      </span>
-                    </td>
-
-                    {/* Variants */}
-                    <td className="py-4 px-4">
-                      {prod.variants && prod.variants.length > 0 ? (
-                        <div className="flex flex-col gap-2 min-w-[150px] max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
-                          {prod.variants.map((v, index) => {
-                            const colorVal = v.attributes?.color || '';
-                            const sizeVal = v.attributes?.size || '';
-                            
-                            const hasPipe = colorVal.includes('|');
-                            const colorName = hasPipe ? colorVal.split('|')[0] : colorVal;
-                            const colorHex = hasPipe ? colorVal.split('|')[1] : null;
-                            
-                            const labelParts = [];
-                            if (colorName) labelParts.push(colorName);
-                            if (sizeVal) labelParts.push(sizeVal);
-                            const label = labelParts.join(' / ') || 'Standard Variant';
-
-                            return (
-                              <div 
-                                key={v.id || v._id || index}
-                                className="flex flex-col border border-gray-205 rounded-2xl p-3 bg-white shadow-xs leading-normal font-sans"
-                              >
-                                <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
-                                  <span 
-                                    className="w-2.5 h-2.5 rounded-full border border-gray-200 block shrink-0"
-                                    style={{ backgroundColor: colorHex || '#E5E7EB' }}
-                                  />
-                                  <span>{label}</span>
-                                </div>
-                                <div className="text-[9px] text-gray-400 font-bold mt-1.5">
-                                  Price: <span className="text-purple-600 font-extrabold">₹{Number(v.price).toLocaleString()}</span>
-                                </div>
-                                <div className="text-[9px] text-gray-405 font-bold mt-0.5 flex flex-wrap items-center gap-1">
-                                  <span>Inv:</span>
-                                  <span className={v.stock === 0 ? "text-rose-600 font-extrabold" : v.stock < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
-                                    {v.stock} units
-                                  </span>
-                                  {v.stock === 0 ? (
-                                    <span className="bg-rose-50 text-rose-600 px-1 py-0.2 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
-                                  ) : v.stock < 5 ? (
-                                    <span className="bg-amber-50 text-amber-600 px-1 py-0.2 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
-                                  ) : null}
-                                </div>
-                                {v.weight !== undefined && v.weight >= 0 && (
-                                  <div className="text-[9px] text-gray-450 font-bold mt-0.5">
-                                    Weight: <span className="text-slate-700 font-bold">{v.weight} g</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : prod.selectedAttributes && Object.keys(prod.selectedAttributes).length > 0 ? (
-                        <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal gap-1">
-                          {Object.entries(prod.selectedAttributes).map(([attrName, values]) => (
-                            <div key={attrName} className="text-[9px] text-gray-500 font-medium">
-                              <span className="capitalize font-bold text-gray-750">{attrName}:</span> {values.join(', ')}
-                            </div>
-                          ))}
-                          <div className="text-[9px] font-bold text-purple-600 border-t border-slate-100 pt-0.5 mt-0.5">Price: ₹{prod.price}</div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col border border-gray-250 rounded-2xl p-3 bg-white min-w-[140px] shadow-xs leading-normal font-sans">
-                          <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
-                            <span className="w-2.5 h-2.5 rounded-full border border-gray-200 bg-gray-200 block shrink-0" />
-                            <span>Standard</span>
-                          </div>
-                          <div className="text-[9px] text-gray-400 font-bold mt-1.5">
-                            Price: <span className="text-purple-600 font-extrabold">₹{Number(prod.price).toLocaleString()}</span>
-                          </div>
-                          <div className="text-[9px] text-gray-405 font-bold mt-0.5 flex flex-wrap items-center gap-1">
-                            <span>Inv:</span>
-                            <span className={(prod.stock !== undefined ? prod.stock : 10) === 0 ? "text-rose-600 font-extrabold" : (prod.stock !== undefined ? prod.stock : 10) < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
-                              {prod.stock !== undefined ? prod.stock : 10} units
-                            </span>
-                            {(prod.stock !== undefined ? prod.stock : 10) === 0 ? (
-                              <span className="bg-rose-50 text-rose-600 px-1 py-0.2 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
-                            ) : (prod.stock !== undefined ? prod.stock : 10) < 5 ? (
-                              <span className="bg-amber-50 text-amber-600 px-1 py-0.2 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
-                            ) : null}
-                          </div>
-                        </div>
-                      )}
-                    </td>
-
-                    {/* Total Qty */}
-                    <td className="py-4 px-4 text-center font-bold text-gray-800 text-xs">
-                      {(() => {
-                        const totalQty = prod.variants && prod.variants.length > 0
-                          ? prod.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
-                          : (prod.stock !== undefined ? parseInt(prod.stock) : 10);
-                        return totalQty;
-                      })()}
-                    </td>
-
-                    {/* Availability */}
-                    <td className="py-4 px-4 text-center">
-                      {(() => {
-                        const totalQty = prod.variants && prod.variants.length > 0
-                          ? prod.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
-                          : (prod.stock !== undefined ? parseInt(prod.stock) : 10);
-                        const isOutOfStock = totalQty === 0;
-                        const isLowStock = totalQty > 0 && totalQty < 5;
-                        return (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
-                            isOutOfStock 
-                              ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                              : isLowStock
-                                ? 'bg-amber-50 text-amber-700 border-amber-205'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                          }`}>
-                            {isOutOfStock ? 'OUT OF STOCK' : isLowStock ? 'LOW STOCK' : 'IN STOCK'}
-                          </span>
-                        );
-                      })()}
-                    </td>
-
-                    {/* Status */}
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleProductStatus(prod.id || prod._id, prod.isActive)}
-                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            prod.isActive !== false ? 'bg-[#001E3C]' : 'bg-slate-200'
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                              prod.isActive !== false ? 'translate-x-4' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                        <span className={`text-[10px] font-black uppercase tracking-wider select-none ${
-                          prod.isActive !== false ? 'text-[#001E3C]' : 'text-slate-400'
-                        }`}>
-                          {prod.isActive !== false ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Reviews */}
-                    <td className="py-4 px-4">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="flex items-center gap-1">
-                          <Star size={10} className="text-gray-300 fill-none" />
-                          <span className="font-bold text-gray-800 text-[10px]">{prod.rating ? prod.rating.toFixed(1) : "0.0"}</span>
-                        </div>
-                        <span className="text-[9px] text-gray-400 font-medium block mt-0.5">{prod.reviews || 0} reviews</span>
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <ViewBtn
-                          size={14}
-                          onClick={() => handleViewProduct(prod)}
-                          title="View Product"
-                        />
-                        <EditBtn
-                          size={14}
-                          onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)}
-                          title="Edit Product"
-                        />
-                        <DeleteBtn
-                          size={14}
-                          onClick={(e) => handleDeleteProduct(prod.id, e)}
-                          title="Delete Product"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }}
-            />
-          ) : (
-            /* Products List Grid */
-            <div className="p-4 grid gap-3 max-h-[500px] overflow-y-auto custom-scrollbar grid-cols-1 md:grid-cols-2">
-              {filteredProducts.map(prod => (
-                <div 
-                  key={prod.id} 
-                  className="border border-gray-100 hover:border-gray-200 rounded-lg p-3 bg-gray-50/30 flex gap-3 relative group transition-all hover:shadow-sm"
-                >
-                  <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 shrink-0 bg-white aspect-square">
+  <>
+    <AdminTable
+      headers={[
+        { label: 'Product', align: 'center' },
+        { label: 'Category', align: 'center' },
+        { label: 'Variants', align: 'center' },
+        { label: 'Total Qty', align: 'center' },
+        { label: 'Availability', align: 'center' },
+        { label: 'Status', align: 'center' },
+        { label: 'Reviews', align: 'center' },
+        { label: 'Actions', align: 'center' }
+      ]}
+      data={paginatedProducts}
+      maxHeight="500px"
+      containerClassName="border-0 shadow-none rounded-none"
+      emptyMessage={
+        <div className="flex flex-col items-center gap-2 justify-center">
+          <Package size={24} className="text-gray-300" />
+          <span>
+            {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
+          </span>
+        </div>
+      }
+      renderRow={(prod) => {
+        const subcategoryName = activeSubcategory?.name || "Standard";
+        return (
+          <tr key={prod.id || prod._id} className="hover:bg-gray-50/40 transition-colors">
+            {/* Product */}
+            <td className="py-4 px-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 shrink-0 bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">
+                  {getProductDisplayImage(prod) ? (
                     <img src={getProductDisplayImage(prod)} alt={prod.title} className="w-full h-full object-cover" />
-                  </div>
-                  
-                  <div className="flex-grow min-w-0 pr-6">
-                    <h4 className="text-xs font-bold text-gray-900 line-clamp-2 leading-tight tracking-wide">{prod.title}</h4>
-                    
-                    <div className="flex items-baseline gap-1.5 mt-1.5">
-                      <span className="text-xs font-bold text-gray-950">₹{prod.price}</span>
-                      {prod.originalPrice && (
-                        <span className="text-[10px] text-gray-400 line-through">₹{prod.originalPrice}</span>
-                      )}
-                      {prod.discount > 0 && (
-                        <span className="text-[9px] text-emerald-600 font-bold">{prod.discount}% Off</span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1 mt-1">
-                      <Star size={10} fill="currentColor" className="text-amber-400" />
-                      <span className="text-[10px] font-bold text-gray-600">{prod.rating.toFixed(1)}</span>
-                      <span className="text-[10px] text-gray-400">({prod.reviews})</span>
-                    </div>
-                  </div>
-
-                  <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <EditBtn size={11} onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)} title="Edit Product" />
-                    <DeleteBtn size={11} onClick={(e) => handleDeleteProduct(prod.id, e)} title="Delete Product" />
-                  </div>
+                  ) : (
+                    <span>No Image</span>
+                  )}
                 </div>
-              ))}
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 leading-tight">{prod.title}</h4>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{subcategoryName}</p>
+                </div>
+              </div>
+            </td>
 
-              {filteredProducts.length === 0 && (
-                <div className="col-span-full text-center py-16 text-xs text-gray-400 flex flex-col items-center gap-2 justify-center">
-                  <Package size={24} className="text-gray-300" />
-                  <span>
-                    {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
-                  </span>
+            {/* Category */}
+            <td className="py-4 px-4">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                {activeCategory?.name || "Category"}
+              </span>
+            </td>
+
+            {/* Variants */}
+            <td className="py-4 px-4">
+              {prod.variants && prod.variants.length > 0 ? (
+                <div className="flex flex-col gap-2 min-w-[150px] max-h-[140px] overflow-y-auto pr-1 custom-scrollbar">
+                  {prod.variants.map((v, index) => {
+                    const colorVal = v.attributes?.color || '';
+                    const sizeVal = v.attributes?.size || '';
+                    
+                    const hasPipe = colorVal.includes('|');
+                    const colorName = hasPipe ? colorVal.split('|')[0] : colorVal;
+                    const colorHex = hasPipe ? colorVal.split('|')[1] : null;
+                    
+                    const labelParts = [];
+                    if (colorName) labelParts.push(colorName);
+                    if (sizeVal) labelParts.push(sizeVal);
+                    const label = labelParts.join(' / ') || 'Standard Variant';
+
+                    return (
+                      <div 
+                        key={v.id || v._id || index}
+                        className="flex flex-col border border-gray-200 rounded-2xl p-3 bg-white shadow-xs leading-normal font-sans"
+                      >
+                        <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
+                          <span 
+                            className="w-2.5 h-2.5 rounded-full border border-gray-200 block shrink-0"
+                            style={{ backgroundColor: colorHex || '#E5E7EB' }}
+                          />
+                          <span>{label}</span>
+                        </div>
+                        <div className="text-[9px] text-gray-400 font-bold mt-1.5">
+                          Price: <span className="text-purple-600 font-extrabold">₹{Number(v.price).toLocaleString()}</span>
+                        </div>
+                        <div className="text-[9px] text-gray-400 font-bold mt-0.5 flex flex-wrap items-center gap-1">
+                          <span>Inv:</span>
+                          <span className={v.stock === 0 ? "text-rose-600 font-extrabold" : v.stock < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
+                            {v.stock} units
+                          </span>
+                          {v.stock === 0 ? (
+                            <span className="bg-rose-50 text-rose-600 px-1 py-0.5 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
+                          ) : v.stock < 5 ? (
+                            <span className="bg-amber-50 text-amber-600 px-1 py-0.5 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
+                          ) : null}
+                        </div>
+                        {v.weight !== undefined && v.weight >= 0 && (
+                          <div className="text-[9px] text-gray-400 font-bold mt-0.5">
+                            Weight: <span className="text-slate-700 font-bold">{v.weight} g</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : prod.selectedAttributes && Object.keys(prod.selectedAttributes).length > 0 ? (
+                <div className="inline-flex flex-col border border-gray-200 rounded-xl p-2 bg-white min-w-[130px] shadow-sm leading-normal gap-1">
+                  {Object.entries(prod.selectedAttributes).map(([attrName, values]) => (
+                    <div key={attrName} className="text-[9px] text-gray-500 font-medium">
+                      <span className="capitalize font-bold text-gray-700">{attrName}:</span> {Array.isArray(values) ? values.join(', ') : values}
+                    </div>
+                  ))}
+                  <div className="text-[9px] font-bold text-purple-600 border-t border-slate-100 pt-0.5 mt-0.5">Price: ₹{prod.price}</div>
+                </div>
+              ) : (
+                <div className="flex flex-col border border-gray-200 rounded-2xl p-3 bg-white min-w-[140px] shadow-xs leading-normal font-sans">
+                  <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[10px]">
+                    <span className="w-2.5 h-2.5 rounded-full border border-gray-200 bg-gray-200 block shrink-0" />
+                    <span>Standard</span>
+                  </div>
+                  <div className="text-[9px] text-gray-400 font-bold mt-1.5">
+                    Price: <span className="text-purple-600 font-extrabold">₹{Number(prod.price).toLocaleString()}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-400 font-bold mt-0.5 flex flex-wrap items-center gap-1">
+                    <span>Inv:</span>
+                    <span className={(prod.stock !== undefined ? prod.stock : 10) === 0 ? "text-rose-600 font-extrabold" : (prod.stock !== undefined ? prod.stock : 10) < 5 ? "text-amber-600 font-extrabold" : "text-emerald-600 font-extrabold"}>
+                      {prod.stock !== undefined ? prod.stock : 10} units
+                    </span>
+                    {(prod.stock !== undefined ? prod.stock : 10) === 0 ? (
+                      <span className="bg-rose-50 text-rose-600 px-1 py-0.5 rounded text-[7px] font-black border border-rose-100 uppercase">Out of Stock</span>
+                    ) : (prod.stock !== undefined ? prod.stock : 10) < 5 ? (
+                      <span className="bg-amber-50 text-amber-600 px-1 py-0.5 rounded text-[7px] font-black border border-amber-100 uppercase animate-pulse">Low Stock</span>
+                    ) : null}
+                  </div>
                 </div>
               )}
-            </div>
-          )}
+            </td>
+
+            {/* Total Qty */}
+            <td className="py-4 px-4 text-center font-bold text-gray-800 text-xs">
+              {(() => {
+                const totalQty = prod.variants && prod.variants.length > 0
+                  ? prod.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+                  : (prod.stock !== undefined ? parseInt(prod.stock) : 10);
+                return totalQty;
+              })()}
+            </td>
+
+            {/* Availability */}
+            <td className="py-4 px-4 text-center">
+              {(() => {
+                const totalQty = prod.variants && prod.variants.length > 0
+                  ? prod.variants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0)
+                  : (prod.stock !== undefined ? parseInt(prod.stock) : 10);
+                const isOutOfStock = totalQty === 0;
+                const isLowStock = totalQty > 0 && totalQty < 5;
+                return (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
+                    isOutOfStock 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : isLowStock
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {isOutOfStock ? 'OUT OF STOCK' : isLowStock ? 'LOW STOCK' : 'IN STOCK'}
+                  </span>
+                );
+              })()}
+            </td>
+
+            {/* Status */}
+            <td className="py-4 px-4 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleProductStatus(prod.id || prod._id, prod.isActive)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    prod.isActive !== false ? 'bg-[#001E3C]' : 'bg-slate-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
+                      prod.isActive !== false ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className={`text-[10px] font-black uppercase tracking-wider select-none ${
+                  prod.isActive !== false ? 'text-[#001E3C]' : 'text-slate-400'
+                }`}>
+                  {prod.isActive !== false ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </td>
+
+            {/* Reviews */}
+            <td className="py-4 px-4">
+              <button
+                type="button"
+                onClick={() => handleOpenProductReviews(prod)}
+                className="flex flex-col items-center justify-center mx-auto cursor-pointer hover:opacity-80 transition"
+              >
+                <div className="flex items-center gap-1">
+                  <Star size={10} className="text-amber-400" fill="currentColor" />
+                  <span className="font-bold text-gray-800 text-[10px]">
+                    {prod.rating ? Number(prod.rating).toFixed(1) : "0.0"}
+                  </span>
+                </div>
+                <span className="text-[9px] text-gray-400 font-medium block mt-0.5 underline">
+                  {prod.reviews || 0} reviews
+                </span>
+              </button>
+            </td>
+
+            {/* Actions */}
+            <td className="py-4 px-4 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <ViewBtn
+                  size={14}
+                  onClick={() => handleViewProduct(prod)}
+                  title="View Product"
+                />
+                <EditBtn
+                  size={14}
+                  onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)}
+                  title="Edit Product"
+                />
+                <DeleteBtn
+                  size={14}
+                  onClick={(e) => handleDeleteProduct(prod.id, e)}
+                  title="Delete Product"
+                />
+              </div>
+            </td>
+          </tr>
+        );
+      }}
+    />
+
+    {filteredProducts.length > 0 && totalProductPages > 1 && (
+      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-white">
+        <p className="text-xs text-gray-500 font-medium">
+          Showing <span className="font-bold">{productStartIndex + 1}</span> to{" "}
+          <span className="font-bold">
+            {Math.min(productEndIndex, filteredProducts.length)}
+          </span>{" "}
+          of <span className="font-bold">{filteredProducts.length}</span> products
+        </p>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Prev
+          </button>
+
+          {[...Array(totalProductPages)].map((_, i) => {
+            const page = i + 1;
+            return (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-8 h-8 rounded-md text-xs font-bold border transition ${
+                  currentPage === page
+                    ? "bg-[#001E3C] text-white border-[#001E3C]"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalProductPages))}
+            disabled={currentPage === totalProductPages}
+            className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )}
+  </>
+) : (
+  /* Products List Grid */
+  <div className="p-4 grid gap-3 max-h-[500px] overflow-y-auto custom-scrollbar grid-cols-1 md:grid-cols-2">
+    {filteredProducts.map(prod => (
+      <div 
+        key={prod.id || prod._id} 
+        className="border border-gray-100 hover:border-gray-200 rounded-lg p-3 bg-gray-50/30 flex gap-3 relative group transition-all hover:shadow-sm"
+      >
+        <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 shrink-0 bg-white aspect-square">
+          <img src={getProductDisplayImage(prod)} alt={prod.title} className="w-full h-full object-cover" />
+        </div>
+        
+        <div className="flex-grow min-w-0 pr-6">
+          <h4 className="text-xs font-bold text-gray-900 line-clamp-2 leading-tight tracking-wide">{prod.title}</h4>
+          
+          <div className="flex items-baseline gap-1.5 mt-1.5">
+            <span className="text-xs font-bold text-gray-950">₹{prod.price}</span>
+            {prod.originalPrice && (
+              <span className="text-[10px] text-gray-400 line-through">₹{prod.originalPrice}</span>
+            )}
+            {prod.discount > 0 && (
+              <span className="text-[9px] text-emerald-600 font-bold">{prod.discount}% Off</span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 mt-1">
+            <Star size={10} fill="currentColor" className="text-amber-400" />
+            <span className="text-[10px] font-bold text-gray-600">
+              {prod?.rating ? Number(prod.rating).toFixed(1) : "0.0"}
+            </span>
+            <span className="text-[10px] text-gray-400">({prod.reviews || 0})</span>
+          </div>
+        </div>
+
+        <div className="absolute right-2 top-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <EditBtn size={11} onClick={() => navigate(`/admin/products/add?edit=true&catId=${selectedCatId}&subId=${selectedSubId}&prodId=${prod.id}`)} title="Edit Product" />
+          <DeleteBtn size={11} onClick={(e) => handleDeleteProduct(prod.id, e)} title="Delete Product" />
+        </div>
+      </div>
+    ))}
+
+    {filteredProducts.length === 0 && (
+      <div className="col-span-full text-center py-16 text-xs text-gray-400 flex flex-col items-center gap-2 justify-center">
+        <Package size={24} className="text-gray-300" />
+        <span>
+          {!selectedSubId ? "Select a Subcategory first" : "No products found in this subcategory."}
+        </span>
+      </div>
+    )}
+  </div>
+)}
         </div>
 
       </div>

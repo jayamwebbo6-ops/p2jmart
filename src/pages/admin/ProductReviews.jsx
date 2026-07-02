@@ -15,18 +15,29 @@ const ProductReviews = ({ combo, onBack }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const [reviewList, setReviewList] = useState(activeCombo.reviews || []);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const reviewsPerPage = 20;
+
   // Update table dataset dynamically if the parent combo properties change
   useEffect(() => {
-    setReviewList(activeCombo.reviews || []);
-  }, [combo]);
+  setReviewList(activeCombo.reviews || []);
+  setCurrentPage(1);
+}, [activeCombo]);
 
   // Configure target headers for the AdminTable interface
   const tableHeaders = [
-    { key: 'userName', label: 'Customer Name', sortable: true, align: 'left' },
-    { key: 'rating', label: 'Rating', sortable: true, align: 'left' },
-    { key: 'comment', label: 'Content Feedback', sortable: false, align: 'left' },
-    { key: 'date', label: 'Date', sortable: true, align: 'left' }
-  ];
+  { key: 'name', label: 'Customer Name', sortable: true, align: 'left' },
+  { key: 'rating', label: 'Rating', sortable: true, align: 'left' },
+  { key: 'description', label: 'Content Feedback', sortable: false, align: 'left' },
+  { key: 'createdAt', label: 'Date', sortable: true, align: 'left' }
+];
+
+const totalPages = Math.ceil(reviewList.length / reviewsPerPage);
+
+const startIndex = (currentPage - 1) * reviewsPerPage;
+const endIndex = startIndex + reviewsPerPage;
+
+const paginatedReviews = reviewList.slice(startIndex, endIndex);
 
   // Simple column sort event execution mapping logic
   const handleSort = (key) => {
@@ -66,7 +77,7 @@ const ProductReviews = ({ combo, onBack }) => {
             <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-gray-500 shrink-0">
               <User size={14} />
             </div>
-            <span className="font-bold text-gray-800 text-xs">{review.userName}</span>
+            <span className="font-bold text-gray-800 text-xs">{review.name}</span>
           </div>
         </td>
 
@@ -90,7 +101,7 @@ const ProductReviews = ({ combo, onBack }) => {
         {/* Content Review Payload */}
         <td className="py-4 px-3 max-w-md">
           <p className="text-gray-600 font-normal leading-relaxed text-xs break-words">
-            {review.comment}
+            {review.description || "No feedback provided"}
           </p>
         </td>
 
@@ -99,7 +110,7 @@ const ProductReviews = ({ combo, onBack }) => {
           <div className="flex items-center gap-1.5">
             <Calendar size={13} className="opacity-70" />
             <span>
-              {new Date(review.date).toLocaleDateString('en-IN', { 
+              {new Date(review.createdAt).toLocaleDateString('en-IN', { 
                 year: 'numeric', 
                 month: 'short', 
                 day: 'numeric' 
@@ -142,13 +153,60 @@ const ProductReviews = ({ combo, onBack }) => {
       {/* Integrated Admin Table Element Component Module Container */}
       <AdminTable
         headers={tableHeaders}
-        data={reviewList}
+        data={paginatedReviews}
         renderRow={renderReviewRow}
         onSort={handleSort}
         sortConfig={sortConfig}
         minWidth="min-w-[800px]"
         emptyMessage="No customer evaluation reviews left discovered for this bundle pack."
       />
+
+      {reviewList.length > 0 && totalPages > 1 && (
+  <div className="flex items-center justify-between mt-4 px-2">
+    <p className="text-xs text-gray-500 font-medium">
+      Showing <span className="font-bold">{startIndex + 1}</span> to{" "}
+      <span className="font-bold">
+        {Math.min(endIndex, reviewList.length)}
+      </span>{" "}
+      of <span className="font-bold">{reviewList.length}</span> reviews
+    </p>
+
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+        disabled={currentPage === 1}
+        className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+      >
+        Prev
+      </button>
+
+      {[...Array(totalPages)].map((_, i) => {
+        const page = i + 1;
+        return (
+          <button
+            key={page}
+            onClick={() => setCurrentPage(page)}
+            className={`w-8 h-8 rounded-md text-xs font-bold border transition ${
+              currentPage === page
+                ? "bg-[#001E3C] text-white border-[#001E3C]"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            {page}
+          </button>
+        );
+      })}
+
+      <button
+        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1.5 text-xs font-bold rounded-md border border-gray-200 bg-white text-gray-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 };
