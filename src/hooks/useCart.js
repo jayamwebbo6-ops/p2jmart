@@ -72,7 +72,14 @@ export const useCart = () => {
     if (!existingItem) return;
 
     const nextQty = Math.max(1, (existingItem.quantity || 1) + amount);
-    dispatch(updateCartItem({ itemId: existingItem.id || existingItem._id, payload: { quantity: nextQty } }));
+    
+    dispatch(updateCartItem({ itemId: existingItem.id || existingItem._id, payload: { quantity: nextQty } }))
+      .catch((error) => {
+        // Error message will be displayed via toast in component
+        if (error) {
+          toast.error(error.toString());
+        }
+      });
   };
 
   const removeFromCart = (id) => {

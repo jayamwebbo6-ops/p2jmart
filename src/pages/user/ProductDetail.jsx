@@ -738,7 +738,7 @@ useEffect(() => {
                       src={formatImageUrl(product.images[activeImageIndex] || product.images[0])}
                       alt={product.title}
                       style={zoomStyle}
-                      onLoad={() => setMainImageLoaded(true)}
+                      onLoad={() => setMainImageLoaded(true)}      
                       className={`w-full h-full object-cover transition-all duration-300 ease-out pointer-events-none select-none ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                       onError={(e) => {
                         setMainImageLoaded(true);
@@ -902,8 +902,9 @@ useEffect(() => {
                 </div>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  disabled={product.isActive === false}
-                  className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
+                  disabled={product.isActive === false || quantity >= (product.activeVariant?.stock || 0)}
+                  className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+                  title={quantity >= (product.activeVariant?.stock || 0) ? `Maximum stock available: ${product.activeVariant?.stock || 0}` : 'Add quantity'}
                 >
                   +
                 </button>
@@ -931,9 +932,9 @@ useEffect(() => {
             <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 mt-auto w-full max-w-sm">
               <button 
                 onClick={handleAddToCart}
-                disabled={product.isActive === false || !product.inStock}
+                disabled={product.isActive === false || !product.inStock || quantity > (product.activeVariant?.stock || 0)}
                 className={`w-full border-2 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-colors shadow-sm ${
-                  product.isActive === false || !product.inStock
+                  product.isActive === false || !product.inStock || quantity > (product.activeVariant?.stock || 0)
                     ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                     : 'border-primary text-primary hover:bg-primary/5'
                 }`}
@@ -942,9 +943,9 @@ useEffect(() => {
               </button>
               <button 
                 onClick={handleBuyNow}
-                disabled={product.isActive === false || !product.inStock}
+                disabled={product.isActive === false || !product.inStock || quantity > (product.activeVariant?.stock || 0)}
                 className={`w-full py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-opacity shadow-sm ${
-                  product.isActive === false || !product.inStock
+                  product.isActive === false || !product.inStock || quantity > (product.activeVariant?.stock || 0)
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-90'
                 }`}
