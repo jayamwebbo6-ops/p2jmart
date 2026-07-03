@@ -2,4 +2,8 @@ node_modules/
 dist/
 build/
 coverage/
-*.loggit
+
+# Log files
+*.log
+*.logs
+logs/

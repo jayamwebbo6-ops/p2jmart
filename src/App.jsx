@@ -1,10 +1,11 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Loader from './components/Loader';
 import ScrollToTop from './components/ScrollToTop';
-import { ToastContainer } from './components/toast';
+import { ToastContainer, toast } from './components/toast';
 import { useCart } from './hooks/useCart';
 import { useWishlist } from './hooks/useWishlist';
+import { applyCouponAPI } from './api/couponApi';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
@@ -76,6 +77,54 @@ function App() {
     removeFromWishlist
   } = useWishlist();
 
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [couponError, setCouponError] = useState('');
+
+  const handleApplyCoupon = async (subtotal, codeOverride) => {
+    const code = (codeOverride ?? couponCode ?? '').trim().toUpperCase();
+
+    if (!code) {
+      toast.error('Please enter a coupon code.');
+      return false;
+    }
+
+    setApplyingCoupon(true);
+    setCouponError('');
+
+    try {
+      const res = await applyCouponAPI({ code, subtotal });
+      if (res && res.success) {
+        setAppliedCoupon(res.data);
+        setCouponDiscount(Number(res.data.discountAmount || 0));
+        setCouponCode(code);
+        toast.success(res.message || 'Coupon applied successfully!');
+        return true;
+      }
+
+      throw new Error(res?.message || 'Invalid or expired coupon code.');
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Invalid or expired coupon code.';
+      setCouponError(errMsg);
+      setAppliedCoupon(null);
+      setCouponDiscount(0);
+      toast.error(errMsg);
+      return false;
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponDiscount(0);
+    setCouponCode('');
+    setCouponError('');
+    toast.info('Coupon removed.');
+  };
+
   return (
     <BrowserRouter basename={basename}>
       <ScrollToTop />
@@ -138,6 +187,14 @@ function App() {
                   clearCart={clearCartItems}
                   setCart={setLocalCart}
                   onAddToCart={addToCart}
+                  couponCode={couponCode}
+                  setCouponCode={setCouponCode}
+                  appliedCoupon={appliedCoupon}
+                  couponDiscount={couponDiscount}
+                  couponError={couponError}
+                  applyingCoupon={applyingCoupon}
+                  onApplyCoupon={handleApplyCoupon}
+                  onRemoveCoupon={handleRemoveCoupon}
                 />
               } 
             />
@@ -147,6 +204,14 @@ function App() {
                 <Checkout 
                   cart={localCart} 
                   setCart={setLocalCart}
+                  couponCode={couponCode}
+                  setCouponCode={setCouponCode}
+                  appliedCoupon={appliedCoupon}
+                  couponDiscount={couponDiscount}
+                  couponError={couponError}
+                  applyingCoupon={applyingCoupon}
+                  onApplyCoupon={handleApplyCoupon}
+                  onRemoveCoupon={handleRemoveCoupon}
                 />
               } 
             />            
