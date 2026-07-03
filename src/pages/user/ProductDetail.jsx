@@ -478,17 +478,25 @@ useEffect(() => {
     const selectedOptions = product.activeVariant && product.activeVariant.attributes
       ? product.activeVariant.attributes
       : { color: selectedColor, size: selectedSize };
+    
+    // Include variantId in selectedOptions for backend stock validation
+    const enrichedOptions = {
+      ...selectedOptions,
+      variantId: product.activeVariant?.id || product.activeVariant?._id || ''
+    };
+
     const payload = {
       productId: product.id || product._id || product.productId,
       title: product.title,
       price: Number(product.price ?? 0),
       quantity: quantity,
       image: product.image || (product.images && product.images[0]) || '',
-      selectedOptions,
+      selectedOptions: enrichedOptions,
       isComboProduct: false,
       includedProducts: [],
       weight: Number(product.weight || 0),
-      category: product.category || 'Catalog'
+      category: product.category || 'Catalog',
+      variantId: product.activeVariant?.id || product.activeVariant?._id || ''
     };
     if (!isUserAuthenticated()) {
       toast.info('Please login to add items to cart.');

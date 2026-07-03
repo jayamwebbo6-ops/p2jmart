@@ -39,6 +39,15 @@ export const useCart = () => {
     }
 
     const productId = product.id || product._id || product.productId;
+    
+    // Extract variantId from product data
+    let variantId = '';
+    if (product.activeVariant?.id) {
+      variantId = product.activeVariant.id;
+    } else if (product.selectedOptions?.variantId) {
+      variantId = product.selectedOptions.variantId;
+    }
+
     const payload = {
       productId,
       title: product.title || product.name || 'Product',
@@ -51,7 +60,8 @@ export const useCart = () => {
       weight: Number(product.weight || 0),
       category: typeof product.category === 'object'
         ? (product.category.name || product.category.title || product.category.id || 'Catalog')
-        : (product.category || 'Catalog')
+        : (product.category || 'Catalog'),
+      variantId: variantId
     };
 
     try {
