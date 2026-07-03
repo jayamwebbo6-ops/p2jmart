@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import ExcelJS from "exceljs";
 import PageHeader from '../../components/PageHeader';
 
 import {
@@ -252,13 +253,8 @@ const exportToCSV = (rows, range, stats) => {
 
 // XLSX Export
 const exportToExcel = async (rows, range, stats) => {
-  const { Workbook } = window.ExcelJS || {};
-  if (!Workbook) {
-    console.error("ExcelJS not loaded");
-    return;
-  }
 
-  const workbook = new Workbook();
+  const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sales Report");
 
   worksheet.mergeCells("A1:G1");
@@ -483,9 +479,7 @@ export default function SalesAnalytics() {
 
   return (
     <div style={{ backgroundColor: COLORS.neutral, minHeight: "100vh", width: "100%" }} className="font-sans antialiased">
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-      <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+
 
 
   <div className="w-full text-slate-800 antialiased min-h-screen">
