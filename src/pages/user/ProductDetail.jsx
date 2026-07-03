@@ -972,11 +972,7 @@ useEffect(() => {
           </div>
         </div>
 
-         <ProductReviews
-          productId={product.id}
-          initialRating={product.rating}
-          initialReviewCount={product.reviews}
-        />
+     
 
         <ComboSection
   product={product}
@@ -989,7 +985,7 @@ useEffect(() => {
 
         {/* You May Also Like Section */}
         {relatedProducts.length > 0 && (
-          <div className="w-full mt-12 bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-2xs">
+          <div className="w-full mt-2 bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-2xs">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
@@ -1047,6 +1043,11 @@ useEffect(() => {
             </div>
           </div>
         )}
+            <ProductReviews
+          productId={product.id}
+          initialRating={product.rating}
+          initialReviewCount={product.reviews}
+        />
 
       </div>
     </div>

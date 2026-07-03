@@ -32,7 +32,18 @@ import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
 
-const Checkout = ({ cart = [], setCart }) => {
+const Checkout = ({
+  cart = [],
+  setCart,
+  couponCode: couponCodeProp,
+  setCouponCode: setCouponCodeProp,
+  appliedCoupon: appliedCouponProp,
+  couponDiscount: couponDiscountProp,
+  couponError: couponErrorProp,
+  applyingCoupon: applyingCouponProp,
+  onApplyCoupon,
+  onRemoveCoupon
+}) => {
   const formatImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
@@ -89,11 +100,18 @@ const Checkout = ({ cart = [], setCart }) => {
   const [placedOrder, setPlacedOrder] = useState(null);
 
   // Coupon System State
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [applyingCoupon, setApplyingCoupon] = useState(false);
-  const [couponError, setCouponError] = useState('');
+  const [localCouponCode, setLocalCouponCode] = useState('');
+  const [localAppliedCoupon, setLocalAppliedCoupon] = useState(null);
+  const [localCouponDiscount, setLocalCouponDiscount] = useState(0);
+  const [localApplyingCoupon, setLocalApplyingCoupon] = useState(false);
+  const [localCouponError, setLocalCouponError] = useState('');
+
+  const couponCode = couponCodeProp ?? localCouponCode;
+  const setCouponCode = setCouponCodeProp ?? setLocalCouponCode;
+  const appliedCoupon = appliedCouponProp ?? localAppliedCoupon;
+  const couponDiscount = couponDiscountProp ?? localCouponDiscount;
+  const couponError = couponErrorProp ?? localCouponError;
+  const applyingCoupon = applyingCouponProp ?? localApplyingCoupon;
 
   // Selected address object
   const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
@@ -223,36 +241,50 @@ const Checkout = ({ cart = [], setCart }) => {
 
   const handleApplyCoupon = async (e) => {
     if (e) e.preventDefault();
-    if (!couponCode.trim()) {
+    const typedCode = (couponCode || '').trim();
+
+    if (!typedCode) {
       toast.error('Please enter a coupon code.');
       return;
     }
-    setApplyingCoupon(true);
-    setCouponError('');
+
+    if (typeof onApplyCoupon === 'function') {
+      await onApplyCoupon(subtotal, typedCode);
+      return;
+    }
+
+    setLocalApplyingCoupon(true);
+    setLocalCouponError('');
     try {
-      const res = await applyCouponAPI({ code: couponCode.trim().toUpperCase(), subtotal });
+      const res = await applyCouponAPI({ code: typedCode.toUpperCase(), subtotal });
       if (res && res.success) {
-        setAppliedCoupon(res.data);
-        setCouponDiscount(res.data.discountAmount);
+        setLocalAppliedCoupon(res.data);
+        setLocalCouponDiscount(Number(res.data.discountAmount || 0));
+        setCouponCode(typedCode.toUpperCase());
         toast.success(res.message || 'Coupon applied successfully!');
       }
     } catch (err) {
       console.error(err);
       const errMsg = err.response?.data?.message || 'Invalid or expired coupon code.';
-      setCouponError(errMsg);
+      setLocalCouponError(errMsg);
       toast.error(errMsg);
-      setAppliedCoupon(null);
-      setCouponDiscount(0);
+      setLocalAppliedCoupon(null);
+      setLocalCouponDiscount(0);
     } finally {
-      setApplyingCoupon(false);
+      setLocalApplyingCoupon(false);
     }
   };
 
   const handleRemoveCoupon = () => {
-    setAppliedCoupon(null);
-    setCouponDiscount(0);
+    if (typeof onRemoveCoupon === 'function') {
+      onRemoveCoupon();
+      return;
+    }
+
+    setLocalAppliedCoupon(null);
+    setLocalCouponDiscount(0);
     setCouponCode('');
-    setCouponError('');
+    setLocalCouponError('');
     toast.info('Coupon removed.');
   };
 

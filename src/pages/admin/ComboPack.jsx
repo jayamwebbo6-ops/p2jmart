@@ -89,6 +89,21 @@ const ComboPacks = () => {
     };
   };
 
+  const getComboVariantItems = (combo, products) => {
+    if (!combo || !combo.selectedVariants || combo.selectedVariants.length === 0) {
+      return [];
+    }
+    
+    return combo.selectedVariants.map((sv, index) => {
+      const prod = products.find(p => (p._id || p.id) === (sv.productId?._id || sv.productId?.id || sv.productId));
+      const details = getComboVariantDetails(combo, prod, sv.variantId);
+      return {
+        key: `${sv.productId}-${sv.variantId}-${index}`,
+        ...details
+      };
+    });
+  };
+
   const [combos, setCombos] = useState([]);
   const [availableProducts, setAvailableProducts] = useState([]);
   const [categories, setCategories] = useState([]);

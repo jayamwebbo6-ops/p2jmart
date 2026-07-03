@@ -1,10 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Minus, Plus, ArrowRight, ShieldCheck, Truck, Layers } from 'lucide-react';
+import { Trash2, Minus, Plus, ArrowRight, ShieldCheck, Layers, Ticket } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
 // FIXED: Added passed structural dependency setCart to accept remote data transfers
-const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, onAddToCart }) => {
+const Cart = ({
+  cart = [],
+  updateQuantity,
+  removeFromCart,
+  clearCart,
+  setCart,
+  onAddToCart,
+  couponCode,
+  setCouponCode,
+  appliedCoupon,
+  couponDiscount,
+  couponError,
+  applyingCoupon,
+  onApplyCoupon,
+  onRemoveCoupon
+}) => {
   const [productToDelete, setProductToDelete] = useState(null);
   const [showClearModal, setShowClearModal] = useState(false);
   const location = useLocation();
@@ -45,10 +60,8 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
   // Calculations based on current cart contents
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const totalWeight = cart.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
-  const shippingFee = subtotal > 1000 || subtotal === 0 || totalWeight === 0 ? 0 : 100; 
-  const freeShippingThreshold = 1000;
-  const amountNeededForFreeShipping = freeShippingThreshold - subtotal;
-  const total = subtotal + shippingFee;
+  const shippingFee = subtotal > 1000 || subtotal === 0 || totalWeight === 0 ? 0 : 100;
+  const total = Math.max(0, subtotal - Number(couponDiscount || 0));
 
   const handleOpenConfirmation = (item) => {
     setProductToDelete(item);
@@ -224,17 +237,47 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
       <div className="w-full md:w-80 bg-white border border-gray-200 rounded-3xl p-5 shadow-sm flex flex-col gap-5">
         <h2 className="text-sm sm:text-base font-bold text-[#003147] border-b border-gray-50 pb-2">Order Summary</h2>
         
-        {amountNeededForFreeShipping > 0 ? (
-          <div className="bg-blue-50/50 border border-blue-100 text-[#003147] text-[11px] p-2.5 rounded-lg flex items-center gap-2">
-            <Truck size={16} className="text-[#009EDB] shrink-0" />
-            <span>Add <strong>₹{amountNeededForFreeShipping}</strong> more for <strong>FREE SHIPPING!</strong></span>
+        {/* Cart page intentionally hides shipping/GST details; checkout shows them */}
+
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3">
+          <div className="flex items-center gap-2 text-[#003147] font-semibold text-sm mb-2">
+            <Ticket size={15} />
+            <span>Apply Promo Code</span>
           </div>
-        ) : (
-          <div className="bg-green-50 border border-green-100 text-green-800 text-[11px] p-2.5 rounded-lg flex items-center gap-2">
-            <Truck size={16} className="text-green-600 shrink-0" />
-            <span>🎉 Your order qualifies for <strong>Free Shipping!</strong></span>
-          </div>
-        )}
+          {!appliedCoupon ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                onApplyCoupon?.(subtotal, couponCode);
+              }}
+              className="flex flex-col gap-2"
+            >
+              <input
+                type="text"
+                value={couponCode || ''}
+                onChange={(e) => setCouponCode?.(e.target.value)}
+                placeholder="Enter coupon code"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#009EDB]"
+              />
+              {couponError ? <p className="text-xs text-red-600">{couponError}</p> : null}
+              <button
+                type="submit"
+                disabled={applyingCoupon}
+                className="w-full bg-[#009EDB] hover:bg-[#007fb0] disabled:opacity-70 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
+              >
+                {applyingCoupon ? 'Applying...' : 'Apply Coupon'}
+              </button>
+            </form>
+          ) : (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">{appliedCoupon.code}</span>
+                <button type="button" onClick={onRemoveCoupon} className="text-xs font-semibold underline">Remove</button>
+              </div>
+              <p className="mt-1 text-xs">Discount applied: {Number(couponDiscount) > 0 ? `-₹${Number(couponDiscount).toFixed(2)}` : `₹0.00`}</p>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-gray-600">
           <div className="flex justify-between">
@@ -242,9 +285,10 @@ const Cart = ({ cart = [], updateQuantity, removeFromCart, clearCart, setCart, o
             <span className="font-bold text-gray-900">₹{subtotal}</span>
           </div>
           <div className="flex justify-between">
-            <span>Estimated Shipping:</span>
-            <span className="font-bold text-gray-900">{shippingFee === 0 ? "FREE" : `₹${shippingFee}`}</span>
+            <span>Coupon Discount:</span>
+            <span className="font-bold text-emerald-600">{Number(couponDiscount) > 0 ? `-₹${Number(couponDiscount).toFixed(2)}` : `₹0.00`}</span>
           </div>
+       
           <hr className="border-gray-100 my-1" />
           <div className="flex justify-between text-base font-black text-[#003147]">
             <span>Total Amount:</span>
