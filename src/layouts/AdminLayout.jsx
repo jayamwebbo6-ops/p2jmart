@@ -12,6 +12,7 @@ import {
   Users, 
   User, 
   LogOut,
+  FileText,
   XCircle,
   Ticket,
   Layers,
@@ -183,6 +184,11 @@ const AdminLayout = () => {
           <Link to="/admin/gst" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/gst')}`}>
             <Percent size={18} className="flex-shrink-0" />
             <span className="text-sm">GST</span>
+          </Link>
+
+           <Link to="/admin/sales-report" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/sales-report')}`}>
+            <FileText size={18} className="flex-shrink-0" />
+            <span className="text-sm">Sales Report</span>
           </Link>
  
           <Link to="/admin/users" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/users')}`}>
