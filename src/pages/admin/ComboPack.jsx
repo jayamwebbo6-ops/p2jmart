@@ -492,7 +492,6 @@ const ComboPacks = () => {
         );
         return sum + (found ? found.price : 0);
       }, 0);
-      }, 0);
 
       return {
         ...prev,
