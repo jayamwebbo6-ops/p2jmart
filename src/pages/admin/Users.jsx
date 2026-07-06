@@ -352,9 +352,7 @@ const Users = () => {
               >
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-sm shadow-sm shrink-0 ${getAvatarBg(customer.name)}`}>
-                      {getInitials(customer.name)}
-                    </div>
+                  
                     <div className="min-w-0">
                       <span className="font-bold text-gray-900 group-hover:text-primary transition-colors block truncate">
                         {customer.name}

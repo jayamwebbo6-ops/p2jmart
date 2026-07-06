@@ -71,6 +71,9 @@ export default function ProductReviews({ productId, initialRating = 0, initialRe
 
   const displayTotal = stats.total || initialReviewCount || 0;
 
+  // Hide the entire section when there are no reviews
+  if (!loading && !error && displayTotal === 0) return null;
+
   return (
     <div className="w-full mt-10 bg-white rounded-xl border border-gray-200 shadow-2xs p-4 sm:p-6">
       <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-1">Customer Reviews</h3>
