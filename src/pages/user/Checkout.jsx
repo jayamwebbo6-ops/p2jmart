@@ -32,6 +32,7 @@ import { applyCouponAPI } from '../../api/couponApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
+import {getEligibleCouponsAPI} from '../../api/couponApi'
 
 const Checkout = ({
   cart = [],
@@ -183,7 +184,7 @@ const applyingCoupon = localApplyingCoupon;
   getAllShippingAPI(),
   getAllGstAPI(),
   getHomeCMS(),
-  getAvailableCouponsAPI()
+  getEligibleCouponsAPI()
 ]);
 
       if (addressRes && addressRes.success) {
@@ -535,7 +536,7 @@ const applyingCoupon = localApplyingCoupon;
     const isPaid = placedOrder.paymentStatus === 'paid';
     return (
     
-      <div className="w-full max-w-4xl mx-auto py-6 sm:py-10 px-3 sm:px-4 font-sans flex flex-col items-center select-none antialiased">
+      <div className="w-full max-w-4xl mx-auto sm:py-10 px-3 sm:px-4 font-sans flex flex-col items-center select-none antialiased">
   <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl text-center flex flex-col items-center transition-all">
     
     {/* Animated Status Icon Wrapper */}
@@ -633,7 +634,7 @@ const applyingCoupon = localApplyingCoupon;
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-6 px-3 sm:px-4 font-sans">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 font-sans">
       
       {/* Steps Indicator Section */}
       <div className="flex items-center justify-center gap-4 my-8">
