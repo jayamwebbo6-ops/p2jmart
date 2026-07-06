@@ -167,8 +167,7 @@ export default function ContactPage() {
     <div className="w-full pt-16 min-h-screen bg-[#f5f5f5]">
       {/* Contact Cards */}
       {/* This grid stays 1 column until exactly 850px, then becomes 3 columns */}
-<div className="grid grid-cols-1 min-[610px]:grid-cols-3 gap-6 w-full max-w-7xl">
-  
+<div className="grid grid-cols-1 min-[570px]:grid-cols-2 min-[800px]:grid-cols-3 gap-6 w-full max-w-7xl">  
   {/* ADDRESS CARD */}
   <div className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 py-6 px-4 text-center flex flex-col justify-between min-h-[220px]">
     <div>
@@ -179,7 +178,6 @@ export default function ContactPage() {
           className="relative z-10 text-primary group-hover:text-white transition-colors duration-500"
         />
       </div>
-
       <h3 className="mt-3 text-lg font-semibold text-gray-900">
         Address
       </h3>
@@ -388,15 +386,15 @@ export default function ContactPage() {
                 )}
               </div>
 
-              <div className="md:col-span-2 flex items-end">
-                <button
-                  type="submit"
-                  disabled={loading || Object.values(errors).some(v => v)}
-                  className="bg-primary text-white h-12 px-8 rounded-md text-sm font-medium hover:bg-primary/90 transition w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? "Sending..." : "Send Message"}
-                </button>
-              </div>
+           <div className="md:col-span-2 flex items-end">
+  <button
+    type="submit"
+    disabled={loading || Object.values(errors).some(v => v)}
+    className="bg-primary text-white h-12 px-8 rounded-md text-sm font-medium hover:bg-primary/90 transition w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+  >
+    {loading ? "Sending..." : "Send Message"}
+  </button>
+</div>
             </form>
           </div>
         </div>

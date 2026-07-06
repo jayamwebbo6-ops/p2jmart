@@ -538,77 +538,101 @@ const Checkout = ({
   if (step === 3 && placedOrder) {
     const isPaid = placedOrder.paymentStatus === 'paid';
     return (
-      <div className="max-w-4xl mx-auto py-10 px-4 font-sans flex flex-col items-center">
-        <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-3xl p-8 shadow-xl text-center flex flex-col items-center">
-          {isPaid ? (
-            <div className="w-20 h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mb-6 border-4 border-green-100 shadow-inner">
-              <Check size={40} strokeWidth={3} className="animate-bounce" />
-            </div>
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-6 border-4 border-amber-100 shadow-inner">
-              <Clock size={40} strokeWidth={3} className="animate-pulse" />
-            </div>
-          )}
-          
-          <h2 className="text-2xl md:text-4xl font-black text-primary leading-tight mb-2">
-            {isPaid ? 'Order Placed Successfully!' : 'Payment Failed / Pending'}
-          </h2>
-          <p className="text-gray-500 text-sm md:text-base max-w-md mb-8">
-            {isPaid 
-              ? 'Thank you for your purchase. We have received your order, and our team is preparing it for delivery.'
-              : 'Your payment was not completed. The stock for your items has been temporarily reserved for 15 minutes. Please complete payment within this window, or the order will be cancelled automatically.'}
+    
+      <div className="w-full max-w-4xl mx-auto py-6 sm:py-10 px-3 sm:px-4 font-sans flex flex-col items-center select-none antialiased">
+  <div className="w-full max-w-2xl bg-white border border-gray-100 rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl text-center flex flex-col items-center transition-all">
+    
+    {/* Animated Status Icon Wrapper */}
+    {isPaid ? (
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-50 flex items-center justify-center text-green-600 mb-4 sm:mb-6 border-4 border-green-100 shadow-inner shrink-0">
+        <Check size={32} strokeWidth={3} className="animate-bounce" />
+      </div>
+    ) : (
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-4 sm:mb-6 border-4 border-amber-100 shadow-inner shrink-0">
+        <Clock size={32} strokeWidth={3} className="animate-pulse" />
+      </div>
+    )}
+    
+    {/* Headline Header */}
+    <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-primary leading-tight mb-2 px-1">
+      {isPaid ? 'Order Placed Successfully!' : 'Payment Failed / Pending'}
+    </h2>
+    <p className="text-gray-500 text-xs sm:text-sm md:text-base max-w-md mb-6 sm:mb-8 px-2 leading-relaxed">
+      {isPaid 
+        ? 'Thank you for your purchase. We have received your order, and our team is preparing it for delivery.'
+        : 'Your payment was not completed. The stock for your items has been temporarily reserved for 15 minutes. Please complete payment within this window, or the order will be cancelled automatically.'}
+    </p>
+
+    <hr className="w-full border-gray-100 mb-5 sm:mb-6" />
+
+    {/* Order Details Breakdown Box Layer */}
+    <div className="w-full text-left bg-gray-50/70 border border-gray-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+      <h3 className="font-extrabold text-primary text-base sm:text-lg mb-4 border-b border-gray-200/60 pb-2">
+        Order Summary
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <div className="min-w-0">
+          <p className="text-gray-400 font-medium">Order ID</p>
+          <p className="font-bold text-gray-900 tracking-wide break-all mt-0.5">
+            {placedOrder.orderId}
           </p>
-
-          <hr className="w-full border-gray-100 mb-6" />
-
-          <div className="w-full text-left bg-gray-50 rounded-2xl p-6 mb-8 border border-gray-100">
-            <h3 className="font-bold text-primary text-lg mb-4 border-b border-gray-200 pb-2">Order Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-400 font-medium">Order ID</p>
-                <p className="font-bold text-gray-900">{placedOrder.orderId}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 font-medium">Date Placed</p>
-                <p className="font-bold text-gray-900">
-                  {new Date(placedOrder.placedDate || placedOrder.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-gray-400 font-medium">Shipping Address</p>
-                <div className="font-semibold text-gray-800 mt-1">
-                  <p className="font-bold text-black capitalize">{placedOrder.shippingAddress?.fullName}</p>
-                  <p className="text-gray-600">{placedOrder.shippingAddress?.streetAddress}{placedOrder.shippingAddress?.apartment ? `, ${placedOrder.shippingAddress.apartment}` : ''}</p>
-                  <p className="text-gray-600">{placedOrder.shippingAddress?.city}, {placedOrder.shippingAddress?.state} - {placedOrder.shippingAddress?.pincode}</p>
-                  <p className="text-gray-800 mt-1 font-bold">PH: {placedOrder.shippingAddress?.phoneNumber}</p>
-                </div>
-              </div>
-              <div className="md:col-span-2 border-t border-gray-200 pt-3 flex justify-between items-center">
-                <div>
-                  <p className="text-gray-400 font-medium">{isPaid ? 'Total Paid' : 'Total Amount Due'}</p>
-                  <p className="text-xs text-gray-400 font-normal">{isPaid ? 'via Cash / Card / UPI' : 'Temporary Hold: 15 mins'}</p>
-                </div>
-                <p className="text-2xl font-black text-primary">₹{placedOrder.total.toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-            <Link 
-              to="/" 
-              className="bg-primary hover:bg-secondary text-white font-bold py-3.5 px-6 rounded-2xl transition-all shadow-md active:scale-95 text-center text-sm flex items-center justify-center gap-2"
-            >
-              Continue Shopping
-            </Link>
-            <Link 
-              to="/my-account" 
-              className="border border-primary text-primary hover:bg-gray-50 font-bold py-3.5 px-6 rounded-2xl transition-all active:scale-95 text-center text-sm flex items-center justify-center gap-2"
-            >
-              View Order History
-            </Link>
+        </div>
+        
+        <div>
+          <p className="text-gray-400 font-medium">Date Placed</p>
+          <p className="font-bold text-gray-900 mt-0.5">
+            {new Date(placedOrder.placedDate || placedOrder.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+        
+        <div className="md:col-span-2 min-w-0">
+          <p className="text-gray-400 font-medium">Shipping Address</p>
+          <div className="font-semibold text-gray-800 mt-1 space-y-0.5">
+            <p className="font-extrabold text-black capitalize text-xs sm:text-sm">{placedOrder.shippingAddress?.fullName}</p>
+            <p className="text-gray-600 capitalize text-xs">{placedOrder.shippingAddress?.streetAddress}{placedOrder.shippingAddress?.apartment ? `, ${placedOrder.shippingAddress.apartment}` : ''}</p>
+            <p className="text-gray-600 capitalize text-xs">{placedOrder.shippingAddress?.city}, {placedOrder.shippingAddress?.state} - {placedOrder.shippingAddress?.pincode}</p>
+            <p className="text-gray-900 font-bold mt-1.5 text-xs">PH: {placedOrder.shippingAddress?.phoneNumber}</p>
           </div>
         </div>
+        
+        {/* Dynamic Amount Bar Line */}
+        <div className="md:col-span-2 border-t border-gray-200/70 pt-4 mt-1 flex flex-row items-center justify-between gap-2 w-full">
+          <div className="min-w-0">
+            <p className="text-gray-400 font-bold text-[11px] sm:text-xs uppercase tracking-wider">
+              {isPaid ? 'Total Paid' : 'Total Amount Due'}
+            </p>
+            <p className="text-[10px] sm:text-xs text-gray-400/90 font-medium truncate mt-0.5">
+              {isPaid ? 'via Cash / Card / UPI' : 'Temporary Hold: 15 mins'}
+            </p>
+          </div>
+          <p className="text-xl sm:text-2xl font-black text-primary shrink-0 tracking-tight">
+            ₹{placedOrder.total.toFixed(2)}
+          </p>
+        </div>
       </div>
+    </div>
+
+    {/* Primary Navigation Buttons Flow Control */}
+    <div className="grid grid-cols-1 min-[411px]:flex min-[411px]:flex-row gap-2 w-full justify-center">
+  <Link
+    to="/"
+    className="w-full min-[411px]:w-auto bg-primary hover:bg-secondary text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-[0.98] text-center text-[11px] sm:text-xs flex items-center justify-center gap-1.5"
+  >
+    Continue Shopping
+  </Link>
+
+  <Link
+    to="/my-account"
+    className="w-full min-[411px]:w-auto border border-primary/30 hover:border-primary text-primary bg-transparent hover:bg-gray-50/50 font-semibold py-2 px-4 rounded-lg transition-all active:scale-[0.98] text-center text-[11px] sm:text-xs flex items-center justify-center gap-1.5"
+  >
+    View Order History
+  </Link>
+</div>
+    
+  </div>
+</div>
+
     );
   }
 
@@ -866,58 +890,88 @@ const Checkout = ({
           </div>
 
           {/* Coupon Code Input Area */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3 font-sans">
-            <h4 className="text-xs sm:text-sm font-extrabold text-primary flex items-center gap-1.5">
-              <span>🎟️ Apply Promo Code / Coupon</span>
-            </h4>
-            {!appliedCoupon ? (
-              <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter Coupon Code (e.g. FURN5000)"
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs sm:text-sm uppercase bg-gray-50/50 font-semibold"
-                />
-                <button
-                  type="submit"
-                  disabled={applyingCoupon}
-                  className="bg-primary hover:bg-secondary text-white font-bold px-4 py-2.5 rounded-xl transition-all text-xs cursor-pointer select-none active:scale-95 disabled:opacity-50"
-                >
-                  {applyingCoupon ? 'Applying...' : 'Apply'}
-                </button>
-              </form>
-            ) : (
-              <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200/80 rounded-xl p-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
-                    <Check size={14} strokeWidth={3} />
-                  </span>
-                  <div>
-                    <p className="text-xs font-black text-emerald-800 tracking-wider">
-                      {appliedCoupon.code} APPLIED!
-                    </p>
-                    <p className="text-[10px] font-semibold text-emerald-600">
-                      Savings of ₹{couponDiscount.toFixed(2)} applied to subtotal
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleRemoveCoupon}
-                  className="text-xs font-bold text-red-500 hover:text-red-700 bg-transparent border-0 cursor-pointer p-1"
-                  title="Remove Coupon"
-                >
-                  Remove
-                </button>
-              </div>
-            )}
-            {couponError && (
-              <p className="text-[10px] text-red-500 font-bold tracking-wide mt-1">
-                ⚠️ {couponError}
-              </p>
-            )}
+<div className="w-full bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-200 hover:shadow-md">
+  {/* Header Section */}
+  <div className="flex items-center justify-between mb-3.5">
+    <div className="flex items-center gap-2">
+      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-3-12h.008v.008H13.5V6zm0 6h.008v.008H13.5V12zm0 6h.008v.008H13.5V18zM6 6h.008v.008H6V6zm0 6h.008v.008H6V12zm0 6h.008v.008H6V18z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12z" />
+        </svg>
+      </div>
+      <div>
+        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 tracking-tight">Promotions &amp; Coupons</h4>
+        <p className="text-[10px] text-gray-400 font-medium">Apply a code to unlock extra savings</p>
+      </div>
+    </div>
+  </div>
+
+  {/* Promo Code Input & Form Handling States */}
+  {!appliedCoupon ? (
+    <form onSubmit={handleApplyCoupon} className="relative flex items-center border border-gray-200 rounded-xl bg-gray-50/50 p-1 group focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
+      <input
+        type="text"
+        placeholder="Enter Code (e.g., FURN5000)"
+        value={couponCode}
+        onChange={(e) => setCouponCode(e.target.value)}
+        className="w-full bg-transparent pl-3 pr-2 py-2 text-xs sm:text-sm uppercase font-bold tracking-wider text-gray-800 placeholder:text-gray-400 placeholder:normal-case placeholder:font-medium focus:outline-none min-w-0"
+      />
+      <button
+        type="submit"
+        disabled={applyingCoupon || !couponCode.trim()}
+        className="bg-gray-900 hover:bg-primary disabled:bg-gray-200 text-white disabled:text-gray-400 font-bold text-xs px-4 py-2 rounded-lg transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed select-none active:scale-[0.98]"
+      >
+        {applyingCoupon ? (
+          <span className="flex items-center gap-1.5">
+            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            <span>Applying...</span>
+          </span>
+        ) : (
+          'Apply'
+        )}
+      </button>
+    </form>
+  ) : (
+    /* Applied Success State UI Banner */
+    <div className="relative overflow-hidden bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 group animate-in fade-in-50 duration-200">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-xs">
+          <Check size={14} strokeWidth={3} />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-black text-emerald-900 tracking-wider uppercase block truncate">
+              {appliedCoupon.code}
+            </span>
+            <span className="text-[9px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded-md tracking-wide uppercase shadow-3xs shrink-0 scale-90 origin-left">
+              Active
+            </span>
           </div>
+          <p className="text-[11px] font-medium text-emerald-700/90 mt-0.5">
+            You saved <span className="font-bold text-emerald-800">₹{couponDiscount.toFixed(2)}</span> on your order!
+          </p>
+        </div>
+      </div>
+      
+      <button
+        type="button"
+        onClick={handleRemoveCoupon}
+        className="text-[11px] font-bold text-rose-600 hover:text-white bg-transparent hover:bg-rose-600 border border-rose-200/40 hover:border-transparent px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer self-end xs:self-auto shadow-3xs"
+      >
+        Remove
+      </button>
+    </div>
+  )}
+
+  {/* Dynamic Error State Notification Layout */}
+  {couponError && (
+    <div className="flex items-start gap-1.5 bg-rose-50 border border-rose-100 rounded-xl p-2.5 mt-2.5 text-rose-700 font-semibold text-[11px] leading-relaxed animate-shake">
+      <span className="shrink-0 text-sm leading-none select-none">⚠️</span>
+      <p className="flex-1">{couponError}</p>
+    </div>
+  )}
+</div>
 
           <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3">
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">
@@ -958,24 +1012,27 @@ const Checkout = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-100">
-            <button 
-              type="button"
-              onClick={() => setStep(1)}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:underline bg-transparent border-0 cursor-pointer"
-            >
-              <ArrowLeft size={14} strokeWidth={2.5} />
-              <span>Back to Address</span>
-            </button>
+         
+         <div className="flex flex-col min-[410px]:flex-row min-[410px]:items-center min-[410px]:justify-between gap-2 mt-4 pt-4 border-t border-gray-100">
+  <button
+    type="button"
+    onClick={() => setStep(1)}
+    className="w-full min-[410px]:w-auto flex items-center justify-center gap-1 text-[11px] sm:text-xs font-semibold text-primary border border-primary/20 hover:bg-primary/5 bg-transparent rounded-xl py-2 px-3 cursor-pointer"
+  >
+    <ArrowLeft size={13} strokeWidth={2.5} />
+    <span>Back to Address</span>
+  </button>
 
-            <button 
-              type="button"
-              onClick={handlePlaceOrder}
-              className="bg-primary hover:bg-secondary text-white font-bold py-3 px-5 sm:px-6 rounded-2xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99] cursor-pointer text-xs sm:text-sm"
-            >
-              <span>Continue to Pay — ₹{total.toFixed(2)}</span>
-            </button>
-          </div>
+  <button
+    type="button"
+    onClick={handlePlaceOrder}
+    className="w-full min-[410px]:w-auto bg-primary hover:bg-secondary text-white font-semibold py-2 px-3 sm:px-5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer text-[11px] sm:text-xs"
+  >
+    <span>Continue to Pay — ₹{total.toFixed(2)}</span>
+  </button>
+</div>
+
+
         </div>
       )}
 

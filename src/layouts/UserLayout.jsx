@@ -11,10 +11,8 @@ const UserLayout = ({ wishlist = [], cart = [] }) => {
   useEffect(() => {
     const checkProfileStatus = async () => {
       if (isUserAuthenticated()) {
-        // Skip check if already on the complete-profile path
         if (location.pathname === '/complete-profile') return;
 
-        // 1. Check cached local storage profile first
         const stored = localStorage.getItem('p2j_user_profile');
         if (stored) {
           const user = JSON.parse(stored);
@@ -24,7 +22,6 @@ const UserLayout = ({ wishlist = [], cart = [] }) => {
           }
         }
 
-        // 2. Double-check backend server status
         try {
           const response = await getUserProfile();
           if (response && response.success && !response.data.phone) {
@@ -40,9 +37,10 @@ const UserLayout = ({ wishlist = [], cart = [] }) => {
   }, [location.pathname, navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#FDFDFB] flex flex-col font-sans">
       <Header wishlist={wishlist} cart={cart} />
-      <main className="px-2 md:px-3 lg:px-5 flex-1 pb-5">
+      {/* REMOVED layout side padding here so children control their full alignment bounds */}
+      <main className="w-full flex-1 pb-10">
         <Outlet />
       </main>
       <Footer />

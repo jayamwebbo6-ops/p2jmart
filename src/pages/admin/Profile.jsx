@@ -133,7 +133,7 @@ const AdminProfile = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
       <PageHeader 
         title="Profile Settings" 
         subtitle="Manage your personal information, contact email, and secure credentials"
@@ -141,7 +141,7 @@ const AdminProfile = () => {
         {!isEditing && (
           <button 
             onClick={() => setIsEditing(true)}
-            className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
+            className="flex items-center justify-center space-x-2 bg-primary text-white px-4 py-2 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
           >
             <Edit2 size={16} />
             <span>Edit Profile</span>
@@ -155,12 +155,12 @@ const AdminProfile = () => {
         {/* Header Background */}
         <div className="h-32 bg-primary w-full relative"></div>
 
-        <form onSubmit={handleProfileSave} className="px-8 pb-8">
+        <form onSubmit={handleProfileSave} className="px-4 sm:px-8 pb-8">
           
           {/* Profile Photo Area */}
-          <div className="relative flex justify-between items-end -mt-16 mb-8">
+          <div className="relative flex flex-col md:flex-row md:justify-between items-center md:items-end -mt-16 mb-8 gap-4">
             <div className="relative group">
-              <div className={`w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center ${isEditing ? 'cursor-pointer' : ''}`}>
+              <div className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-white shadow-md bg-white flex items-center justify-center ${isEditing ? 'cursor-pointer' : ''}`}>
                 {profile.photo ? (
                   <img 
                     src={profile.photo} 
@@ -182,8 +182,10 @@ const AdminProfile = () => {
               )}
             </div>
             
-            <div className="mb-2">
-              <span className="px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">Administrator</span>
+            <div className="w-full md:w-auto text-center md:text-right">
+              <div className="inline-flex items-center justify-center md:justify-end mb-2 px-3 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                Administrator
+              </div>
             </div>
           </div>
 
@@ -191,7 +193,7 @@ const AdminProfile = () => {
             {/* General Info Section */}
             <section>
               <h3 className="text-base font-bold text-gray-800 mb-4 pb-2 border-b border-gray-100">Admin Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Username</label>
                   <input 
@@ -243,7 +245,7 @@ const AdminProfile = () => {
                     )}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">New Password</label>
                     <div className="relative">
@@ -294,18 +296,18 @@ const AdminProfile = () => {
 
             {/* Action Buttons */}
             {isEditing && (
-              <div className="flex justify-end items-center space-x-4 pt-6 border-t border-gray-100">
+              <div className="flex flex-col gap-3 justify-end items-stretch sm:flex-row sm:items-center sm:space-x-4 pt-6 border-t border-gray-100">
                 <button 
                   type="button"
                   onClick={handleCancel}
-                  className="flex items-center space-x-2 text-gray-650 px-4 py-2.5 rounded-2xl hover:bg-gray-50 transition-all text-xs sm:text-sm font-bold"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 text-gray-650 px-4 py-2.5 rounded-2xl hover:bg-gray-50 transition-all text-xs sm:text-sm font-bold"
                 >
                   <X size={16} />
                   <span>Cancel</span>
                 </button>
                 <button 
                   type="submit" 
-                  className="flex items-center space-x-2 bg-primary text-white px-6 py-3 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
+                  className="w-full sm:w-auto flex items-center justify-center space-x-2 bg-primary text-white px-6 py-3 rounded-2xl hover:bg-primary/95 transition-all text-xs sm:text-sm font-bold shadow-[0_4px_12px_rgba(0,49,71,0.2)]"
                 >
                   <Save size={16} />
                   <span>Save Changes</span>

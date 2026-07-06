@@ -53,10 +53,7 @@ const TermsContion = () => {
           Terms & Conditions
         </h1>
 
-        {/* Introduction */}
-        <p className="text-sm sm:text-base leading-relaxed text-gray-600 mb-8 text-center max-w-2xl mx-auto border-b border-gray-100 pb-6">
-          At p2j-mart, we value your trust and are committed to protecting your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your data when you interact with our website, products, or services.
-        </p>
+       
 
         {/* Loading and Error Handlers */}
         {isLoading && (

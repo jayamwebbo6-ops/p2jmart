@@ -12,6 +12,7 @@ import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import ProductCard from '../../components/ProductCard';
+import { getCategoriesAPI } from '../../api/categoryApi';
 import { getProductByIdAPI, getProductsAPI } from '../../api/productApi';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
@@ -31,9 +32,38 @@ const fileToBase64 = (file) => {
 };
 
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
-  const { productId } = useParams();
+    const { subcategoryId, id: productId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+
+    const [categoryName, setCategoryName] = useState('');
+  const [subcategoryName, setSubcategoryName] = useState('');
+
+
+    useEffect(() => {
+      if (!subcategoryId) return;
+      const fetchNames = async () => {
+        try {
+          const catRes = await getCategoriesAPI();
+          if (catRes && catRes.success && Array.isArray(catRes.data)) {
+            for (const cat of catRes.data) {
+              const matchedSub = (cat.subcategories || []).find(
+                sub => (sub._id || sub.id) === subcategoryId
+              );
+              if (matchedSub) {
+                setCategoryName(cat.name);
+                setSubcategoryName(matchedSub.name || matchedSub);
+                break;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error looking up names for breadcrumbs:", err);
+        }
+      };
+      fetchNames();
+    }, [subcategoryId]);
+  
 
   // Color Mapping Configurations matching your branding requirements
   const colors = {
@@ -470,26 +500,58 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   }, 1000);
 
 
+  const handleShare = async () => {
+    // Check if the browser supports the Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Check this out!',
+          text: 'Here is some cool content I wanted to share with you.',
+          url: window.location.href, 
+        });
+        console.log('Successfully shared');
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
+    } else {
+      // Fallback behavior for browsers/devices that don't support it (like older desktop browsers)
+      alert('Native sharing is not supported on this browser. Copying URL to clipboard instead!');
+      navigator.clipboard.writeText(window.location.href);
+    }
+  };
+
+
   return (
     <div className="w-full antialiased text-gray-800 selection:bg-gray-200 min-w-0 relative">
       
       {/* Breadcrumbs */}
-      <div className="max-w-[2500px] mx-auto px-4 mt-8">
+      <div className="max-w-[2500px] mx-auto px-4 mt-5">
         <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium flex-wrap">
           <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/')}>Home</span>
           <span className="text-gray-300">/</span>
           <span className="hover:text-primary transition-colors cursor-pointer" onClick={() => navigate('/customized')}>Customized Products</span>
+           {subcategoryId && subcategoryName && (
+                     <>
+                       <span className="text-gray-300">/</span>
+                       <Link 
+                         to={`/sub-category/${subcategoryId}`}
+                         className="hover:text-primary transition-colors cursor-pointer"
+                       >
+                         {subcategoryName}
+                       </Link>
+                     </>
+                   )}
           <span className="text-gray-300">/</span>
           <span className="text-gray-900 font-bold">{product.title}</span>
         </div>
       </div>
 
       {/* Main Container Layout */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative px-4 mt-4">        
+      <div className="w-full px-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative mt-4">        
         {/* Left Column Image Layout: Swiper when <= 638px, Grid Desk layout when larger */}
         <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">        
           {/* Mobile Swiper: Targets screens 638px and below exclusively */}
-          <div className="block min-[639px]:hidden w-full pb-8">
+          <div className="block min-[640px]:hidden w-full pb-8">
             <Swiper
               modules={[Pagination]}
               pagination={{ clickable: true }}
@@ -535,7 +597,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               ref={containerRef}
               onMouseMove={handleMouseMoveZoom}
               onMouseLeave={handleMouseLeaveZoom}
-              className="flex-grow aspect-square border border-gray-200 rounded-lg bg-gray-50 relative overflow-hidden flex items-center justify-center cursor-zoom-in"
+              className="flex-1 aspect-square relative overflow-hidden rounded-lg border border-gray-200 cursor-zoom-in bg-gray-50 flex items-center justify-center"
             >
               <>
                 {!mainImageLoaded && (
@@ -552,58 +614,70 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                     objectFit: imageFit
                   }}
                   onLoad={() => setMainImageLoaded(true)}
-                  className={`w-full h-full transition-all duration-300 ease-out pointer-events-none select-none ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  className={`w-full h-full object-cover transition-all duration-300 ease-out pointer-events-none select-none ${mainImageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 />
                 <button className="absolute top-3 right-3 p-2 bg-white/90 text-gray-700 rounded-full shadow border border-gray-100 pointer-events-none z-10">
                   <Eye size={16} />
                 </button>
+
+                 {activeDiscount > 0 && (
+                  <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold pointer-events-none z-10">
+                    {activeDiscount}%
+                  </div>
+                )}
               </>
             </div>
           </div>
         </div>
 
         {/* Right Details Panel Dashboard */}
-        <div className="col-span-1 md:col-span-5 flex flex-col gap-2 w-full min-w-0 relative">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight leading-snug">
-              {product.title}
-            </h1>
+        <div className="col-span-1 md:col-span-5 px-4 flex flex-col gap-3 w-full min-w-0 relative">
+          <div className='flex flex-col gap-3'>
+                      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
+
             
-            <div className="flex items-baseline gap-2 mt-3 flex-wrap">
-              {activeOriginalPrice > activePrice && (
-                <span className="text-xs sm:text-sm text-gray-500">
-                  MRP <span className="line-through">₹{activeOriginalPrice.toLocaleString('en-IN')}</span>
+           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+  <div className="flex text-amber-400 items-center">
+    {[...Array(5)].map((_, i) => (
+      <Star
+        key={i}
+        size={14}
+        fill={i < Math.round(product.rating || 0) ? "currentColor" : "none"}
+        className={i < Math.round(product.rating || 0) ? "" : "text-gray-300"}
+      />
+    ))}
+  </div>
+
+  <span className="text-xs text-gray-500 font-medium">
+    ({product.reviews || 0})
+  </span>
+
+   <span className="font-bold text-gray-800 text-sm">{product.rating.toFixed(1)}</span>
+              <span className="text-gray-500 text-sm">({product.reviews} Customer Reviews)</span>
+</div>
+            
+            <div className="text-sm space-y-1.5">
+              <p><span className="font-bold text-gray-800">Category:</span> <span className="text-gray-600">{product.category}</span></p>
+            </div>
+
+
+             <div className="flex flex-wrap items-baseline gap-2">
+              {product.originalPrice > product.price && (
+                <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                  MRP <span className="line-through">₹{product.originalPrice.toLocaleString('en-IN')}</span>
                 </span>
               )}
-              <span className={`text-lg sm:text-xl font-bold ${colors.primaryText}`}>₹{activePrice.toLocaleString('en-IN')}</span>
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 tracking-tight">₹{product.price.toLocaleString('en-IN')}</span>
               {activeDiscount > 0 && (
                 <span className="text-xs sm:text-sm font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
                   {activeDiscount}% Off
                 </span>
               )}
             </div>
-            {/* Stock badge */}
-            <div className="mt-1">
-              {product.isActive === false ? (
-                <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 uppercase tracking-wider flex items-center gap-1.5 w-fit">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                  Product Inactive / Unavailable
-                </span>
-              ) : isOutOfStock ? (
-                <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
-              ) : (
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
-              )}
-            </div>
 
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              <div className="flex text-amber-400 items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={14} fill={i < 4 ? "currentColor" : "none"} className={i < 4 ? "" : "text-gray-300"} />
-                ))}
-              </div>
-              <span className="text-xs text-gray-500 font-medium">({product.reviews})</span>
-            </div>
+           
+
+           
           </div>
 
           {/* Variant Attribute Selectors */}
@@ -658,20 +732,22 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                             v => v.attributes?.[key] === val
                           );
                           return (
-                            <button
-                              key={val}
-                              onClick={() => handleAttributeSelect(key, val)}
-                              disabled={!available}
-                              className={`px-4 py-1.5 text-xs font-semibold rounded-full border transition-all ${
-                                isSelected
-                                  ? 'border-[#001E3C] bg-[#001E3C] text-white shadow-sm'
-                                  : available
-                                    ? 'border-gray-300 text-gray-700 hover:border-gray-600 bg-white'
-                                    : 'border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed line-through'
-                              }`}
-                            >
-                              {val}
-                            </button>
+                          <button
+  key={val}
+  onClick={() => handleAttributeSelect(key, val)}
+  disabled={!available}
+  className={`px-3 sm:px-4 py-1 text-xs sm:text-sm rounded-md font-bold border transition-colors shadow-sm ${
+    isSelected
+      ? 'border-[#001E3C] text-[#001E3C] bg-[#001E3C]/5' 
+      : available
+        ? 'border-gray-200 text-gray-600 hover:border-gray-400 hover:text-gray-800 bg-white'
+        : 'border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed line-through shadow-none'
+  }`}
+>
+  {val}
+</button>
+
+                            
                           );
                         })}
                       </div>
@@ -681,6 +757,20 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               })}
             </div>
           )}
+
+
+           <div className="mt-1">
+              {product.isActive === false ? (
+                <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 uppercase tracking-wider flex items-center gap-1.5 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                  Product Inactive / Unavailable
+                </span>
+              ) : isOutOfStock ? (
+                <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
+              )}
+            </div>
 
           <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 ">
             {product.warranty && (
@@ -734,37 +824,48 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
                   className={isWishlisted ? "text-red-500" : "text-gray-500 group-hover:text-red-500 group-hover:fill-red-500 transition-colors"} 
                 />
               </button>
-              <button className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group">
-                <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
-              </button>
+              
+              <button 
+                              onClick={handleShare}
+                              className="w-10 h-10 sm:w-11 sm:h-11 border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm group"
+                            >
+                              <Share2 size={16} className="text-gray-500 group-hover:text-primary transition-colors" />
+                            </button>
+
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mt-auto">
-            <button 
-              onClick={handleAddToCart}
-              disabled={product.isActive === false || isOutOfStock}
-              className={`flex-1 border-2 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-sm transition-colors ${
-                product.isActive === false || isOutOfStock
-                  ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
-                  : 'border-primary text-primary hover:bg-primary/5'
-              }`}
-            >
-              <ShoppingCart size={18} /> Add to Cart
-            </button>
-            <button 
-              onClick={handleBuyNow}
-              disabled={product.isActive === false || isOutOfStock}
-              className={`flex-1 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg font-bold flex justify-center items-center gap-2 shadow-md transition-opacity ${
-                product.isActive === false || isOutOfStock
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-primary text-white hover:opacity-90'
-              }`}
-            >
-              <ShoppingBag size={18} /> {product.isActive === false ? 'Inactive' : isOutOfStock ? 'Unavailable' : 'Buy Now'}
-            </button>
-          </div>
+         <div className="grid grid-cols-2 max-[408px]:grid-cols-1 gap-2 items-stretch mt-auto w-full max-w-sm">
+  <button 
+    onClick={handleAddToCart}
+    disabled={product.isActive === false || isOutOfStock}
+    className={`w-full h-full border-2 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-colors shadow-sm ${
+      product.isActive === false || isOutOfStock
+        ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+        : 'border-primary text-primary hover:bg-primary/5'
+    }`}
+  >
+    <ShoppingCart size={16} className="flex-shrink-0" /> 
+    <span className="truncate">Add to Cart</span>
+  </button>
 
+  <button 
+    onClick={handleBuyNow}
+    disabled={product.isActive === false || isOutOfStock}
+    className={`w-full h-full border-2 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md font-bold flex justify-center items-center gap-1.5 transition-colors shadow-sm ${
+      product.isActive === false || isOutOfStock
+        ? 'bg-gray-300 text-gray-500 border-gray-300 cursor-not-allowed'
+        : 'bg-primary border-primary text-white hover:opacity-90'
+    }`}
+  >
+    <ShoppingBag size={16} className="flex-shrink-0" /> 
+    <span className="truncate">
+      {product.isActive === false ? 'Inactive' : isOutOfStock ? 'Unavailable' : 'Buy Now'}
+    </span>
+  </button>
+</div>
+
+ 
           {product.customizeProduct === 'Yes' && (
             <div className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-4 mt-2">
               <div>

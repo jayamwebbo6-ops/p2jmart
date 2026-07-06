@@ -3,7 +3,6 @@ import { Trash2, Minus, Plus, ArrowRight, ShieldCheck, Layers, Ticket } from 'lu
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ConfirmationModal from '../../components/ConfirmationModal';
 
-// FIXED: Added passed structural dependency setCart to accept remote data transfers
 const Cart = ({
   cart = [],
   updateQuantity,
@@ -34,19 +33,11 @@ const Cart = ({
     return `${BACKEND_URL}/${imagePath.replace(/^\//, '')}`;
   };
 
-  /* ==========================================================================
-      INTERMEDIARY HANDLER FOR CAPTURING ROUTER STATE BUNDLES
-     ========================================================================== */
   useEffect(() => {
     if (location.state && location.state.incomingBundle) {
       const bundle = location.state.incomingBundle;
-
-      // Clean historical router state context references FIRST to prevent duplicate triggers
       navigate(location.pathname, { replace: true, state: {} });
-
-      // Ensure the collection item is not already inside the active layout context
       const bundleExists = cart.some(item => (item.id === bundle.id || item._id === bundle.id || item.productId === bundle.id));
-
       if (!bundleExists) {
         if (typeof onAddToCart === 'function') {
           onAddToCart(bundle);
@@ -57,7 +48,6 @@ const Cart = ({
     }
   }, [location.state, navigate, location.pathname, onAddToCart, cart, setCart]);
 
-  // Calculations based on current cart contents
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const totalWeight = cart.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
   const shippingFee = subtotal > 1000 || subtotal === 0 || totalWeight === 0 ? 0 : 100;
@@ -76,10 +66,10 @@ const Cart = ({
 
   if (cart.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center font-['Inter'] px-2 py-20">
-        <h2 className="text-lg md:text-2xl font-bold text-[#003147] mb-1">Your Cart is Empty</h2>
-        <p className="text-gray-500 text-[11px] md:text-sm mb-4">Add items to your cart to see them here.</p>
-        <Link to="/" className="bg-[#003147] text-white text-[11px] md:text-sm font-semibold px-4 py-2 rounded-md hover:bg-[#009EDB] transition-colors">
+      <div className="flex flex-col items-center justify-center text-center font-['Inter'] px-4 py-20">
+        <h2 className="text-lg font-bold text-[#003147] mb-1">Your Cart is Empty</h2>
+        <p className="text-gray-500 text-xs mb-4">Add items to your cart to see them here.</p>
+        <Link to="/" className="bg-[#003147] text-white text-xs font-semibold px-4 py-2 rounded-md hover:bg-[#009EDB] transition-colors">
           Continue Shopping
         </Link>
       </div>
@@ -87,161 +77,159 @@ const Cart = ({
   }
 
   return (
-    <div className="w-full pt-10 flex flex-col md:flex-row gap-4 font-['Inter'] items-start px-1 sm:px-0">
+    /* Base wrapper layout: stacks on mobile (<800px), shifts side-by-side at >=801px */
+    <div className="w-full pt-6 flex flex-col min-[801px]:flex-row gap-6 font-['Inter'] items-start px-2 min-[350px]:px-4 max-w-7xl mx-auto">       
       
       {/* Left Container: Items list */}
-      <div className="flex-1 w-full flex flex-col gap-3">
-        <div className="flex flex-col min-[240px]:flex-row min-[240px]:items-center justify-between border-b border-gray-100 pb-2 gap-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-[#003147]">Your Items ({cart.length})</h1>
-            {cart.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowClearModal(true)}
-                className="text-[#9E2A2B] bg-red-50 border border-red-100 hover:bg-red-100 transition-colors rounded-full px-3 py-2 text-[11px] sm:text-xs font-semibold"
-              >
-                Clear Cart
-              </button>
-            )}
+      <div className="flex-1 w-full flex flex-col gap-4 min-w-0">
+        <div className="flex flex-row items-center justify-between border-b border-gray-100 pb-3 gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-sm sm:text-lg font-bold text-[#003147]">Your Items ({cart.length})</h1>
+            <button
+              type="button"
+              onClick={() => setShowClearModal(true)}
+              className="text-[#9E2A2B] bg-red-50 border border-red-100 hover:bg-red-100 transition-colors rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+            >
+              Clear
+            </button>
           </div>
-          <Link to="/" className="text-[11px] sm:text-sm font-semibold text-[#009EDB] hover:underline w-fit">Continue Shopping</Link>
+          <Link to="/" className="text-xs font-semibold text-[#009EDB] hover:underline">Continue Shopping</Link>
         </div>
 
-        <div className={cart.length > 3 ? 'max-h-[calc(100vh-200px)] overflow-y-auto pr-2' : ''}>
+        <div className={cart.length > 3 ? 'max-h-[calc(100vh-220px)] overflow-y-auto pr-1' : ''}>
           {cart.map((item) => (
-            <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-3xl p-4 shadow-sm flex flex-col sm:flex-row gap-4 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
+            <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-2xl mb-4 p-3 sm:p-4 shadow-sm flex flex-col gap-3 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
             
-            {/* Image wrapper */}
-            <div className="flex justify-start sm:block flex-shrink-0">
-              <Link 
-                to={item.isComboProduct && item.includedProducts?.[0]
-                  ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id}`
-                  : `/product/${item.productId || item.id || item._id}`
-                }
-                className="w-16 h-16 sm:w-24 sm:h-24 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 relative block cursor-pointer"
-              >
-                {/* Fallback image handle for standard bundle components schema */}
-                <img 
-                  src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200" 
-                />
-                {item.isComboProduct && (
-                  <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
-                    <Layers size={8} /> Combo
-                  </div>
-                )}
-              </Link>
-            </div>
-
-            {/* Middle text data & Quantity Selector */}
-            <div className="flex-1 flex flex-col justify-between py-0.5 text-left min-w-0">
-              
-              <div>
-                {/* Badges & Vendor Line */}
-                <div className="flex items-center justify-start gap-2 flex-wrap mb-1.5">
-                  <span className="text-[10px] sm:text-xs text-gray-500 font-semibold tracking-wide uppercase">
-                    Joy Gift House
-                  </span>
-                  {item.isComboProduct && (
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                      ✨ Combo Bundle Savings Deal
-                    </span>
-                  )}
-                </div>
-
-                {/* Main Item Title */}
-                <h3 className="text-[13px] sm:text-base font-extrabold text-gray-900 leading-snug line-clamp-2">
-                  {item.title}
-                </h3>
+              {/* Responsive Frame: Stacked on tiny screens (<380px), side-by-side on larger screens */}
+              <div className="flex flex-col min-[380px]:flex-row gap-3 items-center min-[380px]:items-start w-full">
                 
-                {/* --- DYNAMIC NESTED SUB-ITEMS RENDER FOR COMBO PACKS --- */}
-                {item.isComboProduct && item.includedProducts && (
-                  <div className="mt-3 bg-slate-50 border border-slate-200/60 rounded-xl p-3 w-full max-w-full shadow-inner">
-                    <div className="flex items-center gap-1.5 mb-2 border-b border-slate-200/40 pb-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
-                      <p className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-500 tracking-wider">
-                        Included Package Customizations ({item.includedProducts.length} items)
-                      </p>
-                    </div>
+                {/* Large, High-Visibility Image Container */}
+                <div className="shrink-0 w-full min-[380px]:w-24 sm:w-28 aspect-square min-[380px]:h-24 sm:h-28 max-w-[140px] min-[380px]:max-w-none">
+                  <Link 
+                    to={item.isComboProduct && item.includedProducts?.[0]
+                      ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id}`
+                      : `/product/${item.productId || item.id || item._id}`
+                    }
+                    className="w-full h-full bg-slate-50 rounded-xl overflow-hidden border border-gray-200 relative block cursor-pointer"
+                  >
+                    <img 
+                      src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} 
+                      alt={item.title} 
+                      className="w-full h-full object-contain p-1 mix-blend-multiply hover:scale-105 transition-transform duration-200" 
+                    />
+                    {item.isComboProduct && (
+                      <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 uppercase flex items-center justify-center gap-0.5">
+                        <Layers size={8} /> Combo
+                      </div>
+                    )}
+                  </Link>
+                </div>
 
-                    <div className="flex flex-col gap-2">
-                      {item.includedProducts.map((subItem, index) => (
-                        <div 
-                          key={`${subItem.id || subItem.productId}-${subItem.variantId || 'default'}-${index}`} 
-                          className="flex items-center justify-between gap-3 bg-white border border-slate-100 p-1.5 rounded-lg hover:border-blue-200 transition-colors shadow-sm"
-                        >
-                          {/* Thumbnail + Title Group */}
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-md bg-slate-100 border border-slate-200/85 overflow-hidden shrink-0 shadow-sm">
-                              <img 
-                                src={formatImageUrl(subItem.image)} 
-                                alt={subItem.productName || subItem.title} 
-                                className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300" 
-                              />
-                            </div>
-                            <span className="truncate font-semibold text-gray-800 text-xs sm:text-sm">
-                              {subItem.productName || subItem.title}
-                            </span>
-                          </div>
-
-                          {/* Individual Item Multiplier Counter Badge */}
-                          <div className="shrink-0 bg-slate-100 text-slate-700 font-mono text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-md border border-slate-200/50">
-                            QTY: {item.quantity}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                {/* Middle text details */}
+                <div className="flex-1 min-w-0 text-center min-[380px]:text-left w-full">
+                  <div className="flex items-center justify-center min-[380px]:justify-start gap-2 flex-wrap mb-1">
+                    <span className="text-[10px] sm:text-xs text-gray-400 font-semibold uppercase tracking-wide">
+                      Joy Gift House
+                    </span>
+                    {item.isComboProduct && (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                        ✨ Bundle
+                      </span>
+                    )}
                   </div>
-                )}
+
+                  <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-gray-900 leading-snug line-clamp-2">
+                    {item.title}
+                  </h3>
+
+                  <div className="mt-1">
+                    <span className="text-[11px] text-gray-400 font-medium mr-1">Unit Price:</span>
+                    <span className="text-xs font-bold text-gray-600">₹{item.price}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Quantity Counter */}
-              <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
-                <div className="flex items-center border border-gray-200 rounded-full w-fit bg-white px-1 py-0.5">
+              {/* --- DYNAMIC NESTED SUB-ITEMS RENDER FOR COMBO PACKS --- */}
+              {item.isComboProduct && item.includedProducts && (
+                <div className="w-full bg-slate-50 border border-slate-200/60 rounded-xl p-2 shadow-inner">
+                  <div className="flex items-center gap-1 mb-1.5 border-b border-slate-200/40 pb-1">
+                    <p className="text-[9px] font-bold uppercase text-slate-500 tracking-wider">
+                      Included Layout Customizations ({item.includedProducts.length} items)
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    {item.includedProducts.map((subItem, index) => (
+                      <div 
+                        key={`${subItem.id || subItem.productId}-${subItem.variantId || 'default'}-${index}`} 
+                        className="flex items-center justify-between gap-2 bg-white border border-slate-100 p-1 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div className="w-7 h-7 rounded-md bg-slate-100 overflow-hidden shrink-0">
+                            <img 
+                              src={formatImageUrl(subItem.image)} 
+                              alt={subItem.productName || subItem.title} 
+                              className="w-full h-full object-cover" 
+                            />
+                          </div>
+                          <span className="truncate font-medium text-gray-800 text-[11px]">
+                            {subItem.productName || subItem.title}
+                          </span>
+                        </div>
+                        <div className="shrink-0 bg-slate-100 text-slate-700 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded">
+                          QTY: {item.quantity}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Rows Area (Counter + Delete Action + Item Totals) */}
+              <div className="w-full flex flex-col min-[320px]:flex-row items-center justify-between pt-2.5 border-t border-gray-100 gap-2 mt-1">
+                <div className="flex items-center gap-3 justify-between w-full min-[320px]:w-auto">
+                  <div className="flex items-center border border-gray-200 rounded-full bg-white px-1 py-0.5 shadow-sm">
+                    <button 
+                      onClick={() => item.quantity > 1 ? updateQuantity(item.id || item._id, -1) : handleOpenConfirmation(item)}
+                      className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <span className="px-2 text-xs font-bold text-gray-800 min-w-5 text-center">{item.quantity}</span>
+                    <button 
+                      onClick={() => updateQuantity(item.id || item._id, 1)}
+                      className="p-1 text-gray-500 hover:bg-gray-100 rounded-full"
+                    >
+                      <Plus size={12} />
+                    </button>
+                  </div>
+
                   <button 
-                    onClick={() => item.quantity > 1 ? updateQuantity(item.id || item._id, -1) : handleOpenConfirmation(item)}
-                    className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                    onClick={() => handleOpenConfirmation(item)}
+                    className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-medium"
                   >
-                    <Minus size={14} />
-                  </button>
-                  <span className="px-3 text-xs font-bold text-gray-800 min-w-6 text-center">{item.quantity}</span>
-                  <button 
-                    onClick={() => updateQuantity(item.id || item._id, 1)}
-                    className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Plus size={14} />
+                    <Trash2 size={13} /> <span>Remove</span>
                   </button>
                 </div>
 
-                <button 
-                  onClick={() => handleOpenConfirmation(item)}
-                  className="text-gray-400 hover:text-red-500 transition-colors flex items-center gap-1 text-xs font-medium"
-                >
-                  <Trash2 size={14} /> Remove
-                </button>
+                <div className="text-right flex min-[320px]:flex-col items-center min-[320px]:items-end justify-between w-full min-[320px]:w-auto border-t min-[320px]:border-t-0 pt-1.5 min-[320px]:pt-0 border-dashed border-gray-100">
+                  <span className="text-[10px] text-gray-400 font-medium min-[320px]:mb-0.5">Total:</span>
+                  <span className="text-xs sm:text-sm font-black text-[#003147]">₹{item.price * item.quantity}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Right Side Price Displays */}
-            <div className="text-left sm:text-right flex flex-row sm:flex-col justify-between sm:justify-start items-center sm:items-end gap-1 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-gray-50">
-              <span className="text-xs text-gray-400 block sm:hidden font-medium">Total:</span>
-              <span className="text-sm sm:text-base font-black text-[#003147]">₹{item.price * item.quantity}</span>
             </div>
-
-          </div>
           ))}
         </div>
       </div>
-      {/* Right Side calculations layout summary section */}
-      <div className="w-full md:w-80 bg-white border border-gray-200 rounded-3xl p-5 shadow-sm flex flex-col gap-5">
-        <h2 className="text-sm sm:text-base font-bold text-[#003147] border-b border-gray-50 pb-2">Order Summary</h2>
-        
-        {/* Cart page intentionally hides shipping/GST details; checkout shows them */}
 
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3">
-          <div className="flex items-center gap-2 text-[#003147] font-semibold text-sm mb-2">
-            <Ticket size={15} />
+      {/* Right Side Order Summary calculation box: Holds fixed 80px width ONLY at >=801px layout setups */}
+      <div className="w-full shrink-0 min-[801px]:w-80 bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col gap-4 min-w-0">
+        <h2 className="text-xs sm:text-base font-bold text-[#003147] border-b border-gray-100 pb-2">Order Summary</h2>
+        
+        <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-2.5">
+          <div className="flex items-center gap-1.5 text-[#003147] font-semibold text-xs mb-2">
+            <Ticket size={13} />
             <span>Apply Promo Code</span>
           </div>
           {!appliedCoupon ? (
@@ -250,70 +238,77 @@ const Cart = ({
                 e.preventDefault();
                 onApplyCoupon?.(subtotal, couponCode);
               }}
-              className="flex flex-col gap-2"
+              className="w-full"
             >
-              <input
-                type="text"
-                value={couponCode || ''}
-                onChange={(e) => setCouponCode?.(e.target.value)}
-                placeholder="Enter coupon code"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#009EDB]"
-              />
-              {couponError ? <p className="text-xs text-red-600">{couponError}</p> : null}
-              <button
-                type="submit"
-                disabled={applyingCoupon}
-                className="w-full bg-[#009EDB] hover:bg-[#007fb0] disabled:opacity-70 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
-              >
-                {applyingCoupon ? 'Applying...' : 'Apply Coupon'}
-              </button>
+              <div className="flex gap-1.5 w-full items-start">
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="text"
+                    value={couponCode || ''}
+                    onChange={(e) => setCouponCode?.(e.target.value)}
+                    placeholder="Coupon"
+                    className="w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#009EDB]"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={applyingCoupon}
+                  className="bg-[#009EDB] hover:bg-[#007fb0] disabled:opacity-70 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shrink-0"
+                >
+                  {applyingCoupon ? '...' : 'Apply'}
+                </button>
+              </div>
+              {couponError && <p className="text-[10px] text-red-600 mt-1">{couponError}</p>}
             </form>
           ) : (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold">{appliedCoupon.code}</span>
-                <button type="button" onClick={onRemoveCoupon} className="text-xs font-semibold underline">Remove</button>
+                <span className="font-semibold truncate">{appliedCoupon.code}</span>
+                <button type="button" onClick={onRemoveCoupon} className="text-[11px] font-semibold underline shrink-0">Remove</button>
               </div>
-              <p className="mt-1 text-xs">Discount applied: {Number(couponDiscount) > 0 ? `-₹${Number(couponDiscount).toFixed(2)}` : `₹0.00`}</p>
+              <p className="mt-0.5 text-[10px]">Discount: -₹{Number(couponDiscount).toFixed(2)}</p>
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-2.5 text-xs sm:text-sm text-gray-600">
+        <div className="flex flex-col gap-2 text-xs text-gray-600">
           <div className="flex justify-between">
             <span>Subtotal:</span>
             <span className="font-bold text-gray-900">₹{subtotal}</span>
           </div>
           <div className="flex justify-between">
-            <span>Coupon Discount:</span>
-            <span className="font-bold text-emerald-600">{Number(couponDiscount) > 0 ? `-₹${Number(couponDiscount).toFixed(2)}` : `₹0.00`}</span>
+            <span>Discount:</span>
+            <span className="font-bold text-emerald-600">-₹{Number(couponDiscount).toFixed(2)}</span>
           </div>
-       
-          <hr className="border-gray-100 my-1" />
-          <div className="flex justify-between text-base font-black text-[#003147]">
-            <span>Total Amount:</span>
+          <hr className="border-gray-100 my-0.5" />
+          <div className="flex justify-between text-sm sm:text-base font-black text-[#003147]">
+            <span>Total:</span>
             <span>₹{total}</span>
           </div>
         </div>
 
-        <Link to="/checkout" className="w-full bg-[#003147] hover:bg-[#002232] text-white py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors shadow-md mt-2">
-          Proceed to Checkout <ArrowRight size={16} />
-        </Link>
+        <div className="w-full">
+          <Link 
+            to="/checkout" 
+            className="w-full bg-[#003147] hover:bg-[#002232] text-white py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors shadow-md"
+          >
+            Checkout <ArrowRight size={14} />
+          </Link>
+        </div>
 
-        <div className="flex flex-col gap-2 mt-2 border-t border-gray-50 pt-3">
-          <div className="flex items-center gap-2 text-[10px] sm:text-xs text-gray-500">
-            <ShieldCheck size={16} className="text-green-600 shrink-0" />
-            <span>100% Safe and Secure Payments.</span>
-          </div>
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
+          <ShieldCheck size={13} className="text-green-600 shrink-0" />
+          <span>Secure Checkout Guarantee</span>
         </div>
       </div>
 
+      {/* Modals placeholders */}
       <ConfirmationModal 
         isOpen={productToDelete !== null}
         onClose={() => setProductToDelete(null)}
         onConfirm={handleConfirmRemove}
         title="Remove Item"
-        message={`Are you sure you want to remove "${productToDelete?.title}" from your shopping cart?`}
+        message={`Are you sure you want to remove "${productToDelete?.title}"?`}
       />
       <ConfirmationModal 
         isOpen={showClearModal}
