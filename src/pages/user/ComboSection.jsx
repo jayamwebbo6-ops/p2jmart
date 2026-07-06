@@ -46,7 +46,12 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
         );
         if (!item) return null;
 
-        const isCurrent = (item._id || item.id) === product.id;
+        const currentActiveVariantId = product?.activeVariant?.id || product?.activeVariant?._id;
+        const svVariantId = sv.variantId && sv.variantId !== 'default' ? sv.variantId : null;
+        
+        // To be considered "This Item" (locked), it must be the exact product AND exact active variant
+        const isCurrent = (item._id || item.id) === product.id && 
+                          (!svVariantId || !currentActiveVariantId || svVariantId === currentActiveVariantId);
         
         let resolvedPrice = item.price || 0;
         let resolvedWeight = item.weight || 0;

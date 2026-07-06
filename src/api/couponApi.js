@@ -1,4 +1,5 @@
 import api from './api';
+import userApi from './userApi';
 
 export const createCouponAPI = async (couponData) => {
   const response = await api.post('/coupons/create', couponData);
@@ -10,9 +11,13 @@ export const getAllCouponsAPI = async () => {
   return response.data;
 };
 
-// NEW: checkout page available coupons
-export const getAvailableCouponsAPI = async () => {
-  const response = await api.get('/coupons/available');
+export const getEligibleCouponsAPI = async () => {
+  const response = await userApi.get('/coupons/get-eligible');
+  return response.data;
+};
+
+export const updateCouponAPI = async (id, couponData) => {
+  const response = await api.put(`/coupons/update/${id}`, couponData);
   return response.data;
 };
 
@@ -27,6 +32,6 @@ export const deleteCouponAPI = async (id) => {
 };
 
 export const applyCouponAPI = async (couponDetails) => {
-  const response = await api.post('/coupons/apply', couponDetails);
+  const response = await userApi.post('/coupons/apply', couponDetails);
   return response.data;
 };

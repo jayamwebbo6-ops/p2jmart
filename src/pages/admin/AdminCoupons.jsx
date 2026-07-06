@@ -16,6 +16,7 @@ import { AddBtn, SaveBtn, CancelBtn, DeleteBtn } from '../../components/AdminBut
 import { 
   getAllCouponsAPI, 
   createCouponAPI, 
+  updateCouponAPI,
   toggleCouponStatusAPI, 
   deleteCouponAPI 
 } from '../../api/couponApi';
@@ -28,6 +29,7 @@ const AdminCoupons = () => {
 
   // Modal Visibility State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingCouponId, setEditingCouponId] = useState(null);
 
   // Delete Confirmation Modal State
   const [deleteConfirmCoupon, setDeleteConfirmCoupon] = useState(null);
@@ -44,7 +46,8 @@ const AdminCoupons = () => {
     maxDiscountAmount: '',
     minOrderAmount: '',
     validityFrom: '',
-    validityTo: ''
+    validityTo: '',
+    usageLimitPerUser: 1
   });
 
   const [error, setError] = useState('');
@@ -141,6 +144,23 @@ const AdminCoupons = () => {
     }));
   };
 
+  const openEditModal = (coupon) => {
+    setError('');
+    setEditingCouponId(coupon._id);
+    setFormData({
+      code: coupon.code,
+      status: coupon.status,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue,
+      maxDiscountAmount: coupon.maxDiscountAmount || '',
+      minOrderAmount: coupon.minOrderAmount || '',
+      validityFrom: coupon.validityFrom ? coupon.validityFrom.split('T')[0] : '',
+      validityTo: coupon.validityTo ? coupon.validityTo.split('T')[0] : '',
+      usageLimitPerUser: coupon.usageLimitPerUser || 1
+    });
+    setIsAddModalOpen(true);
+  };
+
   // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -175,13 +195,20 @@ const AdminCoupons = () => {
         maxDiscountAmount: isPct ? Number(formData.maxDiscountAmount) : 0,
         validityFrom: formData.validityFrom,
         validityTo: formData.validityTo,
+        usageLimitPerUser: Number(formData.usageLimitPerUser) || 1,
         applicableForActiveUsersOnly: true,
         isSingleUse: true
       };
 
-      const res = await createCouponAPI(payload);
+      let res;
+      if (editingCouponId) {
+        res = await updateCouponAPI(editingCouponId, payload);
+      } else {
+        res = await createCouponAPI(payload);
+      }
+      
       if (res && res.success) {
-        toast.success(res.message || 'Coupon added successfully!');
+        toast.success(res.message || `Coupon ${editingCouponId ? 'updated' : 'added'} successfully!`);
         
         // Reset Form
         setFormData({
@@ -192,10 +219,13 @@ const AdminCoupons = () => {
           maxDiscountAmount: '',
           minOrderAmount: '',
           validityFrom: '',
-          validityTo: ''
+          validityTo: '',
+          usageLimitPerUser: 1
         });
 
         setIsAddModalOpen(false);
+        setEditingCouponId(null);
+        loadCoupons();
         loadCoupons();
       }
     } catch (err) {
@@ -229,6 +259,7 @@ const AdminCoupons = () => {
         
         <td className="py-4 px-3 space-y-1 text-xs text-gray-600">
           <div>Min Order Amount: <span className="font-bold text-gray-900">₹{coupon.minOrderAmount}</span></div>
+          <div>Usage Limit: <span className="font-bold text-indigo-700">{coupon.usageLimitPerUser || 1} {coupon.usageLimitPerUser === 1 ? 'time' : 'times'} / user</span></div>
           {isPct && (
             <div>Max Discount Cap: <span className="font-bold text-amber-700">₹{coupon.maxDiscountAmount}</span></div>
           )}
@@ -266,7 +297,15 @@ const AdminCoupons = () => {
         </td>
         
         <td className="py-4 px-3 text-center">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => openEditModal(coupon)}
+              className="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-1.5 rounded-lg transition-colors cursor-pointer"
+              title="Edit Coupon"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
             <DeleteBtn 
               onClick={() => handleDeleteCoupon(coupon)} 
               title="Delete Coupon"
@@ -287,6 +326,12 @@ const AdminCoupons = () => {
           <AddBtn
             onClick={() => {
               setError('');
+              setEditingCouponId(null);
+              setFormData({
+                code: '', status: 'Active', discountType: 'Fixed Amount (₹)',
+                discountValue: '', maxDiscountAmount: '', minOrderAmount: '',
+                validityFrom: '', validityTo: '', usageLimitPerUser: 1
+              });
               setIsAddModalOpen(true);
             }}
           >
@@ -319,7 +364,7 @@ const AdminCoupons = () => {
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <PlusCircle className="text-primary animate-pulse" size={18} />
-                  <h2 className="text-base font-bold text-slate-800">Create New Coupon</h2>
+                  <h2 className="text-base font-bold text-slate-800">{editingCouponId ? 'Edit Coupon' : 'Create New Coupon'}</h2>
                 </div>
                 <button 
                   onClick={() => setIsAddModalOpen(false)} 
@@ -490,9 +535,25 @@ const AdminCoupons = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">
+                    Usage Limit Per User *
+                  </label>
+                  <input 
+                    type="number"
+                    name="usageLimitPerUser"
+                    min="1"
+                    placeholder="e.g. 1"
+                    value={formData.usageLimitPerUser}
+                    onChange={handleInputChange}
+                    className="w-full text-xs border border-indigo-200 bg-indigo-50/30 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 font-bold"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">How many times a single user can apply this code.</p>
+                </div>
+
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3 bg-white">
                   <CancelBtn onClick={() => setIsAddModalOpen(false)} />
-                  <SaveBtn type="submit">Save Coupon</SaveBtn>
+                  <SaveBtn type="submit">{editingCouponId ? 'Update Coupon' : 'Save Coupon'}</SaveBtn>
                 </div>
               </form>
             </div>

@@ -146,28 +146,26 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
         const res = await getProductsAPI();
         if (res && res.success && Array.isArray(res.data)) {
           const currentId = loadedProduct._id || loadedProduct.id;
-          const currentCat = typeof loadedProduct.category === 'object' 
-            ? loadedProduct.category._id || loadedProduct.category.id || loadedProduct.category.name 
-            : loadedProduct.category;
-          const currentSubCat = typeof loadedProduct.subcategory === 'object'
-            ? loadedProduct.subcategory._id || loadedProduct.subcategory.id || loadedProduct.subcategory.name
-            : loadedProduct.subcategory;
+          const getSafeId = (val) => {
+            if (!val) return null;
+            if (typeof val === 'object') return (val._id || val.id || val.name)?.toString();
+            return val.toString();
+          };
+
+          const currentCat = getSafeId(loadedProduct.category);
+          const currentSubCat = getSafeId(loadedProduct.subcategory);
 
           const otherProducts = res.data.filter(p => {
-            const pId = p._id || p.id;
-            return pId !== currentId && p.status !== false;
+            const pId = getSafeId(p._id || p.id);
+            return pId !== currentId && p.status !== false && p.isActive !== false;
           });
 
           const sameSubcategory = [];
           const sameCategoryOnly = [];
 
           otherProducts.forEach(p => {
-            const pCat = typeof p.category === 'object' 
-              ? p.category._id || p.category.id || p.category.name 
-              : p.category;
-            const pSubCat = typeof p.subcategory === 'object'
-              ? p.subcategory._id || p.subcategory.id || p.subcategory.name
-              : p.subcategory;
+            const pCat = getSafeId(p.category);
+            const pSubCat = getSafeId(p.subcategory);
 
             if (currentSubCat && pSubCat === currentSubCat) {
               sameSubcategory.push(p);
