@@ -397,7 +397,7 @@ const ComboPacks = () => {
             title="View Customer Reviews"
           >
             <span className="text-amber-500">★</span>
-            <span className="text-primary font-bold">{(combo.rating || 5.0).toFixed(1)}</span>
+            <span className="text-primary font-bold">{(combo.rating || 0).toFixed(1)}</span>
             <span className="text-primary opacity-60 font-normal">({combo.reviewCount || 0})</span>
           </div>
         </td>

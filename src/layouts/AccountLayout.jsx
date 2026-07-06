@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, Link, useNavigate } from 'react-router-dom';
 import { User, Package,Ticket, MapPin, Heart, ShoppingCart, LogOut, Home, ChevronDown, Settings } from 'lucide-react';
+import { userLogout } from '../api/userApi';
 
 const AccountLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Orders');
   const location = useLocation();
+  const navigate = useNavigate();
+
+  
 
   const navLinks = [
     { to: '/my-account/profile', label: 'Profile', icon: <User size={18} /> },
@@ -14,7 +18,7 @@ const AccountLayout = () => {
     { to: '/my-account/address', label: 'Address Book', icon: <MapPin size={18} /> },
         { to: '/my-account/coupons', label: 'Coupons', icon: <Ticket size={18} /> },
    
-    { to: '/my-account/logout', label: 'Logout', icon: <LogOut size={18} /> },
+    { label: 'Logout', icon: <LogOut size={18} />, isLogout: true },
 
   ];
 
@@ -42,6 +46,13 @@ const AccountLayout = () => {
       setStatusFilter('All Orders');
     }
   }, [currentPage]);
+
+
+ const handleLogout = () => {
+  userLogout();
+  window.location.href = import.meta.env.BASE_URL || '/';
+};
+
 
   return (
     <div className="min-h-screen bg-[#fcf9f5] font-sans py-6 md:py-8">
@@ -117,27 +128,43 @@ const AccountLayout = () => {
             </div>
 
             <nav className="flex flex-col py-2">
-              {navLinks.map((link, index) => (
-                <NavLink
-                  key={index}
-                  to={link.to}
-                  className={({ isActive }) => {
-                    const isActuallyActive = isActive || (link.label === 'Profile' && (location.pathname === '/my-account' || location.pathname === '/my-account/'));
+            {navLinks.map((link, index) => {
+  if (link.isLogout) {
+    return (
+      <button
+        key={index}
+        type="button"
+        onClick={handleLogout}
+        className="w-full flex items-center space-x-3 px-6 py-4 text-sm font-medium transition-colors border-b border-gray-50 last:border-0 text-red-500 hover:text-white hover:bg-red-500 border-l-4 border-l-transparent text-left"
+      >
+        <span className="opacity-80">{link.icon}</span>
+        <span>{link.label}</span>
+      </button>
+    );
+  }
 
-                    if (link.label === 'Logout') {
-                      return 'flex items-center space-x-3 px-6 py-4 text-sm font-medium transition-colors border-b border-gray-50 last:border-0 text-red-500 hover:text-white hover:bg-red-500 border-l-4 border-l-transparent';
-                    }
-                    return `flex items-center space-x-3 px-6 py-4 text-sm font-medium transition-colors border-b border-gray-50 last:border-0 ${
-                      isActuallyActive
-                        ? 'text-primary border-l-4 border-l-primary bg-primary/5'
-                        : 'text-gray-600 hover:text-primary hover:bg-primary/5 border-l-4 border-l-transparent'
-                    }`;
-                  }}
-                >
-                  <span className="opacity-80">{link.icon}</span>
-                  <span>{link.label}</span>
-                </NavLink>
-              ))}
+  return (
+    <NavLink
+      key={index}
+      to={link.to}
+      className={({ isActive }) => {
+        const isActuallyActive =
+          isActive ||
+          (link.label === 'Profile' &&
+            (location.pathname === '/my-account' || location.pathname === '/my-account/'));
+
+        return `flex items-center space-x-3 px-6 py-4 text-sm font-medium transition-colors border-b border-gray-50 last:border-0 ${
+          isActuallyActive
+            ? 'text-primary border-l-4 border-l-primary bg-primary/5'
+            : 'text-gray-600 hover:text-primary hover:bg-primary/5 border-l-4 border-l-transparent'
+        }`;
+      }}
+    >
+      <span className="opacity-80">{link.icon}</span>
+      <span>{link.label}</span>
+    </NavLink>
+  );
+})}
             </nav>
           </div>
         </div>

@@ -89,22 +89,29 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
         };
       }).filter(Boolean);
 
-      const totalOriginalSum = items.reduce((acc, item) => acc + item.price, 0);
-      const offerPrice = matchedCombo.offerPrice || 0;
-      const discountPercent = totalOriginalSum > offerPrice
-        ? Math.round(((totalOriginalSum - offerPrice) / totalOriginalSum) * 100)
-        : 0;
+     const totalOriginalPrice = Number(matchedCombo.totalPrice || 0);
+const offerPrice = Number(matchedCombo.offerPrice || 0);
+
+const comboDiscountAmount =
+  totalOriginalPrice > offerPrice ? totalOriginalPrice - offerPrice : 0;
+
+const discountPercent =
+  totalOriginalPrice > 0 && comboDiscountAmount > 0
+    ? ((comboDiscountAmount / totalOriginalPrice) * 100)
+    : 0;
 
       return {
-        id: matchedCombo._id || matchedCombo.id,
-        title: matchedCombo.name,
-        offerPrice,
-        rating: matchedCombo.rating || 5.0,
-        reviewCount: matchedCombo.reviewCount || 0,
-        discountPercent,
-        category: matchedCombo.category || '',
-        items
-      };
+  id: matchedCombo._id || matchedCombo.id,
+  title: matchedCombo.name,
+  offerPrice,
+  totalOriginalPrice,
+  comboDiscountAmount,
+  rating: matchedCombo.rating || 5.0,
+  reviewCount: matchedCombo.reviewCount || 0,
+  discountPercent,
+  category: matchedCombo.category || '',
+  items
+};
     });
   }, [product, matchedCombos, selectedColor, selectedSize]);
 
@@ -147,10 +154,13 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
     .reduce((sum, item) => sum + item.price, 0);
 
   const finalComboPrice = isFullComboSelected
-    ? (activeCombo?.offerPrice || Math.round(regularComboSum * (1 - (activeCombo?.discountPercent || 0) / 100)))
-    : regularComboSum;
+  ? Number(activeCombo?.offerPrice || 0)
+  : regularComboSum;
 
-  const totalComboSavings = regularComboSum - finalComboPrice;
+const totalComboSavings = isFullComboSelected
+  ? Number(activeCombo?.comboDiscountAmount || 0)
+  : 0;
+
 
   const buildBundlePayload = () => {
     const selectedItems = activeCombo.items.filter(item => selectedComboUniqueKeys.includes(item.uniqueKey));
@@ -340,16 +350,25 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
                   <span>Selected Items ({selectedComboUniqueKeys.length}):</span>
                   <span className="font-medium text-gray-900">₹{regularComboSum}</span>
                 </div>
-                {isFullComboSelected ? (
-                  <div className="flex justify-between text-green-600 font-medium">
-                    <span>Combo Promotion Pack Discount:</span>
-                    <span>-{activeCombo.discountPercent}%</span>
-                  </div>
-                ) : (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
-                    💡 Select all components to qualify for the bundle discount structure.
-                  </div>
-                )}
+              {isFullComboSelected ? (
+  <>
+    <div className="flex justify-between text-green-600 font-medium">
+      <span>Combo Promotion Pack Discount:</span>
+      <span>{activeCombo.discountPercent.toFixed(0)}%</span>
+    </div>
+
+    <div className="flex justify-between text-xs text-gray-600">
+      <span>Combo Savings:</span>
+      <span className="font-bold text-green-700">
+        ₹{activeCombo.comboDiscountAmount.toLocaleString('en-IN')}
+      </span>
+    </div>
+  </>
+) : (
+  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
+    💡 Select all components to qualify for the bundle discount structure.
+  </div>
+)}
               </div>
             </div>
 
