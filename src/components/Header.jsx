@@ -378,7 +378,7 @@ const handleItemClick = (product) => {
 
   return (
     <>      {/* Top Bar */}
-      <div className="hidden md:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-6 xl:px-12 justify-between items-center font-sans">
+<div className="hidden min-[849px]:flex w-full bg-primary text-white text-xs py-2 px-4 md:px-8 lg:px-6 xl:px-12 justify-between items-center font-sans">
         <div>
           <span className="tracking-wide text-[12px] text-white">Free Shipping Over ₹500</span>
         </div>
@@ -423,16 +423,16 @@ const handleItemClick = (product) => {
       </div>
  
       {/* Main Navbar */}
-      <header className="w-full bg-white px-4 md:px-8 lg:px-6 xl:px-12 py-0 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm">
-        <div className="flex items-center">
-          <Link to="/" className="flex items-center">
-            <img 
-              src={`${import.meta.env.BASE_URL}logo.png`} 
-              alt="P2J Mart Logo" 
-              className="h-16 md:h-23 w-auto object-contain py-1"
-            />
-          </Link>
-        </div>
+     <header className="w-full bg-white px-4 md:px-8 lg:px-6 xl:px-12 py-1 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm max-h-[90px] md:max-h-[110px]">
+  <div className="flex items-center">
+    <Link to="/" className="flex items-center">
+      <img 
+        src={`${import.meta.env.BASE_URL}logo.png`} 
+        alt="P2J Mart Logo" 
+        className="h-16 md:h-20 w-auto object-contain py-0.5" 
+      />
+    </Link>
+  </div>
  
         <nav className="hidden lg:flex items-center space-x-4 xl:space-x-8">
           <Link to="/" className={`${isActive('/')} transition-colors`}>Home</Link>

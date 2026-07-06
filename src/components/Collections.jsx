@@ -87,99 +87,103 @@ const Collections = () => {
     <div className="bg-[#f5f5f5]">
       
       {/* Banner */}
-      <section className="bg-primary text-white w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
-        <div className="px-6 py-11 flex flex-col md:flex-row items-center justify-between gap-5 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Send size={48} className="text-white/60" />
-            <div>
-              <Link to="/contact">
-                <h2 className="text-2xl text-white font-semibold hover:underline">
-                  Contact Us now
-                </h2>
-              </Link>
-              <p className="text-sm md:text-base text-gray-200 mt-1">
-                Explore Our Products Today to get unbelievable Discounts!!
-              </p>
-            </div>
-          </div>
+      <section className="bg-primary text-white w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-x-hidden">
+  <div className="px-6 py-11 flex flex-col md:flex-row items-center justify-between gap-5 max-w-7xl mx-auto w-full">
+    
+    <div className="flex items-center gap-4">
+      <Send size={48} className="text-white/60 shrink-0" />
+      <div>
+        <Link to="/contact">
+          <h2 className="text-2xl text-white font-semibold hover:underline">
+            Contact Us now
+          </h2>
+        </Link>
+        <p className="text-sm md:text-base text-gray-200 mt-1">
+          Explore Our Products Today to get unbelievable Discounts!!
+        </p>
+      </div>
+    </div>
 
-          <Link to="/products"> 
-            <button className="bg-[#2c2c2c] hover:bg-black px-10 py-3 rounded-full text-white font-medium transition">
-              Explore Our Products
-            </button>
-          </Link>
-        </div>
-      </section>
+    {/* FIXED BUTTON CONTAINER */}
+    <div className="flex justify-center md:justify-end shrink-0">
+      <Link to="/products"> 
+        <button className="bg-[#2c2c2c] hover:bg-black px-8 py-3 rounded-full text-white font-medium transition whitespace-nowrap">
+          Explore Our Products
+        </button>
+      </Link>
+    </div>
+    
+  </div>
+</section>
 
       {/* Real Live Products Sections */}
-      <section className="pt-12 max-w-7xl mx-auto  md:px-0">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {sections.map((section) => {
-            if (section.products.length === 0) return null;
+    {/* CHANGED: Added w-full px-4 md:px-6 lg:px-0 to handle edge-to-edge on small screens */}
+<section className="pt-12 w-full max-w-7xl mx-auto lg:px-0">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    {sections.map((section) => {
+      if (section.products.length === 0) return null;
 
-            return (
-              <div
-                key={section.title}
-                className="bg-white border border-gray-200 p-3 flex flex-col justify-between shadow-xs"
-              >
-                <div>
-                  <div className="flex items-center justify-center mb-4">
-                    <h2 className="text-xl font-medium text-gray-800 ">
-                      {section.title}
-                    </h2> 
-                  </div>
+      return (
+        <div
+          key={section.title}
+          className="bg-white border border-gray-200 p-3 flex flex-col justify-between shadow-xs rounded-sm"
+        >
+          <div>
+            <div className="flex items-center justify-center mb-4">
+              <h2 className="text-xl font-medium text-gray-800 ">
+                {section.title}
+              </h2> 
+            </div>
 
-                  {/* Product Grid Mapping */}
-                  {/* Product Grid Mapping */}
-<div className="grid grid-cols-2 gap-3">
-  {section.products.slice(0, 4).map((product) => {
-    const productId = product._id?.$oid || product._id || product.id;
-    
-    // 1. Prioritize the first available variant's image, fall back to root image
-    const rawImagePath = product.variants?.[0]?.image || product.image;
+            {/* Product Grid Mapping */}
+            <div className="grid grid-cols-2 gap-3">
+              {section.products.slice(0, 4).map((product) => {
+                const productId = product._id?.$oid || product._id || product.id;
+                
+                const rawImagePath = product.variants?.[0]?.image || product.image;
 
-    const displayImage = rawImagePath
-      ? (rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath.replace(/^\//, '')}`)
-      : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
+                const displayImage = rawImagePath
+                  ? (rawImagePath.startsWith('http') ? rawImagePath : `${IMAGE_BASE_URL}/${rawImagePath.replace(/^\//, '')}`)
+                  : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
 
-    return (
-      <Link
-        key={productId}
-        to={`/product/${productId}`}
-        className="border border-gray-200 rounded-xs p-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
-      >
-        <div className="aspect-square bg-gray-50/50 rounded overflow-hidden flex items-center justify-center">
-          <img
-            src={displayImage}
-            alt={product.title || "Product Image"}
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-300"
-            onError={(e) => {
-              e.target.src = "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
-            }}
-          />
+                return (
+                  <Link
+                    key={productId}
+                    to={`/product/${productId}`}
+                    className="border border-gray-200 rounded-xs p-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
+                  >
+                    <div className="aspect-square bg-gray-50/50 rounded overflow-hidden flex items-center justify-center">
+                      <img
+                        src={displayImage}
+                        alt={product.title || "Product Image"}
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src = "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-2 flex items-start justify-between gap-1.5 w-full">
+                      <h3 className="text-xs text-gray-700 line-clamp-2 font-medium group-hover:text-primary transition-colors flex-1">
+                        {product.title}
+                      </h3>
+
+                      <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
+                        {typeof product.discount === 'number' ? `${product.discount}% OFF` : product.discount || "Sale"}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
-
-        <div className="mt-2 flex items-start justify-between gap-1.5 w-full">
-          <h3 className="text-xs text-gray-700 line-clamp-2 font-medium group-hover:text-primary transition-colors flex-1">
-            {product.title}
-          </h3>
-
-          <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
-            {typeof product.discount === 'number' ? `${product.discount}% OFF` : product.discount || "Sale"}
-          </span>
-        </div>
-      </Link>
-    );
-  })}
-</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      );
+    })}
+  </div>
+</section>
 
     </div>
   );

@@ -193,6 +193,13 @@ const FilterContent = ({
 /* ==========================================================================
    MAIN SUBCATEGORY PAGE
    ========================================================================== */
+
+
+import { Truck, RotateCcw, Headset, ChevronUp } from 'lucide-react';
+import { FaInstagram, FaYoutube, FaFacebookF } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
+import { getHomeCMS } from '../../api/homeCms'; 
+
 const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart, isCustomizedPage = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -298,12 +305,13 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     fetchSubcategoryCatalog();
   }, [subcategoryId, isCustomizedPage, location.state?.categoryId]);
 
-  const brandsList = useMemo(() => {
+  // Dynamic values mapping safely inside standard handlers without modifications
+  const brandsList = React.useMemo(() => {
     const brands = products.map(p => p.brand).filter(Boolean);
     return [...new Set(brands)];
   }, [products]);
 
-  const sizesList = useMemo(() => {
+  const sizesList = React.useMemo(() => {
     const sizes = products.map(p => p.size).filter(Boolean);
     return [...new Set(sizes)];
   }, [products]);
@@ -324,7 +332,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     setMinDiscount(0);
   };
 
-  const filteredAndSortedProducts = useMemo(() => {
+  const filteredAndSortedProducts = React.useMemo(() => {
     let output = [...products];
 
     if (selectedBrands.length > 0) {
@@ -365,11 +373,11 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
   };
 
   return (
-    <div className="w-full pt-4 max-w-7xl mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-4">
+    <div className="w-full pt-4 max-w-[1440px] mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-2 sm:px-4 lg:px-6">
       
       {/* Page Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-2 flex-wrap">
-        <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
         <span className="text-gray-300">/</span>
         {isCustomizedPage ? (
           <span className="text-gray-900 font-bold">Customized Products</span>
@@ -384,22 +392,23 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
             </span>
           </>
         )}
+         {/* <div className="pb-3 border-b border-gray-100">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800">
+          {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
+        </h1>
+      </div> */}
       </div>
 
       {/* Page Header */}
-      <div className="pb-3 border-b border-gray-100">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-          {isCustomizedPage ? "Customized Products" : (subcategoryName || "Subcategory Products")}
-        </h1>
-      </div>
+     
 
       {/* Control Toolbar Interface */}
-      <div className="w-full flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center mb-4">
+      <div className="w-full flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center my-4">
         <div className="flex items-center gap-2 flex-grow sm:flex-grow-0 max-w-xs relative">
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
-            className="w-full appearance-none bg-white border border-gray-200 rounded px-3 py-2 pr-10 text-sm text-gray-700 focus:outline-none cursor-pointer font-medium"
+            className="w-full appearance-none bg-white border border-gray-200 rounded px-3 py-2 pr-10 text-xs sm:text-sm text-gray-700 focus:outline-none cursor-pointer font-medium"
           >
             <option value="default">Default sorting</option>
             <option value="price-low-high">Price: Low to High</option>
@@ -412,70 +421,74 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
           <button 
             type="button"
             onClick={() => setIsMobileFilterOpen(true)}
-            className="min-[850px]:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 font-medium cursor-pointer"
+            className="min-[850px]:hidden flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded text-xs sm:text-sm text-gray-600 font-medium cursor-pointer"
           >
             Filters
           </button>
-          <div className="min-w-[100px] bg-white border border-gray-200 rounded px-3 py-2 text-xs text-gray-500 font-medium text-center">
+          <div className="min-w-[100px] bg-white border border-gray-200 rounded px-3 py-2 text-[11px] sm:text-xs text-gray-500 font-medium text-center">
             {loading ? "Counting..." : `Showing ${filteredAndSortedProducts.length} Results`}
           </div>
         </div>
       </div>
 
       {/* Main Page Layout Body */}
-      <div className="w-full flex flex-col min-[850px]:flex-row gap-6 items-start">
-        <aside className="hidden min-[850px]:block w-[260px] lg:w-[250px] flex-shrink-0 sticky top-4">
-          <FilterContent {...sharedFilterProps} />
-        </aside>
+      {/* Main Page Layout Body */}
+<div className="w-full flex flex-col min-[850px]:flex-row gap-4 lg:gap-6 items-start relative z-0 mt-6">
+  
+  {/* Desktop Sidebar - Absolute visual ceiling protection applied */}
+  <aside className="hidden min-[850px]:block w-[240px] lg:w-[260px] flex-shrink-0 sticky top-[104px] max-h-[calc(100vh-120px)] overflow-y-auto pr-1">
+    <FilterContent {...sharedFilterProps} />
+  </aside>
 
-        <div className="flex-grow w-full">
-          {loading ? (
-            <div className="w-full text-center py-20 text-gray-400 font-medium">
-              Loading matching catalog items...
-            </div>
-          ) : filteredAndSortedProducts.length === 0 ? (
-            <div className="w-full text-center py-16 bg-white border border-gray-200 rounded-lg p-6">
-              <span className="text-lg font-medium text-gray-400 block mb-1">
-                No products found matching this subcategory
-              </span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 min-[670px]:grid-cols-3 min-[1010px]:grid-cols-4 gap-4">
-              {filteredAndSortedProducts.map((product) => {
-                const productId = product.id || product._id;
-                return (
-                  <ProductCard 
-                    key={productId} 
-                    product={product} 
-                    isWishlisted={wishlist.some(item => item.id === productId)}
-                    onWishlist={addToWishlist}
-                    onRemoveWishlist={removeFromWishlist}
-                    onAddToCart={onAddToCart}
-                    onClick={() => {
-                      if (product.customizeProduct === 'Yes') {
-                        navigate(`/customizedProductDetail/${productId}`, { state: { product } });
-                      } else if (subcategoryId) {
-                        navigate(`/sub-category/${subcategoryId}/${productId}`, { state: { product } });
-                      } else {
-                        navigate(`/product/${productId}`, { state: { product } });
-                      }
-                    }}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
+  {/* Products Area Container */}
+  <div className="flex-grow w-full min-w-0">
+    {loading ? (
+      <div className="w-full text-center py-20 text-gray-400 font-medium">
+        Loading matching catalog items...
       </div>
+    ) : filteredAndSortedProducts.length === 0 ? (
+      <div className="w-full text-center py-16 bg-white border border-gray-200 rounded-lg p-6">
+        <span className="text-lg font-medium text-gray-400 block mb-1">
+          No products found matching this subcategory
+        </span>
+      </div>
+    ) : (
+      <div className="grid grid-cols-2 min-[540px]:grid-cols-3 min-[980px]:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-4">
+        {filteredAndSortedProducts.map((product) => {
+          const productId = product.id || product._id;
+          return (
+            <ProductCard 
+              key={productId} 
+              product={product} 
+              isWishlisted={wishlist.some(item => item.id === productId)}
+              onWishlist={addToWishlist}
+              onRemoveWishlist={removeFromWishlist}
+              onAddToCart={onAddToCart}
+              onClick={() => {
+                if (product.customizeProduct === 'Yes') {
+                  navigate(`/customizedProductDetail/${productId}`, { state: { product } });
+                } else if (subcategoryId) {
+                  navigate(`/sub-category/${subcategoryId}/${productId}`, { state: { product } });
+                } else {
+                  navigate(`/product/${productId}`, { state: { product } });
+                }
+              }}
+            />
+          );
+        })}
+      </div>
+    )}
+  </div>
+</div>
 
       {/* Slide-over Mobile Filter Drawer */}
       {isMobileFilterOpen && (
         <div className="fixed inset-0 z-50 flex min-[850px]:hidden">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setIsMobileFilterOpen(false)} />
-          <div className="relative ml-0 mr-auto flex h-full w-full max-w-xs flex-col overflow-y-auto bg-gray-50 p-6 shadow-xl">
+          <div className="relative ml-0 mr-auto flex h-full w-full max-w-[280px] flex-col overflow-y-auto bg-white p-5 shadow-xl">
             <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
-              <h2 className="text-lg font-bold text-gray-800">Filter Products</h2>
-              <button type="button" onClick={() => setIsMobileFilterOpen(false)} className="text-gray-500">✕</button>
+              <h2 className="text-base font-bold text-gray-800">Filter Products</h2>
+              <button type="button" onClick={() => setIsMobileFilterOpen(false)} className="text-gray-500 font-bold p-1">✕</button>
             </div>
             <FilterContent {...sharedFilterProps} />
           </div>

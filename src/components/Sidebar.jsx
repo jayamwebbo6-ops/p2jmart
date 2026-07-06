@@ -23,7 +23,10 @@ const Sidebar = () => {
             image: cat.image || 'https://via.placeholder.com/150?text=Category', 
             promoImage: cat.image || 'https://via.placeholder.com/300x200?text=Promo+Offer',
             subcategories: Array.isArray(cat.subcategories) 
-              ? cat.subcategories.map(sub => sub.name || sub) 
+              ? cat.subcategories.map(sub => ({
+                  id: sub._id || sub.id || sub,
+                  name: sub.name || sub
+                }))
               : []
           }));
           setCategories(processedCategories);
@@ -102,16 +105,16 @@ const Sidebar = () => {
                 <ul className="flex flex-col gap-1 overflow-y-auto max-h-[250px] custom-scrollbar pr-1">
                   {categories[hoveredIndex].subcategories.map((sub, i) => (
                     <li key={i}>
-                      <a 
-                        href={`/products?category=${categories[hoveredIndex].name}&subcategory=${sub}`}
+                      <Link 
+                        to={`/sub-category/${sub.id}`}
                         className="group/sub flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-[13px] font-bold text-gray-600 hover:text-[#009EDB] hover:bg-slate-50 transition-all duration-200"
                       >
-                        <span className="truncate">{sub}</span>
+                        <span className="truncate">{sub.name}</span>
                         <ChevronRight 
                           size={14} 
                           className="opacity-0 -translate-x-2 group-hover/sub:opacity-100 group-hover/sub:translate-x-0 transition-all duration-200 text-[#009EDB]" 
                         />
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>

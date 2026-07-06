@@ -21,6 +21,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const { subcategoryId, id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  
+
 
   const [selectedColor, setSelectedColor] = useState('Default');
   const [selectedSize, setSelectedSize] = useState('Default');
@@ -28,6 +30,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
   const [quantity, setQuantity] = useState(1);
   const [mainImageLoaded, setMainImageLoaded] = useState(false);
   const mainImgRef = useRef(null);
+
+   
 
   useEffect(() => {
     setMainImageLoaded(false);
@@ -330,6 +334,12 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
     activeVariant
   };
 }, [loadedProduct, selectedColor, selectedSize]);
+
+
+const activeVariant = product?.activeVariant;
+const activeStock = activeVariant?.stock ?? 0;
+const isOutOfStock = activeStock === 0;
+
 
   // Cache-safeguard: If the image is already cached, it completes instantly before onLoad is bound.
   useEffect(() => {
@@ -651,7 +661,7 @@ useEffect(() => {
     <div className="w-full font-sans mt-5">
       <div className="w-full">
         {/* Breadcrumbs */}
-        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-6 flex-wrap">
+        <div className="flex px-4 items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-5 flex-wrap">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
           <span className="text-gray-300">/</span>
           <Link to="/products" className="hover:text-primary transition-colors">
@@ -673,9 +683,9 @@ useEffect(() => {
         </div>
 
         {/* Product Media Gallery + Info Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start w-full">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start w-full max-w-[2500px] mx-auto px-4">
           {/* Left: Images */}
-          <div className="w-full min-w-0">
+          <div className="col-span-1 md:col-span-7 w-full min-w-0">
             {/* Mobile Slider */}
             {product.images.length > 0 && (
               <div className="block sm:hidden">
@@ -762,7 +772,7 @@ useEffect(() => {
                 </button>
                 {product.discount > 0 && (
                   <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded font-bold pointer-events-none z-10">
-                    -{product.discount}%
+                    {product.discount}%
                   </div>
                 )}
               </div>
@@ -770,7 +780,7 @@ useEffect(() => {
           </div>
 
           {/* Right: Info */}
-          <div className="w-full min-w-0 flex flex-col gap-3">
+          <div className="col-span-1 md:col-span-5 w-full px-4 min-w-0 flex flex-col gap-3">
             {product.brand && <span className="text-blue-600 font-bold text-xs sm:text-sm">{product.brand}</span>}
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
             
@@ -863,18 +873,21 @@ useEffect(() => {
               </div>
             )}
 
-            <div>
+
+
+             <div className="mt-1">
               {product.isActive === false ? (
-                <div className="bg-rose-50 text-rose-700 px-3 py-2 rounded-md border border-rose-200 text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
-                  Product Inactive / Temporarily Unavailable
-                </div>
-              ) : (
-                <span className={product.inStock ? "text-green-600 font-bold text-sm tracking-wide" : "text-red-500 font-bold text-sm tracking-wide"}>
-                  {product.inStock ? "In Stock" : "Out of Stock"}
+                <span className="text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 uppercase tracking-wider flex items-center gap-1.5 w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                  Product Inactive / Unavailable
                 </span>
+              ) : isOutOfStock ? (
+                <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">Out of Stock</span>
+              ) : (
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">In Stock ({activeStock} units)</span>
               )}
             </div>
+
 
             <div className="flex flex-col gap-2.5 text-xs font-medium text-gray-600 border-t border-b border-gray-100 py-3">
               {product.warranty && (

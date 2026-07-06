@@ -102,36 +102,46 @@ const Profile = () => {
     <div className="w-full flex flex-col h-full">
       
       {/* Top Banner */}
-      <div className="bg-primary p-6 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white text-2xl font-bold border border-white/30 backdrop-blur-sm shadow-inner overflow-hidden flex-shrink-0">
-            {photoUrl ? (
-              <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              name.charAt(0).toUpperCase()
-            )}
-          </div>
-          <div className="text-white min-w-0">
-            <h2 className="text-xl font-bold tracking-wide text-white truncate">{name}</h2>
-            <p className="text-sm text-red-100 opacity-90 mt-0.5 truncate">{email}</p>
-          </div>
-        </div>
-        
-        {/* Hidden File Input */}
-        <input 
-          type="file" 
-          accept="image/*" 
-          className="hidden" 
-          ref={fileInputRef} 
-          onChange={handlePhotoUpload} 
-        />
-        <button 
-          onClick={() => fileInputRef.current.click()}
-          className="px-5 py-2 border border-white/40 rounded-md text-white text-sm font-medium hover:bg-white hover:text-primary transition-colors shadow-sm cursor-pointer flex-shrink-0"
-        >
-          Change Photo
-        </button>
-      </div>
+   <div className="bg-primary p-5 sm:p-6 rounded-2xl flex flex-col [@media(min-width:500px)]:flex-row items-center justify-between gap-4 sm:gap-6 shadow-md transition-all">
+  <div className="flex flex-col [@media(min-width:500px)]:flex-row items-center text-center [@media(min-width:500px)]:text-left gap-3 sm:gap-4 min-w-0 w-full [@media(min-width:500px)]:w-auto">
+    {/* Avatar Image container */}
+    <div className="w-16 h-16 rounded-full bg-white/15 flex items-center justify-center text-white text-2xl font-black border-2 border-white/20 backdrop-blur-md shadow-inner overflow-hidden shrink-0 select-none">
+      {photoUrl ? (
+        <img src={photoUrl} alt="Profile" className="w-full h-full object-cover" />
+      ) : (
+        name ? name.charAt(0).toUpperCase() : 'U'
+      )}
+    </div>
+    
+    {/* Profile User Metadata text stack */}
+    <div className="text-white min-w-0 w-full">
+      <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white truncate px-1 [@media(min-width:500px)]:px-0">
+        {name}
+      </h2>
+      <p className="text-xs sm:text-sm text-white/80 font-medium mt-0.5 truncate px-1 [@media(min-width:500px)]:px-0">
+        {email}
+      </p>
+    </div>
+  </div>
+  
+  {/* Hidden File Input */}
+  <input 
+    type="file" 
+    accept="image/*" 
+    className="hidden" 
+    ref={fileInputRef} 
+    onChange={handlePhotoUpload} 
+  />
+  
+  {/* Action CTA Trigger */}
+  <button 
+    type="button"
+    onClick={() => fileInputRef.current.click()}
+    className="w-full [@media(min-width:500px)]:w-auto px-5 py-2.5 [@media(min-width:500px)]:py-2 border border-white/30 hover:border-transparent rounded-xl text-white text-xs sm:text-sm font-bold bg-white/5 hover:bg-white hover:text-primary transition-all shadow-xs cursor-pointer shrink-0 select-none active:scale-[0.98]"
+  >
+    Change Photo
+  </button>
+</div>
 
       {/* Profile Details */}
       <div className="p-8 flex flex-col bg-white flex-1">

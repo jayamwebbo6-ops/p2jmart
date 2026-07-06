@@ -70,9 +70,9 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
         <div className="w-full lg:flex-1 h-[350px] md:h-[400px] lg:h-[460px]">
           <HeroBanner />
         </div>
-        <div className="w-full lg:w-1/4 xl:w-[22%] flex-shrink-0 flex flex-col min-[360px]:flex-row lg:flex-col gap-5">
-          <PromoBanners />
-        </div>
+       <div className="hidden lg:flex w-full lg:w-1/4 xl:w-[22%] flex-shrink-0 flex-col gap-5">
+  <PromoBanners />
+</div>
       </div>
 
       {/* Product Section Layout Box */}

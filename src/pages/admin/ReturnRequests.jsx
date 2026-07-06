@@ -59,7 +59,7 @@ const ReturnRequests = () => {
   const totalRequests = requests.length;
   const pendingRequests = requests.filter(r => r.returnStatus === 'Return Requested').length;
   const approvedRequests = requests.filter(r => r.returnStatus === 'Return Approved').length;
-  const refundedRequests = requests.filter(r => r.returnStatus === 'Returned & Refunded').length;
+  const refundedRequests = requests.filter(r => r.refundStatus === 'Refunded').length;
 
   // Search filter logic
   const filteredRequests = requests.filter(req => 

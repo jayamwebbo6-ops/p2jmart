@@ -44,7 +44,6 @@ const CategoryPage = () => {
 
   return (
     <div className="w-full max-w-none  bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
-      
       <main className="w-full py-2">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
           {categoryData.map((category, index) => {

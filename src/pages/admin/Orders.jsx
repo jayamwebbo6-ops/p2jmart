@@ -425,7 +425,8 @@ const OrderManagement = () => {
     
     const matchesStatus = 
       statusFilter === 'ALL STATUS' || 
-      order.fulfillmentStatus.toUpperCase() === statusFilter.toUpperCase();
+      getDisplayStatus(order).toUpperCase() === statusFilter.toUpperCase() ||
+      (statusFilter.toUpperCase() === 'RETURNED' && getDisplayStatus(order).toUpperCase() === 'REFUNDED');
 
     let matchesProductType = true;
     if (productTypeFilter !== 'all') {
@@ -464,10 +465,16 @@ const OrderManagement = () => {
     .reduce((sum, o) => sum + (o.amount), 0)
     .toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     
-  const pendingOrdersCount = headingFilteredOrders.filter(o => o.fulfillmentStatus === 'Processing' || o.fulfillmentStatus === 'Pending').length;
-  const deliveredOrdersCount = headingFilteredOrders.filter(o => o.fulfillmentStatus === 'Delivered').length;
-  const cancelledOrdersCount = headingFilteredOrders.filter(o => o.fulfillmentStatus === 'Cancelled').length; 
-  const returnedOrdersCount = headingFilteredOrders.filter(o => o.fulfillmentStatus === 'Returned').length;
+  const pendingOrdersCount = headingFilteredOrders.filter(o => {
+    const status = getDisplayStatus(o);
+    return status === 'Processing' || status === 'Pending';
+  }).length;
+  const deliveredOrdersCount = headingFilteredOrders.filter(o => getDisplayStatus(o) === 'Delivered').length;
+  const cancelledOrdersCount = headingFilteredOrders.filter(o => getDisplayStatus(o) === 'Cancelled').length; 
+  const returnedOrdersCount = headingFilteredOrders.filter(o => {
+    const status = getDisplayStatus(o);
+    return status === 'Returned' || status === 'Refunded';
+  }).length;
 
   // FIXED: Properly returning the row elements from this arrow function assignment variable
   const renderOrderRow = (order, index) => (

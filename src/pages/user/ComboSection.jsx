@@ -214,7 +214,7 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
   if (combosData.length === 0 || !activeCombo) return null;
 
   return (
-    <div id="main-combo-workspace" className="w-full mt-10">
+    <div id="main-combo-workspace" className="w-full px-4 mt-10">
       {/* Title Section Heading Layout */}
       <div className="mb-5">
         <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase border border-emerald-100">

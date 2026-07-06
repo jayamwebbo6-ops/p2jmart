@@ -196,17 +196,20 @@ const AddressBook = () => {
   if (isFormOpen) {
     return (
       <div className="p-8 flex flex-col bg-white flex-1 h-full">
-        <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {editingId ? 'Edit Address' : 'Add New Address'}
-          </h2>
-          <button 
-            onClick={() => setIsFormOpen(false)}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+        <div className="flex justify-between items-center gap-3 mb-5 sm:mb-6 border-b border-gray-100 pb-3 sm:pb-4 w-full">
+  <h2 className="text-lg [screen-width<=380px]:text-base sm:text-2xl font-black text-gray-900 tracking-tight text-left truncate select-none">
+    {editingId ? 'Edit Address' : 'Add New Address'}
+  </h2>
+  
+  <button 
+    type="button"
+    onClick={() => setIsFormOpen(false)}
+    className="p-1.5 sm:p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-colors bg-transparent border-0 cursor-pointer shrink-0"
+    title="Close Modal"
+  >
+    <X className="w-5 h-5 sm:w-6 sm:h-6" />
+  </button>
+</div>
 
         <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -317,22 +320,31 @@ const AddressBook = () => {
             </label>
           </div>
 
-          <div className="flex space-x-4 pt-4 border-t border-gray-100">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-primary text-white px-6 py-2 rounded-md hover:opacity-90 transition-opacity font-medium shadow-sm disabled:opacity-55"
-            >
-              {loading ? 'Saving...' : 'Save Address'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsFormOpen(false)}
-              className="border border-gray-300 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-50 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-          </div>
+          <div className="flex flex-col [screen-width<=410px]:gap-2 min-[411px]:flex-row min-[411px]:items-center min-[411px]:gap-3 pt-4 border-t border-gray-100 w-full">
+  <button
+    type="submit"
+    disabled={loading}
+    className="w-full mb-2 mt-1 min-[411px]:w-auto bg-primary hover:bg-secondary text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-xs disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2 border-0 order-1"
+  >
+    {loading ? (
+      <>
+        <span className="w-3.5  h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        <span>Saving...</span>
+      </>
+    ) : (
+      'Save Address'
+    )}
+  </button>
+  
+  <button
+    type="button"
+    onClick={() => setIsFormOpen(false)}
+    className="w-full min-[411px]:w-auto border border-gray-300 text-gray-700 hover:bg-gray-50/80 bg-transparent font-semibold py-2.5 px-5 rounded-xl transition-colors cursor-pointer text-sm text-center order-2 [screen-width<=410px]:py-2"
+  >
+    Cancel
+  </button>
+</div>
+
         </form>
       </div>
     );
@@ -340,16 +352,28 @@ const AddressBook = () => {
 
   return (
     <div className="p-8 flex flex-col bg-white flex-1 h-full">
-      <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Address Book</h2>
-        <button 
-          onClick={handleOpenAddForm}
-          className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity font-medium text-sm shadow-sm"
-        >
-          <Plus size={16} />
-          <span>Add New Address</span>
-        </button>
-      </div>
+    
+
+    <div className="w-full flex flex-col [@media(min-width:400px)]:flex-row [@media(min-width:400px)]:items-center justify-between gap-4 mb-6 sm:mb-8 border-b border-gray-100 pb-4 select-none">
+  {/* Left: Heading Details */}
+  <div className="text-left min-w-0">
+    <h2 className="text-lg sm:text-xl md:text-2xl font-black text-gray-900 tracking-tight whitespace-nowrap">
+      Address Book
+    </h2>
+    
+  </div>
+  
+  {/* Right: Sleek Action Button using original color */}
+  <button 
+    type="button"
+    onClick={handleOpenAddForm}
+    className="w-full [@media(min-width:400px)]:w-auto bg-primary hover:bg-secondary text-white font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border-0 shadow-xs hover:shadow-md cursor-pointer whitespace-nowrap active:scale-[0.98] shrink-0"
+  >
+    <Plus size={14} strokeWidth={3} className="shrink-0 text-white/90" />
+    <span>Add New Address</span>
+  </button>
+</div>
+
 
       {loading && addresses.length === 0 ? (
         <div className="flex flex-col gap-6 py-12 items-center justify-center text-slate-400">
@@ -374,30 +398,40 @@ const AddressBook = () => {
               key={address._id} 
               className="border border-gray-100 rounded-xl p-6 flex flex-col justify-between bg-white shadow-sm"
             >
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Home size={22} className="text-gray-500" strokeWidth={1.5} />
-                    <h3 className="font-bold text-lg text-black">{address.fullName}</h3>
-                  </div>
-                  {address.isDefault && (
-                    <span className="bg-primary/10 text-primary text-[10px] uppercase font-bold px-2.5 py-1 rounded-sm tracking-wider">
-                      DEFAULT
-                    </span>
-                  )}
-                </div>
-                
-                <div className="text-[15px] text-gray-600 space-y-1.5 mb-6">
-                  <p>{address.streetAddress}</p>
-                  {address.apartment && <p>{address.apartment}</p>}
-                  <p>{address.city}</p>
-                  <p>{address.state} {address.pincode}</p>
-                  <p>India</p>
-                  <p className="pt-2 text-black">
-                    <span className="font-bold">PH: </span> {address.phoneNumber}
-                  </p>
-                </div>
-              </div>
+              <div className="w-full text-left font-sans select-none antialiased">
+  {/* Top Row Header Section */}
+  <div className="flex flex-col [screen-width<=360px]:gap-2 min-[361px]:flex-row min-[361px]:items-center justify-between gap-3 mb-4 w-full">
+    <div className="flex items-center gap-2.5 min-w-0">
+      <div className="p-1.5 rounded-lg bg-gray-50 border border-gray-100 text-gray-400 shrink-0">
+        <Home size={18} sm:size={20} strokeWidth={2} />
+      </div>
+      <h3 className="font-extrabold text-base sm:text-lg text-gray-900 truncate">
+        {address.fullName}
+      </h3>
+    </div>
+    
+    {address.isDefault && (
+      <span className="self-start [screen-width<=360px]:self-start min-[361px]:self-auto bg-primary/10 text-primary text-[9px] sm:text-[10px] uppercase font-black px-2.5 py-1 rounded-md tracking-wider shrink-0 shadow-3xs">
+        Default
+      </span>
+    )}
+  </div>
+  
+  {/* Detailed Address Fields Container */}
+  <div className="text-xs sm:text-sm text-gray-600 space-y-1 mb-5 sm:mb-6 pl-0.5 min-w-0 font-medium leading-relaxed">
+    <p className="break-words text-gray-700 font-semibold">{address.streetAddress}</p>
+    {address.apartment && <p className="break-words">{address.apartment}</p>}
+    <p className="capitalize">{address.city}</p>
+    <p className="capitalize">{address.state} — <span className="font-bold tracking-wide text-gray-800">{address.pincode}</span></p>
+    <p className="text-gray-400 text-[11px] sm:text-xs font-bold uppercase tracking-wider pt-0.5">India</p>
+    
+    {/* Phone Stack */}
+    <div className="pt-2 text-gray-900 flex items-center gap-1.5 text-xs sm:text-sm">
+      <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">PH:</span>
+      <span className="font-extrabold tracking-wide break-all">{address.phoneNumber}</span>
+    </div>
+  </div>
+</div>
 
               <div className="flex items-center space-x-4 pt-4 border-t border-gray-50">
                 <button 
