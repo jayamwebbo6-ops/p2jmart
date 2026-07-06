@@ -26,8 +26,9 @@ import {
 } from '../../api/addressApi';
 import { getAllShippingAPI } from '../../api/shippingApi';
 import { getAllGstAPI } from '../../api/gstApi';
-import { createOrderAPI } from '../../api/orderApi';
-import { applyCouponAPI, getAvailableCouponsAPI } from '../../api/couponApi';
+import { createOrderAPI, getOrderByIdAPI } from '../../api/orderApi';
+import { createPaymentAPI } from '../../api/paymentApi';
+import { applyCouponAPI } from '../../api/couponApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
@@ -61,6 +62,7 @@ const Checkout = ({
   
   // Simulated dynamic payment state
   const [paymentStage, setPaymentStage] = useState('idle');
+  const [devSimulationUrls, setDevSimulationUrls] = useState(null);
   const [orderRef, setOrderRef] = useState('');
 
   // Addresses state from DB
@@ -230,6 +232,31 @@ const applyingCoupon = localApplyingCoupon;
     if (!isUserAuthenticated()) {
       toast.info('Please login to proceed to checkout.');
       navigate('/login', { state: { from: '/checkout', checkoutState: location.state } });
+      return;
+    }
+
+    const queryParams = new URLSearchParams(location.search);
+    const orderQueryId = queryParams.get('orderId');
+
+    if (orderQueryId) {
+      const fetchPlacedOrder = async () => {
+        setLoading(true);
+        try {
+          const res = await getOrderByIdAPI(orderQueryId);
+          if (res && res.success && res.data) {
+            setPlacedOrder(res.data);
+            setStep(3);
+          } else {
+            toast.error('Could not retrieve order details');
+          }
+        } catch (err) {
+          console.error(err);
+          toast.error('Failed to fetch order summary');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchPlacedOrder();
     } else {
       loadCheckoutData();
     }
@@ -237,10 +264,14 @@ const applyingCoupon = localApplyingCoupon;
 
   // Redirect if checkout items are empty and we are not in success step
   useEffect(() => {
-    if (checkoutItems.length === 0 && step !== 3 && paymentStage === 'idle') {
+    const queryParams = new URLSearchParams(location.search);
+    const orderQueryId = queryParams.get('orderId');
+    if (orderQueryId) return;
+
+    if (checkoutItems.length === 0 && step !== 3 && paymentStage === 'idle' && !loading) {
       navigate('/cart');
     }
-  }, [checkoutItems, step, navigate, paymentStage]);
+  }, [checkoutItems, step, navigate, paymentStage, loading, location.search]);
 
  const handleApplyCoupon = async (e) => {
   if (e) e.preventDefault();
@@ -420,20 +451,13 @@ const applyingCoupon = localApplyingCoupon;
     setStep(2);
   }, 1000);
 
-  const handlePlaceOrder = useThrottledCallback(() => {
+  const handlePlaceOrder = useThrottledCallback(async () => {
     if (!selectedAddress) {
       toast.error("Please select a shipping address.");
       setStep(1);
       return;
     }
-    const generatedRef = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-    setOrderRef(generatedRef);
-    setPaymentStage('gateway_modal');
-  }, 1000);
 
-  const [paymentSuccess, setPaymentSuccess] = useState(true);
-
-  const finalizeFailedPayment = async () => {
     setLoading(true);
     try {
       const orderPayload = {
@@ -459,8 +483,6 @@ const applyingCoupon = localApplyingCoupon;
           state: selectedAddress.state,
           pincode: selectedAddress.pincode
         },
-        paymentMethod: 'UPI/Card (Simulated)',
-        paymentStatus: 'unpaid',
         subtotal: Number(subtotal),
         gst: Number(gstAmount),
         shippingFee: Number(shippingFee),
@@ -470,100 +492,44 @@ const applyingCoupon = localApplyingCoupon;
         isDirectPurchase: isDirectPurchase
       };
 
-      const res = await createOrderAPI(orderPayload);
+      const res = await createPaymentAPI(orderPayload);
       if (res && res.success) {
-        toast.error('Payment failed. Order placed as unpaid.');
-        setPlacedOrder(res.data);
-
-        if (!isDirectPurchase) {
-          dispatch(fetchCart());
-          setCart([]);
-        }
-        setStep(3);
-      } else {
-        toast.error(res.message || 'Failed to place order');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Server error creating unpaid order');
-    } finally {
-      setPaymentStage('idle');
-      setLoading(false);
-    }
-  };
-
-  const finalizeSuccessfulPayment = async () => {
-    setLoading(true);
-    try {
-      const orderPayload = {
-        items: checkoutItems.map(item => ({
-          productId: item.productId || item.id || item._id,
-          title: item.title,
-          price: item.price,
-          quantity: item.quantity,
-          image: item.image || (item.images && item.images[0]) || '',
-          selectedOptions: item.customization 
-            ? { ...item.selectedOptions, customization: item.customization }
-            : (item.selectedOptions || {}),
-          isComboProduct: !!item.isComboProduct,
-          includedProducts: item.includedProducts || [],
-          weight: item.weight || 0
-        })),
-        shippingAddress: {
-          fullName: selectedAddress.fullName,
-          phoneNumber: selectedAddress.phoneNumber,
-          streetAddress: selectedAddress.streetAddress,
-          apartment: selectedAddress.apartment || '',
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          pincode: selectedAddress.pincode
-        },
-        paymentMethod: 'UPI/Card (Simulated)',
-        paymentStatus: 'paid',
-        subtotal: Number(subtotal),
-        gst: Number(gstAmount),
-        shippingFee: Number(shippingFee),
-        couponCode: appliedCoupon ? appliedCoupon.code : null,
-        couponDiscount: Number(couponDiscount),
-        total: Number(total),
-        isDirectPurchase: isDirectPurchase
-      };
-
-      // This single API request now saves the order, clears the cart, and triggers the email!
-      const res = await createOrderAPI(orderPayload);
-      if (res && res.success) {
-        toast.success(res.message || 'Order placed successfully');
-        setPlacedOrder(res.data);
-
-        if (!isDirectPurchase) {
-          dispatch(fetchCart());
-          setCart([]);
-        }
-        setStep(3);
-      } else {
-        toast.error(res.message || 'Failed to place order');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Server error creating order');
-    } finally {
-      setPaymentStage('idle');
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (paymentStage === 'bank_redirect') {
-      const timer = setTimeout(() => {
-        if (paymentSuccess) {
-          finalizeSuccessfulPayment();
+        if (res.simulationUrl) {
+          // If simulationUrl is provided (development mode), show localhost simulation options modal
+          setDevSimulationUrls(res);
+          setPaymentStage('sandbox_simulation');
         } else {
-          finalizeFailedPayment();
+          // Live/production mode: immediately redirect to CCAvenue
+          toast.info('Redirecting to CCAvenue Payment Gateway...');
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = res.paymentUrl;
+          
+          const encRequestInput = document.createElement('input');
+          encRequestInput.type = 'hidden';
+          encRequestInput.name = 'encRequest';
+          encRequestInput.value = res.encRequest;
+          form.appendChild(encRequestInput);
+          
+          const accessCodeInput = document.createElement('input');
+          accessCodeInput.type = 'hidden';
+          accessCodeInput.name = 'access_code';
+          accessCodeInput.value = res.accessCode;
+          form.appendChild(accessCodeInput);
+          
+          document.body.appendChild(form);
+          form.submit();
         }
-      }, 1500);
-      return () => clearTimeout(timer);
+      } else {
+        toast.error(res.message || 'Failed to initialize payment');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error initializing payment');
+    } finally {
+      setLoading(false);
     }
-  }, [paymentStage, paymentSuccess]);
+  }, 1000);
 
   if (step === 3 && placedOrder) {
     const isPaid = placedOrder.paymentStatus === 'paid';
@@ -1299,71 +1265,94 @@ const applyingCoupon = localApplyingCoupon;
         isDanger={true}
       />
 
-      {/* ================= SIMULATED CHECKOUT GATEWAY WORKFLOW MODAL LAYER ================= */}
+      {/* ================= LOCAL / CCAVENUE GATEWAY TEST SIMULATION MODAL ================= */}
       {paymentStage !== 'idle' && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[999] antialiased font-sans">
           
-          {/* PHASE 1: Simulated Checkout Gateway Interface Modal */}
-          {paymentStage === 'gateway_modal' && (
-            <div className="bg-white rounded-[2rem] w-full max-w-[420px] p-8 shadow-2xl text-center relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+          {/* Local Sandbox Simulation Options Modal */}
+          {paymentStage === 'sandbox_simulation' && devSimulationUrls && (
+            <div className="bg-white rounded-[2rem] w-full max-w-[440px] p-8 shadow-2xl text-center relative border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex justify-center mb-5">
-                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-emerald-100/50">
-                  <svg className="w-7 h-7 text-primary" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <rect x="2" y="5" width="20" height="14" rx="2" />
-                    <line x1="2" y1="10" x2="22" y2="10" />
-                  </svg>
+                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-blue-100">
+                  <ShieldCheck className="w-7 h-7 text-primary" />
                 </div>
               </div>
 
-              <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Simulated Checkout Gateway</h3>
+              <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Local Testing Gateway</h3>
               <p className="text-gray-500 text-xs sm:text-[13px] leading-relaxed px-2 mb-6">
-                 You can mock test the payment flow below.
+                You are running in localhost. Choose to simulate the payment callback directly or proceed to the CCAvenue Sandbox portal.
               </p>
 
-              <div className="bg-[#f5f7f9] rounded-xl p-4 mb-6 text-left border border-gray-100 space-y-2.5 text-xs sm:text-sm">
+              <div className="bg-[#f5f7f9] rounded-xl p-4 mb-6 text-left border border-gray-100 space-y-2 text-xs">
                 <div className="flex justify-between items-center text-[#556370]">
-                  <span>Order Reference:</span>
-                  <span className="font-bold text-gray-800 tracking-wide">{orderRef}</span>
+                  <span>Payment Provider:</span>
+                  <span className="font-bold text-gray-800">CCAvenue Sandbox</span>
                 </div>
                 <div className="flex justify-between items-center text-[#556370]">
                   <span>Amount Due:</span>
-                  <span className="font-bold text-gray-900 text-base">₹{total.toFixed(2)}</span>
+                  <span className="font-bold text-gray-900 text-sm">₹{total.toFixed(2)}</span>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPaymentSuccess(true);
-                    setPaymentStage('bank_redirect');
-                  }}
-                  className="w-full bg-primary hover:bg-secondary text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-sm flex items-center justify-center gap-2 shadow-xs border-0"
+              <div className="space-y-2.5">
+                <a
+                  href={devSimulationUrls.simulationUrl}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2 shadow-xs border-0 text-center no-underline font-sans"
                 >
                   <span>Simulate Payment Success</span>
-                  <span className="bg-[#a4f1b5] text-[#34633d] w-4 h-4 rounded flex items-center justify-center text-[10px]">✓</span>
-                </button>
+                  <span className="bg-emerald-800/50 text-white w-4 h-4 rounded flex items-center justify-center text-[10px]">✓</span>
+                </a>
                 
+                <a
+                  href={devSimulationUrls.simulationFailureUrl}
+                  className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-4 rounded-xl transition-all cursor-pointer text-xs flex items-center justify-center gap-2 shadow-xs border-0 text-center no-underline font-sans"
+                >
+                  <span>Simulate Payment Failure</span>
+                  <span className="bg-rose-800/50 text-white w-4 h-4 rounded flex items-center justify-center text-[10px]">✗</span>
+                </a>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-gray-200"></div>
+                  <span className="flex-shrink mx-4 text-gray-400 text-[10px] font-bold uppercase tracking-wider">or</span>
+                  <div className="flex-grow border-t border-gray-200"></div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
-                    setPaymentSuccess(false);
-                    setPaymentStage('bank_redirect');
+                    toast.info('Redirecting to CCAvenue Sandbox...');
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = devSimulationUrls.paymentUrl;
+                    
+                    const encRequestInput = document.createElement('input');
+                    encRequestInput.type = 'hidden';
+                    encRequestInput.name = 'encRequest';
+                    encRequestInput.value = devSimulationUrls.encRequest;
+                    form.appendChild(encRequestInput);
+                    
+                    const accessCodeInput = document.createElement('input');
+                    accessCodeInput.type = 'hidden';
+                    accessCodeInput.name = 'access_code';
+                    accessCodeInput.value = devSimulationUrls.accessCode;
+                    form.appendChild(accessCodeInput);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
                   }}
-                  className="w-full bg-rose-50/50 hover:bg-rose-50 text-rose-700 font-semibold py-3 px-4 rounded-xl border border-rose-100 transition-all cursor-pointer text-sm flex items-center justify-center gap-2"
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
                 >
-                  <span>Simulate Payment Failure</span>
+                  <span>Proceed to CCAvenue Sandbox Page</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentStage('idle')}
+                  className="w-full text-gray-400 hover:text-gray-600 text-xs font-semibold py-1 hover:underline cursor-pointer border-0 bg-transparent mt-1"
+                >
+                  Cancel & Go Back
                 </button>
               </div>
-            </div>
-          )}
-
-          {/* PHASE 2: Bank Redirect Simulator Loader */}
-          {paymentStage === 'bank_redirect' && (
-            <div className="bg-white rounded-[2rem] w-full max-w-[360px] p-8 shadow-2xl text-center border border-gray-100 flex flex-col items-center animate-in fade-in zoom-in-95 duration-200">
-              <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-900 font-bold text-base mb-1">Verifying with Bank</p>
-              <p className="text-gray-400 text-xs">Please do not refresh or close this window...</p>
             </div>
           )}
 

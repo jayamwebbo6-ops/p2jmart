@@ -747,7 +747,7 @@ const OrderDetails = () => {
         </div>
       </div>
       {/* Off-screen container for rendering A4 invoice for PDF generation & printing */}
-      <div id="printable-invoice-area" className="hidden print:block" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      <div id="printable-invoice-area" className="print:block" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         <OrderInvoice 
           order={order} 
           invoiceColors={invoiceColors} 

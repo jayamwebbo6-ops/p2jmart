@@ -423,13 +423,13 @@ const handleItemClick = (product) => {
       </div>
  
       {/* Main Navbar */}
-     <header className="w-full bg-white px-4 md:px-8 lg:px-6 xl:px-12 py-2 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm max-h-[72px] md:max-h-[88px]">
+     <header className="w-full bg-white px-4 md:px-8 lg:px-6 xl:px-12 py-1 flex justify-between items-center sticky top-0 z-[100] border-b border-gray-200 font-sans shadow-sm max-h-[90px] md:max-h-[110px]">
   <div className="flex items-center">
     <Link to="/" className="flex items-center">
       <img 
         src={`${import.meta.env.BASE_URL}logo.png`} 
         alt="P2J Mart Logo" 
-        className="h-12 md:h-12 w-auto object-contain py-0.5" 
+        className="h-16 md:h-20 w-auto object-contain py-0.5" 
       />
     </Link>
   </div>
