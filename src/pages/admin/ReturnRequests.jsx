@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useDebounce from '../../hooks/useDebounce';
-import { Search, X, ShieldAlert, Check, RefreshCw, Eye, Package, User, Clock, AlertTriangle } from 'lucide-react';
+import { Search, X, ShieldAlert, Check, Eye, Package, User, Clock, AlertTriangle } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import AdminTable from '../../components/AdminTable';
 import { toast, ToastContainer } from '../../components/toast';
@@ -319,9 +319,7 @@ const ReturnRequests = () => {
               <span className="text-3xl font-bold text-slate-800 tracking-tight block">{refundedRequests}</span>
               <span className="text-xs font-semibold text-gray-400 uppercase mt-1 block">Refunded & Closed</span>
             </div>
-            <div className="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center border border-emerald-100">
-              <RefreshCw size={18} />
-            </div>
+            
           </div>
         </div>
 

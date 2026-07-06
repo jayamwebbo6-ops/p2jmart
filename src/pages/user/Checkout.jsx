@@ -27,7 +27,7 @@ import {
 import { getAllShippingAPI } from '../../api/shippingApi';
 import { getAllGstAPI } from '../../api/gstApi';
 import { createOrderAPI } from '../../api/orderApi';
-import { applyCouponAPI } from '../../api/couponApi';
+import { applyCouponAPI, getAvailableCouponsAPI } from '../../api/couponApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
@@ -35,14 +35,7 @@ import { isUserAuthenticated } from '../../api/userApi';
 const Checkout = ({
   cart = [],
   setCart,
-  couponCode: couponCodeProp,
-  setCouponCode: setCouponCodeProp,
-  appliedCoupon: appliedCouponProp,
-  couponDiscount: couponDiscountProp,
-  couponError: couponErrorProp,
-  applyingCoupon: applyingCouponProp,
-  onApplyCoupon,
-  onRemoveCoupon
+ 
 }) => {
   const formatImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
@@ -83,6 +76,10 @@ const Checkout = ({
   const [addressToDelete, setAddressToDelete] = useState(null);
   const [loading, setLoading] = useState(true);
 
+
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+
   // New Address Form State
   const [newAddress, setNewAddress] = useState({
     fullName: '',
@@ -106,12 +103,13 @@ const Checkout = ({
   const [localApplyingCoupon, setLocalApplyingCoupon] = useState(false);
   const [localCouponError, setLocalCouponError] = useState('');
 
-  const couponCode = couponCodeProp ?? localCouponCode;
-  const setCouponCode = setCouponCodeProp ?? setLocalCouponCode;
-  const appliedCoupon = appliedCouponProp ?? localAppliedCoupon;
-  const couponDiscount = couponDiscountProp ?? localCouponDiscount;
-  const couponError = couponErrorProp ?? localCouponError;
-  const applyingCoupon = applyingCouponProp ?? localApplyingCoupon;
+
+  const couponCode = localCouponCode;
+const setCouponCode = setLocalCouponCode;
+const appliedCoupon = localAppliedCoupon;
+const couponDiscount = localCouponDiscount;
+const couponError = localCouponError;
+const applyingCoupon = localApplyingCoupon;
 
   // Selected address object
   const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
@@ -178,12 +176,13 @@ const Checkout = ({
   const loadCheckoutData = async () => {
     setLoading(true);
     try {
-      const [addressRes, shippingRes, gstRes, cmsRes] = await Promise.all([
-        getMyAddressesAPI(),
-        getAllShippingAPI(),
-        getAllGstAPI(),
-        getHomeCMS()
-      ]);
+      const [addressRes, shippingRes, gstRes, cmsRes, couponRes] = await Promise.all([
+  getMyAddressesAPI(),
+  getAllShippingAPI(),
+  getAllGstAPI(),
+  getHomeCMS(),
+  getAvailableCouponsAPI()
+]);
 
       if (addressRes && addressRes.success) {
         setAddresses(addressRes.data);
@@ -209,6 +208,10 @@ const Checkout = ({
           flatShippingCost: cmsRes.data.flatShippingCost !== undefined ? cmsRes.data.flatShippingCost : 50
         });
       }
+
+      if (couponRes && couponRes.success) {
+  setAvailableCoupons(couponRes.data || []);
+}
     } catch (err) {
       console.error(err);
       toast.error('Failed to load checkout settings');
@@ -239,54 +242,51 @@ const Checkout = ({
     }
   }, [checkoutItems, step, navigate, paymentStage]);
 
-  const handleApplyCoupon = async (e) => {
-    if (e) e.preventDefault();
-    const typedCode = (couponCode || '').trim();
+ const handleApplyCoupon = async (e) => {
+  if (e) e.preventDefault();
+  const typedCode = (couponCode || '').trim();
 
-    if (!typedCode) {
-      toast.error('Please enter a coupon code.');
-      return;
+  if (!typedCode) {
+    toast.error('Please enter a coupon code.');
+    return;
+  }
+
+  if (typeof onApplyCoupon === 'function') {
+    await onApplyCoupon(subtotal, typedCode);
+    return;
+  }
+
+  setLocalApplyingCoupon(true);
+  setLocalCouponError('');
+  try {
+    const res = await applyCouponAPI({ code: typedCode.toUpperCase(), subtotal });
+    if (res && res.success) {
+      setLocalAppliedCoupon(res.data);
+      setLocalCouponDiscount(Number(res.data.discountAmount || 0));
+      setCouponCode(typedCode.toUpperCase());
+      toast.success(res.message || 'Coupon applied successfully!');
     }
-
-    if (typeof onApplyCoupon === 'function') {
-      await onApplyCoupon(subtotal, typedCode);
-      return;
-    }
-
-    setLocalApplyingCoupon(true);
-    setLocalCouponError('');
-    try {
-      const res = await applyCouponAPI({ code: typedCode.toUpperCase(), subtotal });
-      if (res && res.success) {
-        setLocalAppliedCoupon(res.data);
-        setLocalCouponDiscount(Number(res.data.discountAmount || 0));
-        setCouponCode(typedCode.toUpperCase());
-        toast.success(res.message || 'Coupon applied successfully!');
-      }
-    } catch (err) {
-      console.error(err);
-      const errMsg = err.response?.data?.message || 'Invalid or expired coupon code.';
-      setLocalCouponError(errMsg);
-      toast.error(errMsg);
-      setLocalAppliedCoupon(null);
-      setLocalCouponDiscount(0);
-    } finally {
-      setLocalApplyingCoupon(false);
-    }
-  };
-
-  const handleRemoveCoupon = () => {
-    if (typeof onRemoveCoupon === 'function') {
-      onRemoveCoupon();
-      return;
-    }
-
+  } catch (err) {
+    console.error(err);
+    const errMsg = err.response?.data?.message || 'Invalid or expired coupon code.';
+    setLocalCouponError(errMsg);
+    toast.error(errMsg);
     setLocalAppliedCoupon(null);
     setLocalCouponDiscount(0);
-    setCouponCode('');
-    setLocalCouponError('');
-    toast.info('Coupon removed.');
-  };
+  } finally {
+    setLocalApplyingCoupon(false);
+  }
+};
+
+
+  const handleRemoveCoupon = () => {
+  setLocalAppliedCoupon(null);
+  setLocalCouponDiscount(0);
+  setCouponCode('');
+  setLocalCouponError('');
+  toast.info('Coupon removed.');
+};
+
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -381,6 +381,36 @@ const Checkout = ({
       }
     }
   };
+
+
+  const handleQuickApplyCoupon = async (couponCodeValue) => {
+  setCouponCode(couponCodeValue);
+  setLocalCouponError('');
+
+  try {
+    setLocalApplyingCoupon(true);
+
+    const res = await applyCouponAPI({
+      code: couponCodeValue.toUpperCase(),
+      subtotal
+    });
+
+    if (res?.success) {
+      setLocalAppliedCoupon(res.data);
+      setLocalCouponDiscount(Number(res.data.discountAmount || 0));
+      setCouponCode(couponCodeValue.toUpperCase());
+      toast.success(res.message || 'Coupon applied successfully!');
+    }
+  } catch (err) {
+    const errMsg = err.response?.data?.message || 'Invalid or expired coupon code.';
+    setLocalCouponError(errMsg);
+    toast.error(errMsg);
+    setLocalAppliedCoupon(null);
+    setLocalCouponDiscount(0);
+  } finally {
+    setLocalApplyingCoupon(false);
+  }
+};
 
   const handleUseSelectedAddress = useThrottledCallback(() => {
     if (!selectedAddressId) {
@@ -889,89 +919,156 @@ const Checkout = ({
             ))}
           </div>
 
-          {/* Coupon Code Input Area */}
-<div className="w-full bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs transition-all duration-200 hover:shadow-md">
-  {/* Header Section */}
-  <div className="flex items-center justify-between mb-3.5">
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-3-12h.008v.008H13.5V6zm0 6h.008v.008H13.5V12zm0 6h.008v.008H13.5V18zM6 6h.008v.008H6V6zm0 6h.008v.008H6V12zm0 6h.008v.008H6V18z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12z" />
-        </svg>
-      </div>
-      <div>
-        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 tracking-tight">Promotions &amp; Coupons</h4>
-        <p className="text-[10px] text-gray-400 font-medium">Apply a code to unlock extra savings</p>
-      </div>
+
+
+
+<div className="w-full bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs">
+  <div className="flex items-center justify-between mb-3">
+    <div>
+      <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 tracking-tight">
+        Available Coupons
+      </h4>
+      <p className="text-[10px] text-gray-400 font-medium">
+        Tap a coupon to apply it instantly
+      </p>
     </div>
   </div>
 
-  {/* Promo Code Input & Form Handling States */}
+  {loadingCoupons ? (
+    <div className="text-xs text-gray-500 py-3">Loading coupons...</div>
+  ) : availableCoupons.length === 0 ? (
+    <div className="text-xs text-gray-500 py-3">No coupons available right now.</div>
+  ) : (
+    <div className="flex flex-col gap-3">
+      {availableCoupons.map((coupon) => {
+        const isApplied = appliedCoupon?.code === coupon.code;
+        const isMinAmountMet = subtotal >= Number(coupon.minOrderAmount || 0);
+
+        return (
+          <div
+            key={coupon._id}
+            className={`border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              isApplied ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 bg-gray-50/50'
+            }`}
+          >
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-black tracking-wider uppercase text-primary">
+                  {coupon.code}
+                </span>
+                {isApplied && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                    Applied
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs sm:text-sm font-semibold text-gray-800 mt-1">
+                {coupon.title}
+              </p>
+
+              <p className="text-[11px] text-gray-500 mt-1">
+                Min order: ₹{Number(coupon.minOrderAmount || 0).toFixed(0)}
+              </p>
+
+              {!isMinAmountMet && (
+                <p className="text-[11px] text-rose-600 mt-1 font-medium">
+                  Add ₹{(Number(coupon.minOrderAmount || 0) - subtotal).toFixed(2)} more to use this coupon
+                </p>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={isApplied || !isMinAmountMet || applyingCoupon}
+              onClick={() => handleQuickApplyCoupon(coupon.code)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                isApplied
+                  ? 'bg-emerald-600 text-white cursor-default'
+                  : !isMinAmountMet || applyingCoupon
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-primary hover:bg-secondary text-white'
+              }`}
+            >
+              {isApplied ? 'Applied' : 'Apply'}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
+          {/* Coupon Code Input Area */}
+
+
+ 
+
+
+<div className="w-full bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 shadow-xs">
+  <div className="flex items-center justify-between mb-3.5">
+    <div>
+      <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 tracking-tight">
+        Promotions & Coupons
+      </h4>
+      <p className="text-[10px] text-gray-400 font-medium">
+        Apply a code to unlock extra savings
+      </p>
+    </div>
+  </div>
+
   {!appliedCoupon ? (
-    <form onSubmit={handleApplyCoupon} className="relative flex items-center border border-gray-200 rounded-xl bg-gray-50/50 p-1 group focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all duration-200">
+    <form
+      onSubmit={handleApplyCoupon}
+      className="relative flex items-center border border-gray-200 rounded-xl bg-gray-50/50 p-1"
+    >
       <input
         type="text"
-        placeholder="Enter Code (e.g., FURN5000)"
+        placeholder="Enter Coupon Code"
         value={couponCode}
-        onChange={(e) => setCouponCode(e.target.value)}
-        className="w-full bg-transparent pl-3 pr-2 py-2 text-xs sm:text-sm uppercase font-bold tracking-wider text-gray-800 placeholder:text-gray-400 placeholder:normal-case placeholder:font-medium focus:outline-none min-w-0"
+        onChange={(e) => {
+          setCouponCode(e.target.value.toUpperCase());
+          setLocalCouponError('');
+        }}
+        className="w-full bg-transparent pl-3 pr-2 py-2 text-xs sm:text-sm uppercase font-bold tracking-wider text-gray-800 placeholder:text-gray-400 focus:outline-none min-w-0"
       />
+
       <button
         type="submit"
         disabled={applyingCoupon || !couponCode.trim()}
-        className="bg-gray-900 hover:bg-primary disabled:bg-gray-200 text-white disabled:text-gray-400 font-bold text-xs px-4 py-2 rounded-lg transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed select-none active:scale-[0.98]"
+        className="bg-gray-900 hover:bg-primary disabled:bg-gray-200 text-white disabled:text-gray-400 font-bold text-xs px-4 py-2 rounded-lg transition-all shrink-0"
       >
-        {applyingCoupon ? (
-          <span className="flex items-center gap-1.5">
-            <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            <span>Applying...</span>
-          </span>
-        ) : (
-          'Apply'
-        )}
+        {applyingCoupon ? 'Applying...' : 'Apply'}
       </button>
     </form>
   ) : (
-    /* Applied Success State UI Banner */
-    <div className="relative overflow-hidden bg-emerald-50/60 border border-emerald-100 rounded-xl p-3 flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 group animate-in fade-in-50 duration-200">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-xs">
-          <Check size={14} strokeWidth={3} />
-        </div>
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-black text-emerald-900 tracking-wider uppercase block truncate">
-              {appliedCoupon.code}
-            </span>
-            <span className="text-[9px] bg-emerald-500 text-white font-bold px-1.5 py-0.5 rounded-md tracking-wide uppercase shadow-3xs shrink-0 scale-90 origin-left">
-              Active
-            </span>
-          </div>
-          <p className="text-[11px] font-medium text-emerald-700/90 mt-0.5">
-            You saved <span className="font-bold text-emerald-800">₹{couponDiscount.toFixed(2)}</span> on your order!
-          </p>
-        </div>
+    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center justify-between gap-3">
+      <div>
+        <p className="text-xs font-black text-emerald-900 uppercase">
+          {appliedCoupon.code}
+        </p>
+        <p className="text-[11px] text-emerald-700 mt-0.5">
+          You saved <span className="font-bold">₹{couponDiscount.toFixed(2)}</span>
+        </p>
       </div>
-      
+
       <button
         type="button"
         onClick={handleRemoveCoupon}
-        className="text-[11px] font-bold text-rose-600 hover:text-white bg-transparent hover:bg-rose-600 border border-rose-200/40 hover:border-transparent px-2.5 py-1 rounded-lg transition-all duration-150 cursor-pointer self-end xs:self-auto shadow-3xs"
+        className="text-[11px] font-bold text-red-600 border border-red-200 px-2.5 py-1 rounded-lg"
       >
         Remove
       </button>
     </div>
   )}
 
-  {/* Dynamic Error State Notification Layout */}
   {couponError && (
-    <div className="flex items-start gap-1.5 bg-rose-50 border border-rose-100 rounded-xl p-2.5 mt-2.5 text-rose-700 font-semibold text-[11px] leading-relaxed animate-shake">
-      <span className="shrink-0 text-sm leading-none select-none">⚠️</span>
-      <p className="flex-1">{couponError}</p>
+    <div className="mt-2.5 bg-rose-50 border border-rose-100 rounded-xl p-2.5 text-rose-700 font-semibold text-[11px]">
+      {couponError}
     </div>
   )}
 </div>
+
+
 
           <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 sm:p-5 mt-2 flex flex-col gap-3">
             <div className="flex justify-between items-center text-xs sm:text-sm font-medium text-gray-500">

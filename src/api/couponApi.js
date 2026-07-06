@@ -10,6 +10,12 @@ export const getAllCouponsAPI = async () => {
   return response.data;
 };
 
+// NEW: checkout page available coupons
+export const getAvailableCouponsAPI = async () => {
+  const response = await api.get('/coupons/available');
+  return response.data;
+};
+
 export const toggleCouponStatusAPI = async (id) => {
   const response = await api.put(`/coupons/toggle-status/${id}`);
   return response.data;
