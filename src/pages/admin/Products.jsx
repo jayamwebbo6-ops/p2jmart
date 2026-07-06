@@ -585,7 +585,7 @@ useEffect(() => {
       </PageHeader>
 
       {/* Stats Summary Panel */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-blue-50 text-blue-700 rounded-lg shrink-0">
             <LayoutGrid size={20} />
@@ -618,10 +618,10 @@ useEffect(() => {
       </div>
 
       {/* Tree Grid Manager Layout */}
-      <div className="flex overflow-x-auto lg:overflow-visible lg:grid lg:grid-cols-12 gap-5 items-start pb-4 custom-scrollbar">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-5 items-start pb-4">
              {/* Step 1: Categories Panel (3 cols) */}
         {!isExpanded && (
-          <div className="w-[280px] sm:w-[320px] lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+          <div className="w-full lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
             <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                 <LayoutGrid size={13} className="text-[#001E3C]" /> 1. Categories
@@ -674,7 +674,7 @@ useEffect(() => {
 
         {/* Step 2: Subcategories Panel (3 cols) */}
         {!isExpanded && (
-          <div className="w-[280px] sm:w-[320px] lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
+          <div className="w-full lg:w-auto shrink-0 lg:col-span-3 bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-left duration-200">
             <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                 <Folder size={13} className="text-amber-500" /> 2. Subcategories
@@ -734,7 +734,7 @@ useEffect(() => {
           </div>
         )}
         {/* Step 3: Products Panel (6 cols or 12 cols depending on isExpanded) */}
-        <div className={`${isExpanded ? 'w-full lg:col-span-12' : 'w-[320px] sm:w-[480px] lg:w-auto shrink-0 lg:col-span-6'} bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-all duration-300`}>
+        <div className={`${isExpanded ? 'w-full lg:col-span-12' : 'w-full lg:w-auto shrink-0 lg:col-span-6'} bg-white border border-gray-200/80 rounded-xl overflow-hidden shadow-sm min-h-[400px] transition-all duration-300`}>
           <div className="bg-gray-50/75 border-b border-gray-100 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
               <Package size={13} className="text-emerald-500" /> 3. Products ({filteredProducts.length})

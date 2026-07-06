@@ -16,7 +16,8 @@ import {
   XCircle,
   Ticket,
   Layers,
-  RefreshCw
+  RefreshCw,
+  Menu
 } from 'lucide-react';
 
 import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
@@ -34,6 +35,7 @@ const AdminLayout = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   useEffect(() => {
     // Check if the user is authenticated (token exists in cookie)
@@ -125,51 +127,59 @@ const AdminLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans overflow-hidden admin-panel">
+      {/* Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-white flex flex-col z-10 shadow-[6px_0_25px_-5px_rgba(0,0,0,0.04),_4px_0_10px_-2px_rgba(0,0,0,0.02)]">
+      <aside className={`fixed lg:static inset-y-0 left-0 w-64 bg-white flex flex-col z-50 shadow-[6px_0_25px_-5px_rgba(0,0,0,0.04),_4px_0_10px_-2px_rgba(0,0,0,0.02)] transform transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="p-4 flex items-center justify-center h-20">
-          <Link to="/">
+          <Link to="/" onClick={() => setIsSidebarOpen(false)}>
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="P2J Mart Logo" className="h-16 w-auto object-contain" />
           </Link>
         </div>
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          <Link to="/admin/homecms" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/homecms')}`}>
+          <Link to="/admin/homecms" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/homecms')}`}>
             <LayoutGrid size={18} className="flex-shrink-0" />
             <span className="text-sm">Home CMS</span>
           </Link>
-          <Link to="/admin" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin')}`}>
+          <Link to="/admin" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin')}`}>
             <Gauge size={18} className="flex-shrink-0" />
             <span className="text-sm">Dashboard</span>
           </Link>
-          <Link to="/admin/products" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/products') || location.pathname.includes('/admin/products/')} `}>
+          <Link to="/admin/products" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/products') || location.pathname.includes('/admin/products/')} `}>
             <Package size={18} className="flex-shrink-0" />
             <span className="text-sm">Products</span>
           </Link>
-          <Link to="/admin/attributes" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/attributes')}`}>
+          <Link to="/admin/attributes" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/attributes')}`}>
             <Tag size={18} className="flex-shrink-0" />
             <span className="text-sm">Attributes</span>
           </Link>
-           <Link to="/admin/admin-coupons" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/admin-coupons')}`}>
+           <Link to="/admin/admin-coupons" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/admin-coupons')}`}>
             <Ticket size={18} className="flex-shrink-0" />
             <span className="text-sm">Coupons</span>
           </Link>
-          <Link to="/admin/combo-pack" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/combo-pack')}`}>
+          <Link to="/admin/combo-pack" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/combo-pack')}`}>
             <Layers size={18} className="flex-shrink-0" />
             <span className="text-sm">Combo Pack</span>
           </Link>
-          <Link to="/admin/orders" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/orders')}`}>
+          <Link to="/admin/orders" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/orders')}`}>
             <ShoppingBag size={18} className="flex-shrink-0" />
             <span className="text-sm">Orders</span>
           </Link>
-          <Link to="/admin/return-requests" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/return-requests')}`}>
+          <Link to="/admin/return-requests" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/return-requests')}`}>
             <RefreshCw size={18} className="flex-shrink-0" />
             <span className="text-sm">Return Requests (Buyer)</span>
           </Link>
-          <Link to="/admin/shippingCost" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/shippingCost')}`}>
+          <Link to="/admin/shippingCost" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/shippingCost')}`}>
             <Truck size={18} className="flex-shrink-0" />
             <span className="text-sm">Shipping Cost</span>
           </Link>
-          <Link to="/admin/enquiries" className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${isActive('/admin/enquiries')}`}>
+          <Link to="/admin/enquiries" onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${isActive('/admin/enquiries')}`}>
             <div className="flex items-center gap-3">
               <Mail size={18} className="flex-shrink-0" />
               <span className="text-sm">Enquiries</span>
@@ -181,21 +191,21 @@ const AdminLayout = () => {
             )}
           </Link>
           
-          <Link to="/admin/gst" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/gst')}`}>
+          <Link to="/admin/gst" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/gst')}`}>
             <Percent size={18} className="flex-shrink-0" />
             <span className="text-sm">GST</span>
           </Link>
 
-           <Link to="/admin/sales-report" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/sales-report')}`}>
+           <Link to="/admin/sales-report" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/sales-report')}`}>
             <FileText size={18} className="flex-shrink-0" />
             <span className="text-sm">Sales Report</span>
           </Link>
  
-          <Link to="/admin/users" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/users')}`}>
+          <Link to="/admin/users" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/users')}`}>
             <Users size={18} className="flex-shrink-0" />
             <span className="text-sm">Customers</span>
           </Link>
-          <Link to="/admin/profile" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/profile')}`}>
+          <Link to="/admin/profile" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/profile')}`}>
             <User size={18} className="flex-shrink-0" />
             <span className="text-sm">Profile</span>
           </Link>
@@ -206,7 +216,15 @@ const AdminLayout = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
         <header className="bg-white h-20 px-4 flex justify-between items-center z-30 relative shadow-sm">
-          <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
+          </div>
           <div className="flex items-center space-x-4">
           
  

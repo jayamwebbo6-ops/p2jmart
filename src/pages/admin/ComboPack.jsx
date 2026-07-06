@@ -363,14 +363,25 @@ const ComboPacks = () => {
         </td>
         <td className="py-4 px-4">
           <div className="flex items-center gap-1 flex-wrap">
-            {internalProducts.map((p) => {
-              const varDetails = getComboVariantDetails(combo, p);
-              return (
-                <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
-                  {varDetails.stock}
-                </span>
-              );
-            })}
+            {combo.selectedVariants && combo.selectedVariants.length > 0 
+              ? combo.selectedVariants.map((sv, idx) => {
+                  const prodId = sv.productId?._id || sv.productId?.id || sv.productId;
+                  const p = internalProducts.find(prod => (prod._id || prod.id || prod) === prodId);
+                  const varDetails = getComboVariantDetails(combo, p || { _id: prodId }, sv.variantId);
+                  return (
+                    <span key={`${prodId}-${sv.variantId}-${idx}`} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
+                      {varDetails.stock}
+                    </span>
+                  );
+                })
+              : internalProducts.map((p) => {
+                  const varDetails = getComboVariantDetails(combo, p);
+                  return (
+                    <span key={p._id || p.id} className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${varDetails.stock === 0 ? 'bg-red-50 text-red-500 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`} title={varDetails.title}>
+                      {varDetails.stock}
+                    </span>
+                  );
+                })}
           </div>
         </td>
         <td className="py-4 px-4">
