@@ -126,7 +126,7 @@ const Collections = () => {
       return (
         <div
           key={section.title}
-          className="bg-white border border-gray-200 p-3 flex flex-col justify-between shadow-xs rounded-sm"
+          className="bg-white border border-gray-200  flex flex-col justify-between shadow-xs rounded-sm"
         >
           <div>
             <div className="flex items-center justify-center mb-4">
