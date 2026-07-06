@@ -8,7 +8,8 @@ import {
   Copy, 
   Percent,
 } from 'lucide-react';
-import { getAllCouponsAPI } from '../../api/couponApi';
+import { getEligibleCouponsAPI } from '../../api/couponApi';
+import { toast } from '../../components/toast';
 
 const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -20,7 +21,7 @@ const Coupons = () => {
     const fetchCoupons = async () => {
       try {
         setLoading(true);
-        const res = await getAllCouponsAPI();
+        const res = await getEligibleCouponsAPI();
         if (res && res.success) {
           setCoupons(res.data);
         }
@@ -33,9 +34,17 @@ const Coupons = () => {
     fetchCoupons();
   }, []);
 
-  const handleCopyCode = (id, code) => {
-    navigator.clipboard.writeText(code);
-    setCopiedId(id);
+  const handleCopyCode = (coupon) => {
+    if (coupon.isExhausted) {
+      toast.error('You have already used this coupon code to its maximum limit.');
+      return;
+    }
+    if (coupon.status !== 'Active') {
+      toast.error('This coupon is currently inactive and cannot be copied.');
+      return;
+    }
+    navigator.clipboard.writeText(coupon.code);
+    setCopiedId(coupon._id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
@@ -140,9 +149,10 @@ const Coupons = () => {
                       {/* Metadata Inline Row */}
                       <div className="flex items-center justify-between gap-2 w-full">
                         <span className={`font-black text-[9px] px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                          coupon.isExhausted ? 'bg-slate-100 text-slate-500 border border-slate-300' :
                           isCouponActive ? 'bg-green-50 text-green-700 border border-green-200/40' : 'bg-red-50 text-red-700'
                         }`}>
-                          {coupon.status}
+                          {coupon.isExhausted ? 'Limit Reached' : coupon.status}
                         </span>
                         <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1.5 shrink-0">
                           <Clock size={11} className="text-slate-300" /> 
@@ -160,17 +170,22 @@ const Coupons = () => {
                     <div className="space-y-2">
                       <button
                         type="button"
-                        disabled={!isCouponActive}
-                        onClick={() => handleCopyCode(coupon._id, coupon.code)}
-                        className="w-full bg-slate-50/70 hover:bg-slate-100/80 border border-slate-200 rounded-lg py-2 px-3 flex items-center justify-center gap-2 select-none transition-all cursor-pointer group active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => handleCopyCode(coupon)}
+                        className={`w-full border rounded-lg py-2 px-3 flex items-center justify-center gap-2 select-none transition-all ${
+                          !isCouponActive || coupon.isExhausted 
+                            ? 'bg-slate-100 border-slate-200 opacity-60 cursor-pointer'
+                            : 'bg-slate-50/70 hover:bg-slate-100/80 border-slate-200 cursor-pointer active:scale-[0.99]'
+                        } group`}
                       >
-                        <span className="font-mono text-xs font-bold text-slate-700 tracking-[0.15em] uppercase truncate">
+                        <span className={`font-mono text-xs font-bold tracking-[0.15em] uppercase truncate ${
+                          coupon.isExhausted ? 'text-slate-400 line-through' : 'text-slate-700'
+                        }`}>
                           {coupon.code}
                         </span>
                         {copiedId === coupon._id ? (
                           <span className="text-[10px] text-emerald-600 font-bold shrink-0 animate-pulse">Copied!</span>
                         ) : (
-                          isCouponActive && <Copy size={11} className="text-slate-400 shrink-0 group-hover:text-slate-500 transition-colors" />
+                          !coupon.isExhausted && isCouponActive && <Copy size={11} className="text-slate-400 shrink-0 group-hover:text-slate-500 transition-colors" />
                         )}
                       </button>
                       
