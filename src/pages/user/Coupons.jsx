@@ -23,7 +23,8 @@ const Coupons = () => {
         setLoading(true);
         const res = await getEligibleCouponsAPI();
         if (res && res.success) {
-          setCoupons(res.data);
+          const activeOnly = res.data.filter(c => c.status === 'Active');
+          setCoupons(activeOnly);
         }
       } catch (err) {
         console.error('Error fetching coupons:', err);
@@ -178,7 +179,7 @@ const Coupons = () => {
                         } group`}
                       >
                         <span className={`font-mono text-xs font-bold tracking-[0.15em] uppercase truncate ${
-                          coupon.isExhausted ? 'text-slate-400 line-through' : 'text-slate-700'
+                          coupon.isExhausted ? 'text-slate-400 line-through select-none blur-[2px]' : 'text-slate-700'
                         }`}>
                           {coupon.code}
                         </span>

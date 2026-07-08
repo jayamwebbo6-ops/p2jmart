@@ -94,7 +94,7 @@ const AccountLayout = () => {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 flex flex-col min-[825px]:flex-row gap-6">
+      <div className="max-w-7xl mx-auto  flex flex-col min-[825px]:flex-row gap-6">
         
         {/* Responsive Sidebar Container */}
         <div className="w-full min-[825px]:w-64 flex-shrink-0 relative">

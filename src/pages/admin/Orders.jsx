@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useDebounce from '../../hooks/useDebounce';
 import { 
   Search, 
@@ -35,6 +36,12 @@ const formatImageUrl = (path) => {
   return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
 };
 
+const getFrontendProductUrl = (productId) => {
+  const base = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+  const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  return `${cleanBase}/product/${productId}`;
+};
+
 const getDisplayStatus = (order) => {
   if (!order) return '';
   const hasRefunded = order.items?.some(item => item.returnStatus === 'Returned & Refunded');
@@ -44,6 +51,7 @@ const getDisplayStatus = (order) => {
 
 
 const OrderManagement = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -219,7 +227,7 @@ const OrderManagement = () => {
     { key: 'productName', label: 'Product', sortable: true, align: 'left' },
     { key: 'customerName', label: 'Info', sortable: true, align: 'left' },
     { key: 'timestamp', label: 'Timestamp', sortable: true, align: 'left' },
-    { key: 'fulfillmentStatus', label: 'Fulfillment Status', sortable: true, align: 'left' },
+    { key: 'fulfillmentStatus', label: 'Order Status', sortable: true, align: 'left' },
     { key: 'paymentStatus', label: 'Payment Status', sortable: false, align: 'left' },
     { key: 'amount', label: 'Amount', sortable: true, align: 'right' },
     { key: 'actions', label: 'Action', sortable: false, align: 'center' }
@@ -413,6 +421,9 @@ const OrderManagement = () => {
     if (filterValue === 'WEEK') return orderDate >= new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
     if (filterValue === 'MONTH') return orderDate >= new Date(startOfToday.getFullYear(), startOfToday.getMonth() - 1, startOfToday.getDate());
     if (filterValue === 'YEAR') return orderDate >= new Date(today.getFullYear(), 0, 1);
+    if (!isNaN(filterValue) && filterValue.length === 4) {
+      return orderDate.getFullYear() === parseInt(filterValue);
+    }
     return true;
   };
 
@@ -433,7 +444,9 @@ const OrderManagement = () => {
       matchesProductType = order.productType === productTypeFilter;
     }
 
-    return matchesSearch && matchesStatus && matchesProductType;
+    const matchesTime = checkTimeScope(order.rawDate || order.timestamp, timeFilter);
+
+    return matchesSearch && matchesStatus && matchesProductType && matchesTime;
   });
 
   const sortedOrders = [...filteredOrders].sort((a, b) => {
@@ -490,7 +503,13 @@ const OrderManagement = () => {
                     key={idx}
                     src={formatImageUrl(item.image)}
                     alt={item.title}
-                    className="w-10 h-10 object-cover rounded-lg ring-2 ring-white border border-slate-100 flex-shrink-0 shadow-sm"
+                    title={`Click to view ${item.title} on storefront`}
+                    onClick={() => {
+                      if (item.productId) {
+                        window.open(getFrontendProductUrl(item.productId), '_blank');
+                      }
+                    }}
+                    className="w-10 h-10 object-cover rounded-lg ring-2 ring-white border border-slate-100 flex-shrink-0 shadow-sm cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
                   />
                 ) : (
                   <div key={idx} className="w-10 h-10 bg-slate-100 border border-slate-200 ring-2 ring-white rounded-lg text-slate-400 font-bold text-[8px] flex items-center justify-center flex-shrink-0 shadow-sm">N/A</div>
@@ -504,13 +523,33 @@ const OrderManagement = () => {
             </div>
           ) : (
             order.image ? (
-              <img src={formatImageUrl(order.image)} alt={order.productName} className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0" />
+              <img
+                src={formatImageUrl(order.image)}
+                alt={order.productName}
+                title={`Click to view ${order.productName} on storefront`}
+                onClick={() => {
+                  const firstItem = order.items?.[0];
+                  if (firstItem && firstItem.productId) {
+                    window.open(getFrontendProductUrl(firstItem.productId), '_blank');
+                  }
+                }}
+                className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
+              />
             ) : (
               <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 font-bold text-[10px] flex items-center justify-center flex-shrink-0" />
             )
           )}
           <div className="max-w-[180px]">
-            <div className="font-bold text-slate-800 truncate flex items-center gap-1.5" title={order.items?.[0]?.title || order.productName}>
+            <div
+              className="font-bold text-slate-800 truncate flex items-center gap-1.5 cursor-pointer hover:text-blue-600 transition-colors"
+              title={`Click to view ${order.items?.[0]?.title || order.productName} on storefront`}
+              onClick={() => {
+                const firstItem = order.items?.[0];
+                if (firstItem && firstItem.productId) {
+                  window.open(getFrontendProductUrl(firstItem.productId), '_blank');
+                }
+              }}
+            >
               {order.items?.[0]?.title || order.productName}
               {order.productType === 'custom' && (
                 <span className="bg-pink-50 text-pink-600 text-[8px] font-extrabold uppercase px-1 rounded border border-pink-100">Custom</span>

@@ -175,19 +175,14 @@ const applyingCoupon = localApplyingCoupon;
 
   const total = Math.max(0, subtotal - couponDiscount + gstAmount + shippingFee);
 
-  // Load addresses, shipping states, and GST configurations from database
+  // Load addresses, shipping states, and GST configurations from database safely
   const loadCheckoutData = async () => {
     setLoading(true);
+    
+    // 1. Fetch Addresses
     try {
-      const [addressRes, shippingRes, gstRes, cmsRes, couponRes] = await Promise.all([
-  getMyAddressesAPI(),
-  getAllShippingAPI(),
-  getAllGstAPI(),
-  getHomeCMS(),
-  getEligibleCouponsAPI()
-]);
-
-      if (addressRes && addressRes.success) {
+      const addressRes = await getMyAddressesAPI();
+      if (addressRes && addressRes.success && Array.isArray(addressRes.data)) {
         setAddresses(addressRes.data);
         const defAddr = addressRes.data.find(a => a.isDefault);
         if (defAddr) {
@@ -196,31 +191,57 @@ const applyingCoupon = localApplyingCoupon;
           setSelectedAddressId(addressRes.data[0]._id);
         }
       }
-      
-      if (shippingRes && shippingRes.success) {
+    } catch (err) {
+      console.error("Failed to load user addresses:", err);
+      toast.error("Could not load your saved addresses.");
+    }
+
+    // 2. Fetch Shipping States (Critical for Add Address dropdown)
+    try {
+      const shippingRes = await getAllShippingAPI();
+      if (shippingRes && shippingRes.success && Array.isArray(shippingRes.data)) {
         setShippingStates(shippingRes.data);
       }
+    } catch (err) {
+      console.error("Failed to load shipping states:", err);
+      toast.error("Failed to load shipping states. State selection dropdown may be unavailable.");
+    }
 
-      if (gstRes && gstRes.success) {
+    // 3. Fetch GST tax settings
+    try {
+      const gstRes = await getAllGstAPI();
+      if (gstRes && gstRes.success && Array.isArray(gstRes.data)) {
         setGstSettings(gstRes.data);
       }
+    } catch (err) {
+      console.error("Failed to load GST settings:", err);
+    }
 
+    // 4. Fetch Home CMS rules for shipping thresholds
+    try {
+      const cmsRes = await getHomeCMS();
       if (cmsRes && cmsRes.success && cmsRes.data) {
         setGlobalShippingRules({
           freeShippingMinAmount: cmsRes.data.freeShippingMinAmount !== undefined ? cmsRes.data.freeShippingMinAmount : 1000,
           flatShippingCost: cmsRes.data.flatShippingCost !== undefined ? cmsRes.data.flatShippingCost : 50
         });
       }
-
-      if (couponRes && couponRes.success) {
-  setAvailableCoupons(couponRes.data || []);
-}
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to load checkout settings');
-    } finally {
-      setLoading(false);
+      console.error("Failed to load CMS shipping rules:", err);
     }
+
+    // 5. Fetch eligible coupons
+    try {
+      const couponRes = await getEligibleCouponsAPI();
+      if (couponRes && couponRes.success && Array.isArray(couponRes.data)) {
+        const activeOnly = couponRes.data.filter(c => c.status === 'Active');
+        setAvailableCoupons(activeOnly);
+      }
+    } catch (err) {
+      console.error("Failed to load eligible coupons:", err);
+    }
+
+    setLoading(false);
   };
 
 
@@ -416,11 +437,23 @@ const applyingCoupon = localApplyingCoupon;
 
 
   const handleQuickApplyCoupon = async (couponCodeValue) => {
-  setCouponCode(couponCodeValue);
-  setLocalCouponError('');
+    const couponObj = availableCoupons.find(c => c.code.toUpperCase() === couponCodeValue.toUpperCase());
+    if (couponObj) {
+      if (couponObj.isExhausted) {
+        toast.error('You have already used this coupon code to its maximum limit.');
+        return;
+      }
+      if (couponObj.status !== 'Active') {
+        toast.error('This coupon is currently inactive.');
+        return;
+      }
+    }
 
-  try {
-    setLocalApplyingCoupon(true);
+    setCouponCode(couponCodeValue);
+    setLocalCouponError('');
+
+    try {
+      setLocalApplyingCoupon(true);
 
     const res = await applyCouponAPI({
       code: couponCodeValue.toUpperCase(),
@@ -906,21 +939,25 @@ const applyingCoupon = localApplyingCoupon;
   ) : availableCoupons.length === 0 ? (
     <div className="text-xs text-gray-500 py-3">No coupons available right now.</div>
   ) : (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 max-h-[235px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
       {availableCoupons.map((coupon) => {
+        const isExhaustedOrInactive = coupon.isExhausted || coupon.status !== 'Active';
         const isApplied = appliedCoupon?.code === coupon.code;
         const isMinAmountMet = subtotal >= Number(coupon.minOrderAmount || 0);
+        const buttonDisabled = isApplied || !isMinAmountMet || applyingCoupon || isExhaustedOrInactive;
 
         return (
           <div
             key={coupon._id}
-            className={`border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+            className={`border rounded-xl p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all ${
               isApplied ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 bg-gray-50/50'
+            } ${
+              isExhaustedOrInactive ? 'opacity-60 grayscale blur-[0.5px]' : ''
             }`}
           >
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black tracking-wider uppercase text-primary">
+                <span className={`text-xs font-black tracking-wider uppercase ${isExhaustedOrInactive ? 'line-through text-slate-400 select-none blur-[2px]' : 'text-primary'}`}>
                   {coupon.code}
                 </span>
                 {isApplied && (
@@ -928,9 +965,19 @@ const applyingCoupon = localApplyingCoupon;
                     Applied
                   </span>
                 )}
+                {coupon.isExhausted && (
+                  <span className="text-[9px] font-black uppercase text-slate-500 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded-full">
+                    Limit Reached
+                  </span>
+                )}
+                {!coupon.isExhausted && coupon.status !== 'Active' && (
+                  <span className="text-[9px] font-black uppercase text-rose-500 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full">
+                    Inactive
+                  </span>
+                )}
               </div>
 
-              <p className="text-xs sm:text-sm font-semibold text-gray-800 mt-1">
+              <p className={`text-xs sm:text-sm font-semibold text-gray-800 mt-1 ${isExhaustedOrInactive ? 'text-gray-400' : ''}`}>
                 {coupon.title}
               </p>
 
@@ -938,7 +985,7 @@ const applyingCoupon = localApplyingCoupon;
                 Min order: ₹{Number(coupon.minOrderAmount || 0).toFixed(0)}
               </p>
 
-              {!isMinAmountMet && (
+              {!isMinAmountMet && !isExhaustedOrInactive && (
                 <p className="text-[11px] text-rose-600 mt-1 font-medium">
                   Add ₹{(Number(coupon.minOrderAmount || 0) - subtotal).toFixed(2)} more to use this coupon
                 </p>
@@ -947,17 +994,17 @@ const applyingCoupon = localApplyingCoupon;
 
             <button
               type="button"
-              disabled={isApplied || !isMinAmountMet || applyingCoupon}
+              disabled={buttonDisabled}
               onClick={() => handleQuickApplyCoupon(coupon.code)}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
                 isApplied
                   ? 'bg-emerald-600 text-white cursor-default'
-                  : !isMinAmountMet || applyingCoupon
+                  : buttonDisabled
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : 'bg-primary hover:bg-secondary text-white'
               }`}
             >
-              {isApplied ? 'Applied' : 'Apply'}
+              {isApplied ? 'Applied' : coupon.isExhausted ? 'Limit Reached' : coupon.status !== 'Active' ? 'Inactive' : 'Apply'}
             </button>
           </div>
         );
@@ -1279,9 +1326,9 @@ const applyingCoupon = localApplyingCoupon;
                 </div>
               </div>
 
-              <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Local Testing Gateway</h3>
+              <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Payment Testing Gateway</h3>
               <p className="text-gray-500 text-xs sm:text-[13px] leading-relaxed px-2 mb-6">
-                You are running in localhost. Choose to simulate the payment callback directly or proceed to the CCAvenue Sandbox portal.
+                Choose to simulate the payment callback directly or proceed to the CCAvenue Sandbox portal.
               </p>
 
               <div className="bg-[#f5f7f9] rounded-xl p-4 mb-6 text-left border border-gray-100 space-y-2 text-xs">

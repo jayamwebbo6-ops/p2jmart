@@ -127,11 +127,11 @@ const Footer = () => {
             </div>
             
             <div className="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
-              <img src={`${import.meta.env.BASE_URL}payment_logos/visa.png`} alt="Visa" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
-              <img src={`${import.meta.env.BASE_URL}payment_logos/amex.png`} alt="Amex" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
-              <img src={`${import.meta.env.BASE_URL}payment_logos/mastercard.png`} alt="Mastercard" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
-              <img src={`${import.meta.env.BASE_URL}payment_logos/paypal.png`} alt="PayPal" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
-              <img src={`${import.meta.env.BASE_URL}payment_logos/discover.png`} alt="Discover" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/visa.jpg`} alt="Visa" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/amex.jpg`} alt="Amex" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/mastercard.jpg`} alt="Mastercard" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/paypal.jpg`} alt="PayPal" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
+              <img src={`${import.meta.env.BASE_URL}payment_logos/discover.jpg`} alt="Discover" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
             </div>
           </div>
 

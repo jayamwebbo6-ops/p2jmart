@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import Loader from './components/Loader';
 import ScrollToTop from './components/ScrollToTop';
 import { ToastContainer, toast } from './components/toast';
@@ -126,7 +126,7 @@ function App() {
   };
 
   return (
-    <BrowserRouter basename={basename}>
+    <>
       <ScrollToTop />
       <ToastContainer />
       <Suspense fallback={<Loader />}>
@@ -314,7 +314,7 @@ function App() {
           </Route>
         </Routes>
       </Suspense>
-    </BrowserRouter>
+    </>
   );
 }
 

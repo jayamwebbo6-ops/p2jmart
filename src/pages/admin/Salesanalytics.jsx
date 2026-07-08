@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import ExcelJS from "exceljs";
 import PageHeader from '../../components/PageHeader';
 
 import {
@@ -71,13 +70,8 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 
 // Professional PDF Report Generator
 const generatePDFReport = async (stats, rows, range, from, to) => {
-  const { jsPDF } = window.jspdf;
-  const { html2canvas } = window;
-
-  if (!jsPDF || !html2canvas) {
-    console.error("PDF libraries not loaded");
-    return;
-  }
+  const { jsPDF } = await import("jspdf");
+  const { default: html2canvas } = await import("html2canvas");
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -253,7 +247,7 @@ const exportToCSV = (rows, range, stats) => {
 
 // XLSX Export
 const exportToExcel = async (rows, range, stats) => {
-
+  const { default: ExcelJS } = await import("exceljs/dist/exceljs.bare.js");
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet("Sales Report");
 

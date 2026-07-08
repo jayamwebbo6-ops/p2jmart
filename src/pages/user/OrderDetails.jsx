@@ -10,8 +10,6 @@ import {
   getProductReviewsAPI,
   deleteProductReviewAPI
 } from '../../api/productApi';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
 import OrderInvoice from '../../components/OrderInvoice';
 import { getHomeCMS } from '../../api/homeCms';
 
@@ -401,6 +399,9 @@ const OrderDetails = () => {
     };
 
     try {
+      const { jsPDF } = await import('jspdf');
+      const { default: html2canvas } = await import('html2canvas');
+
       const element = document.getElementById('order-invoice-download-template');
       if (!element) {
         toast.error('Invoice template not found');

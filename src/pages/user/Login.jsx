@@ -118,14 +118,11 @@ export default function AuthFlow() {
       }
     };
 
-    const script = document.createElement('script');
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
+    const initializeGoogleSignIn = () => {
+      if (window.google?.accounts?.id) {
+        // Only initialize once to avoid GSI warning
         window.google.accounts.id.initialize({
-          client_id: "717777690705-pdl02aomsi12r1vnuqalckp5v24de71s.apps.googleusercontent.com",
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "717777690705-pdl02aomsi12r1vnuqalckp5v24de71s.apps.googleusercontent.com",
           callback: handleCredentialResponse
         });
         
@@ -137,8 +134,27 @@ export default function AuthFlow() {
         }
       }
     };
+
+    // If script is already in document, just initialize
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if (existingScript) {
+      const timer = setTimeout(initializeGoogleSignIn, 100);
+      return () => clearTimeout(timer);
+    }
+
+    const script = document.createElement('script');
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.onload = initializeGoogleSignIn;
     document.body.appendChild(script);
-  }, [navigate]);
+
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, [step]);
 
   // Real Integration: Connect to your /send-otp route
   const handleSendCode = async (e) => {
@@ -228,66 +244,80 @@ export default function AuthFlow() {
 };
 
   return (
-    <div className="mt-13 mb-5 bg-primary-100 flex flex-col justify-center items-center relative font-sans text-gray-800 selection:bg-red-200">
+    <div className="min-h-[85vh] w-full flex flex-col justify-center items-center py-12 px-4 bg-gradient-to-b from-[#f8fafc] to-[#e2e8f0] relative font-sans text-gray-800">
       {isLoading && <Loader />}
 
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 max-w-md w-full overflow-hidden flex flex-col transition-all duration-300">
+      <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,49,71,0.08)] border border-slate-100 max-w-[420px] w-full overflow-hidden flex flex-col transition-all duration-500 hover:shadow-[0_30px_70px_rgba(0,49,71,0.12)] hover:-translate-y-1">
         {/* Header Panel */}
-        <div className="bg-[#003147] text-white text-center flex flex-col items-center justify-center pt-10 pb-8 px-6 w-full">
-          <h1 className="text-2xl font-bold tracking-tight mb-2 text-white">Welcome Back</h1>
-          <p className="text-red-100 text-sm font-medium">Sign in to your account</p>
+        <div className="bg-gradient-to-br from-[#001f2e] via-[#003147] to-[#0c4e6e] text-white text-center flex flex-col items-center justify-center pt-12 pb-10 px-6 w-full relative overflow-hidden">
+          {/* Ambient Glow Background Pattern */}
+          <div className="absolute w-40 h-40 bg-secondary/15 rounded-full -top-10 -right-10 blur-3xl"></div>
+          <div className="absolute w-40 h-40 bg-primary/30 rounded-full -bottom-10 -left-10 blur-3xl"></div>
+          
+          <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 mb-4 shadow-inner relative z-10">
+            <ShieldCheck className="w-6 h-6 text-secondary" />
+          </div>
+          
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-1.5 relative z-10">Welcome Back</h1>
+          <p className="text-slate-300 text-xs sm:text-sm font-medium tracking-wide uppercase relative z-10">Sign in to your account</p>
         </div>
 
-        <div className="flex flex-col items-center w-full my-10 mx-auto max-w-[80%]">
+        <div className="flex flex-col items-center w-full px-6 py-10 sm:px-8">
           
           {/* STEP 1: Identification Options */}
           {step === 'methods' && (
             <div className="w-full flex flex-col gap-4 my-2">
               <div className="w-full flex justify-center py-1">
-                <div ref={googleBtnRef}></div>
+                <div ref={googleBtnRef} className="overflow-hidden rounded-xl border border-slate-200 hover:border-slate-350 transition-colors shadow-2xs"></div>
+              </div>
+
+              <div className="relative flex py-2 items-center w-full">
+                <div className="flex-grow border-t border-slate-100"></div>
+                <span className="flex-shrink mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-wider">or</span>
+                <div className="flex-grow border-t border-slate-100"></div>
               </div>
 
               <button 
                 type="button"
                 onClick={() => setStep('email-input')}
-                className="w-full flex items-center justify-center gap-3 border border-gray-300 rounded-xl h-12 hover:bg-gray-50 active:scale-[0.99] transition-all font-semibold text-gray-700 text-sm"
+                className="w-full flex items-center justify-center gap-3 border border-slate-200 hover:border-secondary/40 bg-slate-50/50 hover:bg-white rounded-2xl h-13 active:scale-[0.99] transition-all duration-300 font-bold text-gray-700 text-sm shadow-2xs hover:shadow-xs cursor-pointer"
               >
                 <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                <span>Email Address</span>
+                <span>Continue with Email OTP</span>
               </button>
             </div>
           )}
 
           {/* STEP 2: Email Destination Input Form */}
           {step === 'email-input' && (
-            <form onSubmit={handleSendCode} className="w-full flex flex-col gap-4">
+            <form onSubmit={handleSendCode} className="w-full flex flex-col gap-5">
               <button 
                 type="button"
                 onClick={() => setStep('methods')}
-                className="text-secondary hover:text-primary self-start text-xs sm:text-sm flex items-center gap-1.5 font-semibold transition-colors bg-transparent border-0 cursor-pointer"
+                className="text-slate-400 hover:text-primary self-start text-xs sm:text-sm flex items-center gap-1.5 font-bold transition-colors bg-transparent border-0 cursor-pointer mb-2"
               >
-                <span>← Back</span>
+                <span>← Back to options</span>
               </button>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-gray-700 font-bold text-xs sm:text-sm">
-                  <Mail size={16} className="text-gray-500" />
-                  <label>Email Address</label>
-                </div>
+              <div className="flex flex-col gap-2.5">
+                <label className="text-xs font-extrabold uppercase text-gray-500 tracking-wider">Email Address</label>
                 
-                <input 
-                  type="email"
-                  required
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl indent-4 h-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary bg-gray-50/50 transition-all placeholder-gray-400"
-                />
+                <div className="relative flex items-center">
+                  <Mail className="absolute left-4 w-5 h-5 text-slate-400 pointer-events-none" />
+                  <input 
+                    type="email"
+                    required
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full border border-slate-200 rounded-2xl pl-12 pr-4 h-13 text-sm focus:outline-none focus:ring-4 focus:ring-secondary/10 focus:border-secondary bg-slate-50/40 focus:bg-white transition-all placeholder-slate-400 font-semibold"
+                  />
+                </div>
               </div>
 
               <button 
                 type="submit"
-                className="w-full bg-primary hover:bg-secondary active:scale-[0.99] text-white font-bold h-12 rounded-xl text-sm transition-all shadow-md shadow-red-900/10 cursor-pointer"
+                className="w-full bg-primary hover:bg-[#004260] active:scale-[0.99] text-white font-bold h-13 rounded-2xl text-sm transition-all shadow-md shadow-primary/10 hover:shadow-lg cursor-pointer mt-2"
               >
                 Send Verification Code
               </button>
@@ -296,23 +326,20 @@ export default function AuthFlow() {
 
           {/* STEP 3: Multi-box Code Block Validation Layout (6 boxes) */}
           {step === 'otp-verify' && (
-            <form onSubmit={handleVerifyOtp} className="w-full flex flex-col gap-4">
+            <form onSubmit={handleVerifyOtp} className="w-full flex flex-col gap-5">
               <button 
                 type="button"
                 onClick={() => setStep('email-input')}
-                className="text-secondary hover:text-primary self-start text-xs sm:text-sm flex items-center gap-1.5 font-semibold transition-colors bg-transparent border-0 cursor-pointer"
+                className="text-slate-400 hover:text-primary self-start text-xs sm:text-sm flex items-center gap-1.5 font-bold transition-colors bg-transparent border-0 cursor-pointer mb-2"
               >
-                <span>← Back</span>
+                <span>← Back to email</span>
               </button>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-gray-800 font-bold text-xs sm:text-sm">
-                  <ShieldCheck size={18} className="text-gray-600" />
-                  <label>Verification Code</label>
-                </div>
-
+              <div className="flex flex-col gap-3">
+                <label className="text-xs font-extrabold uppercase text-gray-500 tracking-wider text-center">Enter Verification Code</label>
+                
                 {/* Grid block mapping 6 responsive individual boxes */}
-                <div className="flex justify-center gap-1.5 sm:gap-2">
+                <div className="flex justify-center gap-2 sm:gap-3 my-2">
                   {otpBoxes.map((boxValue, idx) => (
                     <input
                       key={idx}
@@ -323,41 +350,37 @@ export default function AuthFlow() {
                       onChange={(e) => handleOtpBoxChange(e.target.value, idx)}
                       onKeyDown={(e) => handleKeyDown(e, idx)}
                       onPaste={handlePaste}
-                      className="w-10 h-12 sm:w-12 sm:h-12 text-center text-lg font-bold border border-gray-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-inner"
+                      className="w-10 h-13 sm:w-12 sm:h-14 text-center text-xl font-black border border-slate-200 bg-slate-50/50 focus:bg-white rounded-2xl focus:outline-none focus:ring-4 focus:ring-secondary/10 focus:border-secondary transition-all shadow-inner text-primary"
                     />
                   ))}
                 </div>
               </div>
 
-              <p className="text-gray-400 text-[11px] sm:text-xs text-center mb-2">
-                Sent to <span className="font-medium text-gray-600 break-all">{email}</span>
+              <p className="text-slate-400 text-xs text-center leading-normal mb-1">
+                We sent a 6-digit code to <br />
+                <span className="font-bold text-gray-700 break-all">{email}</span>
               </p>
 
               <button 
                 type="submit"
-                className="w-full bg-primary hover:bg-secondary active:scale-[0.99] text-white font-bold h-12 rounded-xl text-sm transition-all shadow-md shadow-red-900/10 tracking-wide cursor-pointer"
+                className="w-full bg-primary hover:bg-[#004260] active:scale-[0.99] text-white font-bold h-13 rounded-2xl text-sm transition-all shadow-md shadow-primary/10 hover:shadow-lg tracking-wide cursor-pointer"
               >
-                Verify & Enter
+                Verify & Sign In
               </button>
 
-              <div className="text-center text-xs text-gray-500 font-medium">
-                Didn't receive? <button type="button" onClick={() => handleSendCode(null)} className="text-primary font-bold hover:underline bg-transparent border-0 cursor-pointer">Resend OTP</button>
+              <div className="text-center text-xs text-gray-500 font-semibold mt-1">
+                Didn't receive code? <button type="button" onClick={() => handleSendCode(null)} className="text-secondary font-bold hover:underline bg-transparent border-0 cursor-pointer">Resend OTP</button>
               </div>
             </form>
           )}
 
-          <div className="w-full h-px bg-gray-100 my-6"></div>
-          <p className="text-[11px] sm:text-xs text-center text-gray-400 leading-relaxed max-w-[280px]">
+          <div className="w-full h-px bg-slate-100 my-6"></div>
+          <p className="text-[11px] sm:text-xs text-center text-slate-400 leading-relaxed max-w-[280px]">
             By continuing, you agree to our{' '}
-            <a href="#" className="text-primary hover:underline font-medium">Terms of Service</a> and{' '}
-            <a href="#" className="text-primary hover:underline font-medium">Privacy Policy</a>
+            <a href="#" className="text-primary hover:underline font-bold">Terms of Service</a> and{' '}
+            <a href="#" className="text-primary hover:underline font-bold">Privacy Policy</a>
           </p>
         </div>
-      </div>
-
-      <div className="absolute bottom-4 right-4 text-right text-gray-400/50 pointer-events-none select-none text-[13px] leading-tight font-light hidden md:block">
-        Activate Windows<br />
-        <span className="text-[11px]">Go to Settings to activate Windows.</span>
       </div>
     </div>
   );

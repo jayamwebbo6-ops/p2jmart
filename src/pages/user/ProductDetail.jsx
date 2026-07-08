@@ -196,15 +196,11 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
 
   // Sync loadedProduct state if URL id or incomingProduct changes
   useEffect(() => {
-    if (incomingProduct) {
-      setLoadedProduct(incomingProduct);
-      setLoading(false);
-      return;
-    }
-
-    const fetchProduct = async () => {
+    const fetchProduct = async (silent = false) => {
       try {
-        setLoading(true);
+        if (!incomingProduct && !silent) {
+          setLoading(true);
+        }
         const res = await getProductByIdAPI(id);
         if (res && res.success && res.data) {
           setLoadedProduct(res.data);
@@ -216,10 +212,36 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
       } catch (err) {
         console.error("Error fetching product details dynamically:", err);
       } finally {
-        setLoading(false);
+        if (!incomingProduct && !silent) {
+          setLoading(false);
+        }
       }
     };
-    fetchProduct();
+
+    // Use passed state immediately for instant UI, then update in background
+    if (incomingProduct) {
+      setLoadedProduct(incomingProduct);
+      setLoading(false);
+    }
+    
+    fetchProduct(false);
+
+    // Refetch when tab becomes active / window gains focus
+    const handleFocus = () => {
+      fetchProduct(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        fetchProduct(true);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [id, incomingProduct]);
 
   // Lookup subcategory and category names for breadcrumbs

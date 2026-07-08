@@ -27,13 +27,22 @@ const api = axios.create({
   baseURL: API_URL
 });
 
-// Interceptor to inject Authorization Bearer token from cookies
+// Interceptor to inject Authorization Bearer token from cookies and prevent GET caching
 api.interceptors.request.use(
   (config) => {
     const token = getCookie('p2jmart_admin_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add cache-busting query parameter for all GET requests
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now()
+      };
+    }
+    
     return config;
   },
   (error) => {

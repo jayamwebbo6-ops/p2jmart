@@ -118,7 +118,7 @@ export default function AdminLogin() {
         {/* Banner Section */}
         <div className="bg-primary px-6 py-8 text-center">
           <img 
-            src={`${import.meta.env.BASE_URL}logo.png`} 
+            src={`${import.meta.env.BASE_URL}logo.webp`} 
             alt="P2J Mart Logo" 
             className="h-16 mx-auto bg-white/10 rounded-lg p-2 mb-4 backdrop-blur-sm"
           />

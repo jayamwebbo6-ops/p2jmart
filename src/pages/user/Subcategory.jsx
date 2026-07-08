@@ -257,9 +257,9 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
       console.warn("SubCategory target configuration lacks identification state values.");
     }
 
-    const fetchSubcategoryCatalog = async () => {
+    const fetchSubcategoryCatalog = async (silent = false) => {
       try {
-        setLoading(true);
+        if (!silent) setLoading(true);
         let response;
         
         if (isCustomizedPage) {
@@ -298,11 +298,28 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
       } catch (error) {
         console.error("Error retrieving matching subcategory goods catalog:", error);
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     };
 
-    fetchSubcategoryCatalog();
+    fetchSubcategoryCatalog(false);
+
+    // Refetch when tab becomes active / window gains focus
+    const handleFocus = () => {
+      fetchSubcategoryCatalog(true);
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        fetchSubcategoryCatalog(true);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [subcategoryId, isCustomizedPage, location.state?.categoryId]);
 
   // Dynamic values mapping safely inside standard handlers without modifications

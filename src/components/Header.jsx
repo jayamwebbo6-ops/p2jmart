@@ -427,7 +427,7 @@ const handleItemClick = (product) => {
   <div className="flex items-center">
     <Link to="/" className="flex items-center">
       <img 
-        src={`${import.meta.env.BASE_URL}logo.png`} 
+        src={`${import.meta.env.BASE_URL}logo.webp`} 
         alt="P2J Mart Logo" 
         className="h-16 md:h-20 w-auto object-contain py-0.5" 
       />
@@ -561,7 +561,7 @@ const handleItemClick = (product) => {
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsMobileMenuOpen(false)}></div>
           <div className="relative w-[85%] max-w-sm bg-white h-full shadow-2xl flex flex-col overflow-y-auto transform transition-transform duration-300">
             <div className="flex justify-between items-center p-4 border-b border-gray-100 sticky top-0 bg-white z-10">
-              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="h-16 object-contain" />
+              <img src={`${import.meta.env.BASE_URL}logo.webp`} alt="Logo" className="h-16 object-contain" />
               <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors">
                 <X size={24} />
               </button>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '../components/toast';
 import { isUserAuthenticated } from '../api/userApi';
 import { fetchCart, addCartItem, updateCartItem, removeCartItem, clearCart, clearCartState } from '../redux/cartSlice';
 
 export const useCart = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const cart = useSelector((state) => state.cart.items || []);
   const [localCart, setLocalCart] = useState(cart);
 
@@ -33,11 +35,6 @@ export const useCart = () => {
   }, [dispatch]);
 
   const addToCart = async (product) => {
-    if (!isUserAuthenticated()) {
-      toast.info('Please login before adding items to cart.');
-      return;
-    }
-
     const productId = product.id || product._id || product.productId;
     
     // Extract variantId from product data
@@ -63,6 +60,12 @@ export const useCart = () => {
         : (product.category || 'Catalog'),
       variantId: variantId
     };
+
+    if (!isUserAuthenticated()) {
+      toast.info('Please login before adding items to cart.');
+      navigate('/login', { state: { addToCartPayload: payload } });
+      return;
+    }
 
     try {
       await dispatch(addCartItem(payload)).unwrap();

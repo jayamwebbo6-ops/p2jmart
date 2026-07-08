@@ -266,7 +266,7 @@ const Cart = ({
                 <span className="font-semibold truncate">{appliedCoupon.code}</span>
                 <button type="button" onClick={onRemoveCoupon} className="text-[11px] font-semibold underline shrink-0">Remove</button>
               </div>
-              <p className="mt-0.5 text-[10px]">Discount: -₹{Number(couponDiscount).toFixed(2)}</p>
+              <p className="mt-0.5 text-[10px]">Discount: {Number(couponDiscount) > 0 ? '-' : ''}₹{Number(couponDiscount).toFixed(2)}</p>
             </div>
           )}
         </div>
@@ -278,7 +278,9 @@ const Cart = ({
           </div>
           <div className="flex justify-between">
             <span>Discount:</span>
-            <span className="font-bold text-emerald-600">-₹{Number(couponDiscount).toFixed(2)}</span>
+            <span className="font-bold text-emerald-600">
+              {Number(couponDiscount) > 0 ? '-' : ''}₹{Number(couponDiscount).toFixed(2)}
+            </span>
           </div>
           <hr className="border-gray-100 my-0.5" />
           <div className="flex justify-between text-sm sm:text-base font-black text-[#003147]">

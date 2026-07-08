@@ -1,5 +1,6 @@
 import React from 'react';
-import logo from '../../public/logo.png';
+import logo from '../../public/logo.webp';
+import signature from '../../public/signature.png';
 
 const OrderInvoice = ({ order, invoiceColors, formatImageUrl, formatDate, contactData }) => {
   if (!order) return null;
@@ -9,7 +10,9 @@ const OrderInvoice = ({ order, invoiceColors, formatImageUrl, formatDate, contac
       id="order-invoice-download-template" 
       className="bg-white text-black font-sans p-8" 
       style={{ 
-        width: '800px', 
+        width: '800px',
+        minHeight: '1123px',
+        position: 'relative',
         fontSize: '12px', 
         lineHeight: '1.5',
         boxSizing: 'border-box'
@@ -38,7 +41,9 @@ const OrderInvoice = ({ order, invoiceColors, formatImageUrl, formatDate, contac
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #E5E7EB', paddingBottom: '20px' }}>
         <div>
           <h1 style={{ color: invoiceColors.primary || '#003147', fontSize: '32px', fontWeight: '800', margin: '0 0 5px 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>Invoice</h1>
-          <p style={{ margin: '0', color: invoiceColors.primary || '#003147', fontWeight: '500', opacity: 0.8 }}>Official Order Bill Receipt</p>
+          <p style={{ margin: '0', color: invoiceColors.primary || '#003147', fontWeight: '600', opacity: 0.85, fontSize: '13px' }}>
+            Invoice ID: <span style={{ fontWeight: '800' }}>{order.orderId || `ORD-${order._id?.slice(-8).toUpperCase()}`}</span>
+          </p>
         </div>
         <div style={{ textAlign: 'right' }}>
           <img 
@@ -52,30 +57,30 @@ const OrderInvoice = ({ order, invoiceColors, formatImageUrl, formatDate, contac
       {/* Addresses Section */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px' }}>
         <div>
-          <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Your Information</h3>
-          <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>P2J Mart E-Commerce Inc.</p>
-          <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>{contactData?.address || "123 Gift Street, Joy City"}</p>
-          <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>{contactData?.email || "support@p2jmart.com"}</p>
-          <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>{contactData?.phones ? contactData.phones.split(',')[0].trim() : "+91-999-888-7777"}</p>
+          <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '5px' }}>Sold By</h3>
+          <p style={{ margin: '0', fontWeight: '700', color: '#1F2937', fontSize: '12px' }}>P2J Mart E-Commerce Inc.</p>
+          <p style={{ margin: '3px 0 0 0', color: '#4B5563', fontSize: '12px' }}>{contactData?.address || "123 Gift Street, Joy City"}</p>
+          <p style={{ margin: '2px 0 0 0', color: '#4B5563', fontSize: '12px' }}>{contactData?.email || "support@p2jmart.com"}</p>
+          <p style={{ margin: '2px 0 0 0', color: '#4B5563', fontSize: '12px' }}>{contactData?.phones ? contactData.phones.split(',')[0].trim() : "+91-999-888-7777"}</p>
         </div>
         <div>
-          <h3 style={{ textTransform: 'uppercase', fontSize: '11px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '6px' }}>Client Information</h3>
-          <p style={{ margin: '0', fontWeight: '700', color: '#1F2937' }}>{order.shippingAddress?.fullName || 'Valued Customer'}</p>
-          <p style={{ margin: '3px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.streetAddress}</p>
-          <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.postalCode || order.shippingAddress?.pincode}</p>
-          {order.shippingAddress?.phone && <p style={{ margin: '2px 0 0 0', color: '#4B5563' }}>PH: {order.shippingAddress.phone}</p>}
+          <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', letterSpacing: '0.5px', marginBottom: '5px' }}>Shipping Address</h3>
+          <p style={{ margin: '0', fontWeight: '700', color: '#1F2937', fontSize: '12px' }}>{order.shippingAddress?.fullName || 'Valued Customer'}</p>
+          <p style={{ margin: '3px 0 0 0', color: '#4B5563', fontSize: '12px' }}>{order.shippingAddress?.streetAddress}</p>
+          <p style={{ margin: '2px 0 0 0', color: '#4B5563', fontSize: '12px' }}>{order.shippingAddress?.city}, {order.shippingAddress?.state} - {order.shippingAddress?.postalCode || order.shippingAddress?.pincode}</p>
+          {order.shippingAddress?.phone && <p style={{ margin: '2px 0 0 0', color: '#4B5563', fontSize: '12px' }}>PH: {order.shippingAddress.phone}</p>}
         </div>
       </div>
 
       {/* Meta Information */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '25px', borderTop: '1px solid #E5E7EB', paddingTop: '15px' }}>
         <div>
-          <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Issued On</h3>
-          <p style={{ margin: '0', fontWeight: '600', color: '#374151' }}>{formatDate(order.placedDate || order.createdAt)}</p>
+          <h3 style={{ textTransform: 'uppercase', fontSize: '9px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 3px 0' }}>Issued On</h3>
+          <p style={{ margin: '0', fontWeight: '600', color: '#374151', fontSize: '11px' }}>{formatDate(order.placedDate || order.createdAt)}</p>
         </div>
         <div>
-          <h3 style={{ textTransform: 'uppercase', fontSize: '10px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 4px 0' }}>Order ID</h3>
-          <p style={{ margin: '0', fontWeight: '700', color: '#374151' }}>{order.orderId || `ORD-${order._id.slice(-8).toUpperCase()}`}</p>
+          <h3 style={{ textTransform: 'uppercase', fontSize: '9px', fontWeight: '800', color: '#9CA3AF', margin: '0 0 3px 0' }}>Order ID</h3>
+          <p style={{ margin: '0', fontWeight: '700', color: '#374151', fontSize: '11px' }}>{order.orderId || `ORD-${order._id.slice(-8).toUpperCase()}`}</p>
         </div>
       </div>
 
@@ -178,27 +183,33 @@ const OrderInvoice = ({ order, invoiceColors, formatImageUrl, formatDate, contac
       {/* Authorized Signature */}
       <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
         <div style={{ width: '220px', textAlign: 'center' }}>
-          <div style={{ borderBottom: '1px solid #4B5563', marginBottom: '6px' }}></div>
-          <span style={{ fontSize: '10px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Authorized Signature</span>
+          <img
+            src={signature}
+            alt="Authorized Signature"
+            style={{ width: '180px', height: '60px', objectFit: 'contain', display: 'block', margin: '0 auto 4px auto' }}
+          />
+          <div style={{ borderTop: '1px solid #4B5563', paddingTop: '5px' }}>
+            <span style={{ fontSize: '9px', color: '#9CA3AF', textTransform: 'uppercase', fontWeight: '600', letterSpacing: '0.5px' }}>Authorized Signature</span>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Color Banner Section */}
-      <div 
-        style={{ 
-          marginTop: '45px', 
-          backgroundColor: invoiceColors.primary || '#003147', 
-          color: '#FFFFFF', 
-          padding: '14px 18px', 
-          borderRadius: '6px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+      {/* Bottom Notice – pinned to the very bottom of the A4 sheet */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: '30px',
+          left: '32px',
+          right: '32px',
+          borderTop: '1px solid #E5E7EB',
+          paddingTop: '10px'
         }}
       >
-        <p style={{ margin: '0 0 6px 0', fontSize: '11px', fontWeight: '700', letterSpacing: '0.3px' }}>
+        <p style={{ margin: '0 0 3px 0', fontSize: '9px', fontWeight: '700', color: '#000000' }}>
           Thank you for choosing P2J MART! We appreciate the opportunity to serve you.
         </p>
-        <p style={{ margin: '0', fontSize: '10px', color: 'rgba(255, 255, 255, 0.85)', fontWeight: '400', lineHeight: '1.5' }}>
-          Please note that payment conditions apply based on terms of billing. If you have any questions or concerns regarding this invoice record statement, feel free to contact us at the provided support email address. We look forward to serving you again in the future.
+        <p style={{ margin: '0', fontSize: '8px', color: '#000000', lineHeight: '1.5' }}>
+          Please note that payment conditions apply based on terms of billing. If you have any questions or concerns regarding this invoice record statement, feel free to contact us at {contactData?.email || 'support@p2jmart.com'}. We look forward to serving you again in the future.
         </p>
       </div>
     </div>
