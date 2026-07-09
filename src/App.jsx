@@ -9,14 +9,15 @@ import { applyCouponAPI } from './api/couponApi';
 
 // Layouts
 import UserLayout from './layouts/UserLayout';
-import AdminLayout from './layouts/AdminLayout';
-import AccountLayout from './layouts/AccountLayout';
-import GSTSettingsPage from './pages/admin/GstSettingsPage';
-import TermsContion from './pages/user/TermsConditions';
-import ProductReviews from './pages/admin/ProductReviews';
 
-// Lazy loading user pages
-const Home = lazy(() => import('./pages/user/Home'));
+const AdminLayout = lazy(() => import('./layouts/AdminLayout'));
+const AccountLayout = lazy(() => import('./layouts/AccountLayout'));
+const GSTSettingsPage = lazy(() => import('./pages/admin/GstSettingsPage'));
+const TermsContion = lazy(() => import('./pages/user/TermsConditions'));
+const ProductReviews = lazy(() => import('./pages/admin/ProductReviews'));
+
+// Eagerly loading main entry page
+import Home from './pages/user/Home';
 const UserProducts = lazy(() => import('./pages/user/Products'));
 const ProductDetail = lazy(() => import('./pages/user/ProductDetail'));
 const Profile = lazy(() => import('./pages/user/Profile'));

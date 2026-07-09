@@ -123,38 +123,59 @@ const applyingCoupon = localApplyingCoupon;
   const shippingFee = (() => {
     if (!selectedAddress || checkoutItems.length === 0) return 0;
 
-    // Check if any product has freeShipping === 'No'
-    const hasNonFreeShippingItem = checkoutItems.some(item => {
-      const isFree = item.freeShipping === 'Yes' || (item.productId && item.productId.freeShipping === 'Yes');
-      return !isFree;
-    });
+    const getWeight = (item) => {
+      if (item.weight !== undefined && item.weight !== null) {
+        const w = parseFloat(item.weight);
+        if (!isNaN(w)) return w;
+      }
+      if (item.productId && typeof item.productId === 'object' && item.productId.weight !== undefined && item.productId.weight !== null) {
+        const w = parseFloat(item.productId.weight);
+        if (!isNaN(w)) return w;
+      }
+      return 0;
+    };
+
+    const getFreeShipping = (item) => {
+      if (item.freeShipping !== undefined && item.freeShipping !== null) {
+        return String(item.freeShipping).trim().toLowerCase() === 'yes';
+      }
+      if (item.productId && typeof item.productId === 'object' && item.productId.freeShipping !== undefined && item.productId.freeShipping !== null) {
+        return String(item.productId.freeShipping).trim().toLowerCase() === 'yes';
+      }
+      return false;
+    };
+
+    // Check if any product has freeShipping === 'No' (or not 'Yes')
+    const hasNonFreeShippingItem = checkoutItems.some(item => !getFreeShipping(item));
 
     if (hasNonFreeShippingItem) {
       // Calculate weight-based shipping only for non-free-shipping items
-      const nonFreeItems = checkoutItems.filter(item => {
-        const isFree = item.freeShipping === 'Yes' || (item.productId && item.productId.freeShipping === 'Yes');
-        return !isFree;
-      });
+      const nonFreeItems = checkoutItems.filter(item => !getFreeShipping(item));
 
-      const totalWeight = nonFreeItems.reduce((acc, item) => acc + ((item.weight || 0) * item.quantity), 0);
-      if (totalWeight === 0) return 0;
-
-      const threshold = Number(globalShippingRules.freeShippingMinAmount) || 1000;
+      const totalWeight = nonFreeItems.reduce((acc, item) => acc + (getWeight(item) * item.quantity), 0);
+      
       const flatCost = Number(globalShippingRules.flatShippingCost) || 50;
-
-      if (!shippingStates.length) {
-        return subtotal >= threshold ? 0 : flatCost;
-      }
       const rule = shippingStates.find(s => s.stateName.trim().toLowerCase() === selectedAddress.state.trim().toLowerCase());
-      if (!rule) {
-        return subtotal >= threshold ? 0 : flatCost;
+
+      if (totalWeight === 0) {
+        return rule ? (Number(rule.baseCost) || 0) : flatCost;
       }
-      if (totalWeight <= rule.baseWeight) {
-        return rule.baseCost;
+
+      if (!rule) {
+        return flatCost;
+      }
+
+      const baseCost = Number(rule.baseCost) || 0;
+      const baseWeight = Number(rule.baseWeight) || 0;
+      const additionalCost = Number(rule.additionalCost) || 0;
+      const additionalWeight = Number(rule.additionalWeight) || 1; // prevent division by zero
+
+      if (totalWeight <= baseWeight) {
+        return baseCost;
       } else {
-        const extraWeight = totalWeight - rule.baseWeight;
-        const extraUnits = Math.ceil(extraWeight / rule.additionalWeight);
-        return rule.baseCost + (extraUnits * rule.additionalCost);
+        const extraWeight = totalWeight - baseWeight;
+        const extraUnits = Math.ceil(extraWeight / additionalWeight);
+        return baseCost + (extraUnits * additionalCost);
       }
     } else {
       // All items in cart/checkout are free shipping!
@@ -174,6 +195,11 @@ const applyingCoupon = localApplyingCoupon;
   }, 0);
 
   const total = Math.max(0, subtotal - couponDiscount + gstAmount + shippingFee);
+
+  const hasUnavailableItems = checkoutItems.some(item => {
+    if (item.isComboProduct) return false;
+    return item.isActiveProduct === false || (item.availableStock !== undefined && (item.availableStock === 0 || item.quantity > item.availableStock));
+  });
 
   // Load addresses, shipping states, and GST configurations from database safely
   const loadCheckoutData = async () => {
@@ -909,6 +935,19 @@ const applyingCoupon = localApplyingCoupon;
                     <p className="text-[10px] sm:text-xs text-gray-500 font-semibold mt-1">
                       ₹{item.price.toFixed(2)} × {item.quantity}
                     </p>
+                    {!item.isComboProduct && (item.isActiveProduct === false ? (
+                      <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
+                        Currently Unavailable
+                      </span>
+                    ) : item.availableStock === 0 ? (
+                      <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
+                        Out of Stock
+                      </span>
+                    ) : (item.availableStock !== undefined && item.quantity > item.availableStock) ? (
+                      <span className="inline-block text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mt-1">
+                        Only {item.availableStock} units available
+                      </span>
+                    ) : null)}
                   </div>
                 </div>
                 
@@ -1134,13 +1173,23 @@ const applyingCoupon = localApplyingCoupon;
     <span>Back to Address</span>
   </button>
 
-  <button
-    type="button"
-    onClick={handlePlaceOrder}
-    className="w-full min-[410px]:w-auto bg-primary hover:bg-secondary text-white font-semibold py-2 px-3 sm:px-5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer text-[11px] sm:text-xs"
-  >
-    <span>Continue to Pay — ₹{total.toFixed(2)}</span>
-  </button>
+  {hasUnavailableItems ? (
+    <button
+      type="button"
+      disabled
+      className="w-full min-[410px]:w-auto bg-gray-300 text-gray-500 font-semibold py-2 px-3 sm:px-5 rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed text-[11px] sm:text-xs"
+    >
+      <span>Remove Unavailable Items to Pay</span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={handlePlaceOrder}
+      className="w-full min-[410px]:w-auto bg-primary hover:bg-secondary text-white font-semibold py-2 px-3 sm:px-5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer text-[11px] sm:text-xs"
+    >
+      <span>Continue to Pay — ₹{total.toFixed(2)}</span>
+    </button>
+  )}
 </div>
 
 

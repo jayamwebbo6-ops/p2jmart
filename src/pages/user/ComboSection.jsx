@@ -89,16 +89,17 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
         };
       }).filter(Boolean);
 
-     const totalOriginalPrice = Number(matchedCombo.totalPrice || 0);
-const offerPrice = Number(matchedCombo.offerPrice || 0);
+      const sumOfSellingPrices = items.reduce((sum, item) => sum + item.price, 0);
+      const totalOriginalPrice = sumOfSellingPrices;
+      const offerPrice = Number(matchedCombo.offerPrice || 0);
 
-const comboDiscountAmount =
-  totalOriginalPrice > offerPrice ? totalOriginalPrice - offerPrice : 0;
+      const comboDiscountAmount =
+        totalOriginalPrice > offerPrice ? totalOriginalPrice - offerPrice : 0;
 
-const discountPercent =
-  totalOriginalPrice > 0 && comboDiscountAmount > 0
-    ? ((comboDiscountAmount / totalOriginalPrice) * 100)
-    : 0;
+      const discountPercent =
+        totalOriginalPrice > 0 && comboDiscountAmount > 0
+          ? ((comboDiscountAmount / totalOriginalPrice) * 100)
+          : 0;
 
       return {
   id: matchedCombo._id || matchedCombo.id,
@@ -174,6 +175,7 @@ const totalComboSavings = isFullComboSelected
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
+      freeShipping: 'No',
       category: activeCombo.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         productId: item.id,

@@ -49,6 +49,63 @@ const getDisplayStatus = (order) => {
   return order.fulfillmentStatus || order.status || 'Pending';
 };
 
+const mapOrderData = (order) => {
+  if (!order) return null;
+  const firstCustomItem = order.items?.find(item => 
+    item.selectedOptions?.customization || 
+    item.selectedOptions?.customImage || 
+    item.selectedOptions?.customText
+  );
+  const customSpec = firstCustomItem?.selectedOptions?.customization || {
+    text: firstCustomItem?.selectedOptions?.customText,
+    image: firstCustomItem?.selectedOptions?.customImage
+  };
+
+  const shippingAddressStr = order.shippingAddress 
+    ? (typeof order.shippingAddress === 'string' 
+        ? order.shippingAddress 
+        : `${order.shippingAddress.fullName || ''}, ${order.shippingAddress.streetAddress || ''}${order.shippingAddress.apartment ? `, ${order.shippingAddress.apartment}` : ''}, ${order.shippingAddress.city || ''}, ${order.shippingAddress.state || ''} - ${order.shippingAddress.pincode || order.shippingAddress.postalCode || ''}. PH: ${order.shippingAddress.phoneNumber || order.shippingAddress.phone || ''}`)
+    : 'No Address';
+
+  return {
+    ...order,
+    id: order.orderId || order._id,
+    _id: order._id,
+    productName: order.items?.[0] 
+      ? `${order.items[0].title || order.items[0].name}${order.items.length > 1 ? ` (+${order.items.length - 1} more)` : ''}`
+      : 'No Items',
+    productType: order.items?.some(item => item.isComboProduct) 
+      ? 'combo' 
+      : (firstCustomItem ? 'custom' : 'all'),
+    customText: customSpec?.text || '',
+    customImage: customSpec?.image || '',
+    customProductImage: firstCustomItem?.image || '',
+    image: order.items?.[0]?.image || '',
+    storeName: 'Joy Gift House',
+    customerName: order.user?.name || 'Guest User',
+    customerEmail: order.user?.email || 'N/A',
+    customerPhone: order.user?.phone || 'N/A',
+    shippingAddress: shippingAddressStr,
+    timestamp: new Date(order.placedDate || order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+    rawDate: new Date(order.placedDate || order.createdAt),
+    fulfillmentStatus: order.status,
+    paymentStatus: order.paymentStatus 
+      ? (typeof order.paymentStatus === 'string' 
+          ? (order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)) 
+          : order.paymentStatus)
+      : 'Pending',
+    paymentMethod: order.paymentMethod || 'Card',
+    razorpayOrderId: order.orderId || '',
+    razorpayPaymentId: 'pay_simulated_' + order._id?.slice(-6),
+    amount: order.total,
+    trackingId: order.trackingId || '',
+    trackingLink: order.trackingLink || '',
+    itemColor: order.items?.[0]?.selectedOptions
+      ? Object.entries(order.items[0].selectedOptions).filter(([k]) => k !== 'customization' && k !== 'customImage' && k !== 'customText').map(([k, v]) => `${k}: ${v}`).join(', ')
+      : 'Standard',
+    itemQuantity: order.items?.[0]?.quantity || 1
+  };
+};
 
 const OrderManagement = () => {
   const navigate = useNavigate();
@@ -81,30 +138,7 @@ const OrderManagement = () => {
       if (res.success) {
         toast.success(`Return request ${action}ed successfully`);
         const updatedRaw = res.data;
-        const mappedOrder = {
-          ...updatedRaw,
-          id: updatedRaw.orderId,
-          _id: updatedRaw._id,
-          productName: updatedRaw.items?.[0]
-            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
-            : 'No Items',
-          productType: updatedRaw.items?.some(item => item.isComboProduct)
-            ? 'combo'
-            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
-          image: updatedRaw.items?.[0]?.image || '',
-          storeName: 'Joy Gift House',
-          customerName: updatedRaw.user?.name || 'Guest User',
-          customerEmail: updatedRaw.user?.email || 'N/A',
-          customerPhone: updatedRaw.user?.phone || 'N/A',
-          shippingAddress: updatedRaw.shippingAddress || 'N/A',
-          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          rawDate: new Date(updatedRaw.createdAt),
-          fulfillmentStatus: updatedRaw.status,
-          paymentStatus: updatedRaw.paymentStatus,
-          paymentMethod: updatedRaw.paymentMethod,
-          amount: updatedRaw.total,
-          items: updatedRaw.items
-        };
+        const mappedOrder = mapOrderData(updatedRaw);
 
         setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
         if (selectedOrder && selectedOrder._id === orderId) {
@@ -125,30 +159,7 @@ const OrderManagement = () => {
       if (res.success) {
         toast.success('Parcel marked as received');
         const updatedRaw = res.data;
-        const mappedOrder = {
-          ...updatedRaw,
-          id: updatedRaw.orderId,
-          _id: updatedRaw._id,
-          productName: updatedRaw.items?.[0]
-            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
-            : 'No Items',
-          productType: updatedRaw.items?.some(item => item.isComboProduct)
-            ? 'combo'
-            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
-          image: updatedRaw.items?.[0]?.image || '',
-          storeName: 'Joy Gift House',
-          customerName: updatedRaw.user?.name || 'Guest User',
-          customerEmail: updatedRaw.user?.email || 'N/A',
-          customerPhone: updatedRaw.user?.phone || 'N/A',
-          shippingAddress: updatedRaw.shippingAddress || 'N/A',
-          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          rawDate: new Date(updatedRaw.createdAt),
-          fulfillmentStatus: updatedRaw.status,
-          paymentStatus: updatedRaw.paymentStatus,
-          paymentMethod: updatedRaw.paymentMethod,
-          amount: updatedRaw.total,
-          items: updatedRaw.items
-        };
+        const mappedOrder = mapOrderData(updatedRaw);
 
         setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
         if (selectedOrder && selectedOrder._id === orderId) {
@@ -169,30 +180,7 @@ const OrderManagement = () => {
       if (res.success) {
         toast.success('Refund processed and stock updated successfully');
         const updatedRaw = res.data;
-        const mappedOrder = {
-          ...updatedRaw,
-          id: updatedRaw.orderId,
-          _id: updatedRaw._id,
-          productName: updatedRaw.items?.[0]
-            ? `${updatedRaw.items[0].title}${updatedRaw.items.length > 1 ? ` (+${updatedRaw.items.length - 1} more)` : ''}`
-            : 'No Items',
-          productType: updatedRaw.items?.some(item => item.isComboProduct)
-            ? 'combo'
-            : (updatedRaw.items?.some(item => item.selectedOptions?.customization || item.selectedOptions?.customImage || item.selectedOptions?.customText) ? 'custom' : 'all'),
-          image: updatedRaw.items?.[0]?.image || '',
-          storeName: 'Joy Gift House',
-          customerName: updatedRaw.user?.name || 'Guest User',
-          customerEmail: updatedRaw.user?.email || 'N/A',
-          customerPhone: updatedRaw.user?.phone || 'N/A',
-          shippingAddress: updatedRaw.shippingAddress || 'N/A',
-          timestamp: new Date(updatedRaw.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + new Date(updatedRaw.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          rawDate: new Date(updatedRaw.createdAt),
-          fulfillmentStatus: updatedRaw.status,
-          paymentStatus: updatedRaw.paymentStatus,
-          paymentMethod: updatedRaw.paymentMethod,
-          amount: updatedRaw.total,
-          items: updatedRaw.items
-        };
+        const mappedOrder = mapOrderData(updatedRaw);
 
         setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
         if (selectedOrder && selectedOrder._id === orderId) {
@@ -239,53 +227,7 @@ const OrderManagement = () => {
       const res = await adminGetAllOrdersAPI();
       if (res && res.success) {
         // Map database order entities to match component expectation
-        const mapped = res.data.map(order => {
-          const firstCustomItem = order.items?.find(item => 
-            item.selectedOptions?.customization || 
-            item.selectedOptions?.customImage || 
-            item.selectedOptions?.customText
-          );
-          const customSpec = firstCustomItem?.selectedOptions?.customization || {
-            text: firstCustomItem?.selectedOptions?.customText,
-            image: firstCustomItem?.selectedOptions?.customImage
-          };
-
-          return {
-            ...order,
-            id: order.orderId,
-            _id: order._id,
-            productName: order.items?.[0] 
-              ? `${order.items[0].title}${order.items.length > 1 ? ` (+${order.items.length - 1} more)` : ''}`
-              : 'No Items',
-            productType: order.items?.some(item => item.isComboProduct) 
-              ? 'combo' 
-              : (firstCustomItem ? 'custom' : 'all'),
-            customText: customSpec?.text || '',
-            customImage: customSpec?.image || '',
-            image: order.items?.[0]?.image || '',
-            storeName: 'Joy Gift House',
-            customerName: order.user?.name || 'Guest User',
-            customerEmail: order.user?.email || 'N/A',
-            customerPhone: order.user?.phone || 'N/A',
-            shippingAddress: order.shippingAddress 
-              ? `${order.shippingAddress.fullName}, ${order.shippingAddress.streetAddress}${order.shippingAddress.apartment ? `, ${order.shippingAddress.apartment}` : ''}, ${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}. PH: ${order.shippingAddress.phoneNumber}`
-              : 'No Address',
-            timestamp: new Date(order.placedDate || order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-            rawDate: new Date(order.placedDate || order.createdAt),
-            fulfillmentStatus: order.status,
-            paymentStatus: order.paymentStatus?.charAt(0).toUpperCase() + order.paymentStatus?.slice(1),
-            paymentMethod: order.paymentMethod || 'Card',
-            razorpayOrderId: order.orderId,
-            razorpayPaymentId: 'pay_simulated_' + order._id.slice(-6),
-            amount: order.total,
-            trackingId: order.trackingId || '',
-            trackingLink: order.trackingLink || '',
-            itemColor: order.items?.[0]?.selectedOptions
-              ? Object.entries(order.items[0].selectedOptions).filter(([k]) => k !== 'customization' && k !== 'customImage' && k !== 'customText').map(([k, v]) => `${k}: ${v}`).join(', ')
-              : 'Standard',
-            itemQuantity: order.items?.[0]?.quantity || 1
-          };
-        });
+        const mapped = res.data.map(mapOrderData);
         setOrders(mapped);
       } else {
         toast.error(res?.message || 'Failed to fetch admin orders');
@@ -840,11 +782,11 @@ const OrderManagement = () => {
       {isModalOpen && selectedOrder && (
         <div 
           onClick={() => setIsModalOpen(false)}
-          className="fixed inset-0 pt-79 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-40 transition-opacity overflow-y-auto"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-[150] transition-opacity overflow-y-auto p-4 sm:p-6 md:p-8"
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-100 overflow-hidden my-8 flex flex-col"
+            className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl border border-slate-100 overflow-hidden my-auto flex flex-col"
           >
             
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -977,11 +919,11 @@ const OrderManagement = () => {
                         </button>
                       </div>
                     ) : (
-                      selectedOrder.image && (
+                      (selectedOrder.customProductImage || selectedOrder.image) && (
                         <div className="space-y-1.5 flex-shrink-0 mx-auto sm:mx-0">
                           <span className="block text-[10px] font-bold text-slate-400 uppercase">Product Image</span>
                           <div className="w-28 h-28 rounded-xl border border-pink-200 overflow-hidden bg-white shadow-xs">
-                            <img src={formatImageUrl(selectedOrder.image)} alt="Product Preview" className="w-full h-full object-cover" />
+                            <img src={formatImageUrl(selectedOrder.customProductImage || selectedOrder.image)} alt="Product Preview" className="w-full h-full object-cover" />
                           </div>
                         </div>
                       )
@@ -1208,7 +1150,7 @@ const OrderManagement = () => {
       {fullscreenImage && (
         <div 
           onClick={() => setFullscreenImage(null)}
-          className="fixed inset-0 bg-slate-950/95 flex flex-col items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center z-[9999] p-4"
         >
           <div className="absolute top-4 right-4 flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
             <button type="button" onClick={() => handleDownloadAsset(fullscreenImage, 'fullscreen-custom-asset.jpg')} className="p-3 bg-slate-800 hover:bg-slate-700 text-white rounded-full transition-colors"><Download size={20} /></button>
@@ -1227,7 +1169,7 @@ const OrderManagement = () => {
       {isTrackingModalOpen && (
         <div 
           onClick={() => setIsTrackingModalOpen(false)}
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[160] p-4"
         >
           <div 
             onClick={(e) => e.stopPropagation()}

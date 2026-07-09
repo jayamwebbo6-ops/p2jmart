@@ -7,15 +7,15 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   // Format the base URL to always start and end with a slash
   const baseUrl = env.BASE_URL ? `/${env.BASE_URL.replace(/^\/|\/$/g, '')}/` : '/';
-  
+
   return {
     base: baseUrl,
     plugins: [react(), tailwindcss(), cssInjectedByJsPlugin()],
     build: {
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: (id) => {

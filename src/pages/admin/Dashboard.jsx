@@ -700,9 +700,7 @@ const Dashboard = () => {
             </span>
             <span className="text-[11px] font-semibold text-gray-400 mt-2">{dateFilter} — live from database</span>
           </div>
-          <div className="w-12 h-12 rounded-[16px] border border-gray-250 flex items-center justify-center text-slate-700 shrink-0">
-            <Wallet size={20} strokeWidth={1.5} />
-          </div>
+        
         </div>
 
         {/* Card 2: Total Orders */}

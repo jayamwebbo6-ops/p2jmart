@@ -36,7 +36,7 @@ export const useCart = () => {
 
   const addToCart = async (product) => {
     const productId = product.id || product._id || product.productId;
-    
+
     // Extract variantId from product data
     let variantId = '';
     if (product.activeVariant?.id) {
@@ -85,7 +85,7 @@ export const useCart = () => {
     if (!existingItem) return;
 
     const nextQty = Math.max(1, (existingItem.quantity || 1) + amount);
-    
+
     dispatch(updateCartItem({ itemId: existingItem.id || existingItem._id, payload: { quantity: nextQty } }))
       .catch((error) => {
         // Error message will be displayed via toast in component

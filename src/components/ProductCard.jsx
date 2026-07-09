@@ -81,6 +81,20 @@ const ProductCard = ({
     return resolved.slice(0, 3);
   }, [product, isHovered, brokenImages]);
 
+  const isInStock = useMemo(() => {
+    if (product.isActive === false) return false;
+    if (product.isComboProduct) return true;
+
+    if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      return product.variants.some(v => (v.stock || 0) > 0);
+    }
+
+    if (product.inStock === false) return false;
+    if (product.stock !== undefined) return Number(product.stock) > 0;
+    
+    return true;
+  }, [product]);
+
   useEffect(() => {
     if (imgRef.current && imgRef.current.complete) {
       setImageLoaded(true);
@@ -133,6 +147,10 @@ const ProductCard = ({
 
   const handleAddToCartClick = useThrottledCallback((e) => {
     e.stopPropagation();
+    if (!isInStock) {
+      toast.error('This product is out of stock.');
+      return;
+    }
     if (product?.customizeProduct === 'Yes') {
       toast.info('Please provide customization (upload image or text) before adding to cart.');
       const targetId = product.id || product._id;
@@ -269,10 +287,15 @@ const ProductCard = ({
             <div className="pt-0.5">
               <button 
                 onClick={handleAddToCartClick}
-                className="bg-[#003147] text-white text-[11px] sm:text-xs font-medium py-2 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 w-full hover:bg-[#009EDB] transition-colors cursor-pointer shadow-sm active:scale-95 transition-transform"
+                disabled={!isInStock}
+                className={`text-[11px] sm:text-xs font-medium py-2 px-2 sm:px-4 rounded flex items-center justify-center gap-1.5 w-full transition-all shadow-sm active:scale-95 transition-transform ${
+                  isInStock 
+                    ? 'bg-[#003147] text-white hover:bg-[#009EDB] cursor-pointer' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <ShoppingCart size={13} className="flex-shrink-0" />
-                <span className="truncate">Add to Cart</span>
+                <span className="truncate">{product.isActive === false ? "Unavailable" : isInStock ? "Add to Cart" : "Out of Stock"}</span>
               </button>
             </div>
           )}

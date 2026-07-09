@@ -553,6 +553,7 @@ useEffect(() => {
       isComboProduct: false,
       includedProducts: [],
       weight: Number(product.weight || 0),
+      freeShipping: product.freeShipping || 'No',
       category: product.category || 'Catalog'
     };
     if (!isUserAuthenticated()) {
@@ -603,6 +604,7 @@ useEffect(() => {
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
+      freeShipping: 'No',
       category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         productId: item.id,
@@ -637,6 +639,7 @@ useEffect(() => {
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
+      freeShipping: 'No',
       category: comboData.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         productId: item.id,

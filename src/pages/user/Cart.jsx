@@ -53,6 +53,11 @@ const Cart = ({
   const shippingFee = subtotal > 1000 || subtotal === 0 || totalWeight === 0 ? 0 : 100;
   const total = Math.max(0, subtotal - Number(couponDiscount || 0));
 
+  const hasOutOfStockItems = cart.some(item => {
+    if (item.isComboProduct) return false;
+    return item.isActiveProduct === false || item.availableStock === 0 || item.quantity > item.availableStock;
+  });
+
   const handleOpenConfirmation = (item) => {
     setProductToDelete(item);
   };
@@ -142,9 +147,24 @@ const Cart = ({
                     {item.title}
                   </h3>
 
-                  <div className="mt-1">
-                    <span className="text-[11px] text-gray-400 font-medium mr-1">Unit Price:</span>
-                    <span className="text-xs font-bold text-gray-600">₹{item.price}</span>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <div>
+                      <span className="text-[11px] text-gray-400 font-medium mr-1">Unit Price:</span>
+                      <span className="text-xs font-bold text-gray-600">₹{item.price}</span>
+                    </div>
+                    {!item.isComboProduct && (item.isActiveProduct === false ? (
+                      <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                        Unavailable
+                      </span>
+                    ) : item.availableStock === 0 ? (
+                      <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
+                        Out of Stock
+                      </span>
+                    ) : item.quantity > item.availableStock ? (
+                      <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
+                        Only {item.availableStock} units available
+                      </span>
+                    ) : null)}
                   </div>
                 </div>
               </div>
@@ -290,12 +310,21 @@ const Cart = ({
         </div>
 
         <div className="w-full">
-          <Link 
-            to="/checkout" 
-            className="w-full bg-[#003147] hover:bg-[#002232] text-white py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors shadow-md"
-          >
-            Checkout <ArrowRight size={14} />
-          </Link>
+          {hasOutOfStockItems ? (
+            <button
+              disabled
+              className="w-full bg-gray-300 text-gray-500 py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 cursor-not-allowed shadow-none"
+            >
+              Checkout (Remove Unavailable Items)
+            </button>
+          ) : (
+            <Link 
+              to="/checkout" 
+              className="w-full bg-[#003147] hover:bg-[#002232] text-white py-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors shadow-md"
+            >
+              Checkout <ArrowRight size={14} />
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1">
