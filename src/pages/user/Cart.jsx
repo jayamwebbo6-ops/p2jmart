@@ -105,11 +105,11 @@ const Cart = ({
           {cart.map((item) => (
             <div key={item.id || item._id} className={`bg-white border border-gray-200 rounded-2xl mb-4 p-3 sm:p-4 shadow-sm flex flex-col gap-3 relative ${item.isComboProduct ? ' bg-gradient-to-r from-white to-blue-50/30' : ''}`}>
             
-              {/* Responsive Frame: Stacked on tiny screens (<380px), side-by-side on larger screens */}
-              <div className="flex flex-col min-[380px]:flex-row gap-3 items-center min-[380px]:items-start w-full">
+              {/* Responsive Frame: Stacked on tiny screens (<350px), side-by-side on larger screens */}
+              <div className="flex flex-col min-[350px]:flex-row gap-3 items-center min-[350px]:items-start w-full">
                 
                 {/* Large, High-Visibility Image Container */}
-                <div className="shrink-0 w-full min-[380px]:w-24 sm:w-28 aspect-square min-[380px]:h-24 sm:h-28 max-w-[140px] min-[380px]:max-w-none">
+                <div className="shrink-0 w-full min-[350px]:w-24 sm:w-28 aspect-square min-[350px]:h-24 sm:h-28 max-w-[140px] min-[350px]:max-w-none">
                   <Link 
                     to={item.isComboProduct && item.includedProducts?.[0]
                       ? `/product/${item.includedProducts[0].id || item.includedProducts[0]._id}`
@@ -131,8 +131,8 @@ const Cart = ({
                 </div>
 
                 {/* Middle text details */}
-                <div className="flex-1 min-w-0 text-center min-[380px]:text-left w-full">
-                  <div className="flex items-center justify-center min-[380px]:justify-start gap-2 flex-wrap mb-1">
+                <div className="flex-1 min-w-0 text-center min-[350px]:text-left w-full">
+                  <div className="flex items-center justify-center min-[350px]:justify-start gap-2 flex-wrap mb-1">
                     <span className="text-[10px] sm:text-xs text-gray-400 font-semibold uppercase tracking-wide">
                       Joy Gift House
                     </span>
@@ -206,8 +206,8 @@ const Cart = ({
               )}
 
               {/* Action Rows Area (Counter + Delete Action + Item Totals) */}
-              <div className="w-full flex flex-col min-[320px]:flex-row items-center justify-between pt-2.5 border-t border-gray-100 gap-2 mt-1">
-                <div className="flex items-center gap-3 justify-between w-full min-[320px]:w-auto">
+              <div className="w-full flex flex-col min-[350px]:flex-row items-center justify-between pt-2.5 border-t border-gray-100 gap-2 mt-1">
+                <div className="flex items-center gap-3 justify-between w-full min-[350px]:w-auto">
                   <div className="flex items-center border border-gray-200 rounded-full bg-white px-1 py-0.5 shadow-sm">
                     <button 
                       onClick={() => item.quantity > 1 ? updateQuantity(item.id || item._id, -1) : handleOpenConfirmation(item)}
@@ -232,8 +232,8 @@ const Cart = ({
                   </button>
                 </div>
 
-                <div className="text-right flex min-[320px]:flex-col items-center min-[320px]:items-end justify-between w-full min-[320px]:w-auto border-t min-[320px]:border-t-0 pt-1.5 min-[320px]:pt-0 border-dashed border-gray-100">
-                  <span className="text-[10px] text-gray-400 font-medium min-[320px]:mb-0.5">Total:</span>
+                <div className="text-right flex min-[350px]:flex-col items-center min-[350px]:items-end justify-between w-full min-[350px]:w-auto border-t min-[350px]:border-t-0 pt-1.5 min-[350px]:pt-0 border-dashed border-gray-100">
+                  <span className="text-[10px] text-gray-400 font-medium min-[350px]:mb-0.5">Total:</span>
                   <span className="text-xs sm:text-sm font-black text-[#003147]">₹{item.price * item.quantity}</span>
                 </div>
               </div>
