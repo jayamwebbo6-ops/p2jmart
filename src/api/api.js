@@ -50,4 +50,59 @@ api.interceptors.request.use(
   }
 );
 
+// Logging Interceptor Setup helper
+export const setupLoggingInterceptors = (axiosInstance, name = 'API') => {
+  axiosInstance.interceptors.request.use(
+    (config) => {
+      console.log(
+        `%c[${name} Request] ${config.method.toUpperCase()} ${config.url}`,
+        'color: #007bff; font-weight: bold;',
+        {
+          params: config.params,
+          data: config.data,
+          headers: config.headers
+        }
+      );
+      return config;
+    },
+    (error) => {
+      console.error(
+        `%c[${name} Request Error]`,
+        'color: #dc3545; font-weight: bold;',
+        error
+      );
+      return Promise.reject(error);
+    }
+  );
+
+  axiosInstance.interceptors.response.use(
+    (response) => {
+      console.log(
+        `%c[${name} Response] ${response.config.method.toUpperCase()} ${response.config.url} - ${response.status}`,
+        'color: #28a745; font-weight: bold;',
+        {
+          data: response.data,
+          status: response.status
+        }
+      );
+      return response;
+    },
+    (error) => {
+      const status = error.response ? error.response.status : 'NETWORK_ERROR';
+      console.error(
+        `%c[${name} Response Error] ${error.config?.method?.toUpperCase() || 'REQUEST'} ${error.config?.url || ''} - ${status}`,
+        'color: #dc3545; font-weight: bold;',
+        {
+          message: error.message,
+          response: error.response?.data
+        }
+      );
+      return Promise.reject(error);
+    }
+  );
+};
+
+// Enable logging for default admin API instance
+setupLoggingInterceptors(api, 'AdminAPI');
+
 export default api;

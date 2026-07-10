@@ -1,9 +1,12 @@
 import axios from 'axios';
-import { getCookie, setCookie, deleteCookie, API_URL } from './api';
+import { getCookie, setCookie, deleteCookie, API_URL, setupLoggingInterceptors } from './api';
 
 const userApi = axios.create({
   baseURL: API_URL
 });
+
+// Enable logging for User API instance
+setupLoggingInterceptors(userApi, 'UserAPI');
 
 // Interceptor to inject User Authorization Bearer token from cookies and prevent GET caching
 userApi.interceptors.request.use(

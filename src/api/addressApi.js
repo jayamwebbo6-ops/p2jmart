@@ -1,9 +1,12 @@
 import axios from 'axios';
-import { getCookie, API_URL } from './api';
+import { getCookie, API_URL, setupLoggingInterceptors } from './api';
 
 const addressApi = axios.create({
   baseURL: API_URL
 });
+
+// Enable logging for Address API instance
+setupLoggingInterceptors(addressApi, 'AddressAPI');
 
 addressApi.interceptors.request.use(
   (config) => {
