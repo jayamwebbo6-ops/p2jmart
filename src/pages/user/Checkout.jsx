@@ -34,11 +34,17 @@ import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
 import { getProductByIdAPI } from '../../api/productApi';
 import { getCombosAPI } from '../../api/comboApi';
-
 const Checkout = ({
   cart = [],
   setCart,
- 
+  couponCode: propCouponCode,
+  setCouponCode: propSetCouponCode,
+  appliedCoupon: propAppliedCoupon,
+  couponDiscount: propCouponDiscount,
+  couponError: propCouponError,
+  applyingCoupon: propApplyingCoupon,
+  onApplyCoupon,
+  onRemoveCoupon
 }) => {
   const formatImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/500?text=No+Image+Available";
@@ -51,7 +57,6 @@ const Checkout = ({
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useDispatch();
-
   const directPurchaseItems = location.state?.items || null;
   const directPurchaseBundle = location.state?.directPurchaseBundle || null;
   const isDirectPurchase = !!location.state?.directPurchase || !!directPurchaseBundle;
@@ -124,13 +129,12 @@ const Checkout = ({
   const [localApplyingCoupon, setLocalApplyingCoupon] = useState(false);
   const [localCouponError, setLocalCouponError] = useState('');
 
-
-  const couponCode = localCouponCode;
-const setCouponCode = setLocalCouponCode;
-const appliedCoupon = localAppliedCoupon;
-const couponDiscount = localCouponDiscount;
-const couponError = localCouponError;
-const applyingCoupon = localApplyingCoupon;
+  const couponCode = propCouponCode !== undefined ? propCouponCode : localCouponCode;
+  const setCouponCode = propSetCouponCode !== undefined ? propSetCouponCode : setLocalCouponCode;
+  const appliedCoupon = propAppliedCoupon !== undefined ? propAppliedCoupon : localAppliedCoupon;
+  const couponDiscount = propCouponDiscount !== undefined ? propCouponDiscount : localCouponDiscount;
+  const couponError = propCouponError !== undefined ? propCouponError : localCouponError;
+  const applyingCoupon = propApplyingCoupon !== undefined ? propApplyingCoupon : localApplyingCoupon;
 
   // Selected address object
   const selectedAddress = addresses.find(addr => addr._id === selectedAddressId);
@@ -278,7 +282,8 @@ const applyingCoupon = localApplyingCoupon;
     try {
       const couponRes = await getEligibleCouponsAPI();
       if (couponRes && couponRes.success && Array.isArray(couponRes.data)) {
-        const activeOnly = couponRes.data.filter(c => c.status === 'Active');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const activeOnly = couponRes.data.filter(c => c.status === 'Active' && todayStr <= c.validityTo);
         setAvailableCoupons(activeOnly);
       }
     } catch (err) {
@@ -632,6 +637,11 @@ const applyingCoupon = localApplyingCoupon;
         toast.error('This coupon is currently inactive.');
         return;
       }
+    }
+
+    if (typeof onApplyCoupon === 'function') {
+      await onApplyCoupon(subtotal, couponCodeValue);
+      return;
     }
 
     setCouponCode(couponCodeValue);

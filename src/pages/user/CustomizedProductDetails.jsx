@@ -983,11 +983,22 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               }}
               className="w-full"
             >
-              {relatedProducts.map((p) => (
-                <SwiperSlide key={p._id || p.id} className="py-1">
-                  <ProductCard product={p} />
-                </SwiperSlide>
-              ))}
+              {relatedProducts.map((p) => {
+                const pId = p._id || p.id;
+                const isSaved = wishlist.some(item => (item.id || item._id) === pId);
+                return (
+                  <SwiperSlide key={pId} className="py-1">
+                    <ProductCard 
+                      product={p} 
+                      isWishlisted={isSaved}
+                      onWishlist={addToWishlist}
+                      onRemoveWishlist={removeFromWishlist}
+                      onAddToCart={onAddToCart}
+                      onClick={() => navigate(`/product/${pId}`, { state: { product: p } })}
+                    />
+                  </SwiperSlide>
+                );
+              })}
             </Swiper>
 
             <button className="rel-custom-next absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">

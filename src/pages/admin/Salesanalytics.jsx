@@ -31,7 +31,6 @@ const COLORS = {
   darkBg: "#FFFFFF",
   border: "#E2E8F0",
 };
-
 const STATUS_CONFIG = {
   Delivered: { bg: "#D1FAE5", text: "#065F46", icon: CheckCircle2 },
   Shipped: { bg: "#DBEAFE", text: "#0C4A6E", icon: Package },
@@ -40,12 +39,7 @@ const STATUS_CONFIG = {
   Processing: { bg: "#EDE9FE", text: "#4C1D95", icon: BarChart3 },
   Returned: { bg: "#F3E8FF", text: "#5B21B6", icon: BarChart3 },
 };
-
-
-
-
 const RANGE_OPTIONS = ["Today", "Weekly", "Monthly", "Yearly", "Custom Date Range"];
-
 const TABLE_HEADERS = [
   { label: "Order ID", key: "id", sortable: true, width: "12%" },
   { label: "Customer", key: "customer", sortable: true, width: "22%" },
@@ -55,7 +49,6 @@ const TABLE_HEADERS = [
   { label: "GST (₹)", key: "gst", sortable: true, align: "right", width: "15%" },
   { label: "Total (₹)", key: "amount", sortable: true, align: "right", width: "15%" },
 ];
-
 const EMPTY_STATS = {
   totalOrders: 0,
   grossSales: 0,
@@ -65,9 +58,7 @@ const EMPTY_STATS = {
   cancelledValue: 0,
   finalIncome: 0,
 };
-
 const todayStr = () => new Date().toISOString().slice(0, 10);
-
 // Professional PDF Report Generator
 const generatePDFReport = async (stats, rows, range, from, to) => {
   const { jsPDF } = await import("jspdf");
@@ -184,11 +175,9 @@ const generatePDFReport = async (stats, rows, range, from, to) => {
       doc.setTextColor(0, 0, 0);
       doc.setFillColor(248, 250, 252);
     }
-
     if (idx % 2 === 0) {
       doc.rect(15, yPos, pageWidth - 30, 6, "F");
     }
-
     const rowData = [
       row.id || "",
       row.customer || "",

@@ -16,13 +16,41 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
   const [selectionsByCombo, setSelectionsByCombo] = useState({});
   const remainingCombosRef = useRef(null);
 
-  // 1. Find EVERY active combo containing this product
+  // Helper to check stock of all constituent items in a combo
+  const isComboInStock = (c) => {
+    if (!c.selectedItemIds || c.selectedItemIds.length === 0) return false;
+    return c.selectedItemIds.every(item => {
+      if (!item) return false;
+      if (item.status === false || item.isActive === false) return false;
+
+      const itemIdStr = item._id || item.id;
+      const sv = c.selectedVariants?.find(v => {
+        const vProdId = v.productId?._id || v.productId?.id || v.productId || v;
+        return vProdId === itemIdStr;
+      });
+
+      if (sv && sv.variantId && sv.variantId !== 'default' && item.variants && item.variants.length > 0) {
+        const variant = item.variants.find(v => v.id === sv.variantId || v._id === sv.variantId);
+        if (variant) {
+          return (Number(variant.stock) || 0) > 0;
+        }
+        return false;
+      } else if (item.variants && item.variants.length > 0) {
+        return item.variants.some(v => (Number(v.stock) || 0) > 0);
+      } else {
+        return (Number(item.stock) || 0) > 0;
+      }
+    });
+  };
+
+  // 1. Find EVERY active combo containing this product that has all items in stock
   const matchedCombos = useMemo(() => {
     if (!product || !combos || combos.length === 0) return [];
     const currentProdId = product.id;
     return combos.filter(c =>
       c.status !== false &&
-      c.selectedItemIds?.some(item => (item._id || item.id || item) === currentProdId)
+      c.selectedItemIds?.some(item => (item._id || item.id || item) === currentProdId) &&
+      isComboInStock(c)
     );
   }, [combos, product]);
 

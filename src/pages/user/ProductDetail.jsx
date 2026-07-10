@@ -397,13 +397,40 @@ useEffect(() => {
   }
 }, [id, loadedProduct]); //  FIXED: Watch loadedProduct/id, NOT the derived memoized product object
 
+  const isComboInStock = (c) => {
+    if (!c.selectedItemIds || c.selectedItemIds.length === 0) return false;
+    return c.selectedItemIds.every(item => {
+      if (!item) return false;
+      if (item.status === false || item.isActive === false) return false;
+
+      const itemIdStr = item._id || item.id;
+      const sv = c.selectedVariants?.find(v => {
+        const vProdId = v.productId?._id || v.productId?.id || v.productId || v;
+        return vProdId === itemIdStr;
+      });
+
+      if (sv && sv.variantId && sv.variantId !== 'default' && item.variants && item.variants.length > 0) {
+        const variant = item.variants.find(v => v.id === sv.variantId || v._id === sv.variantId);
+        if (variant) {
+          return (Number(variant.stock) || 0) > 0;
+        }
+        return false;
+      } else if (item.variants && item.variants.length > 0) {
+        return item.variants.some(v => (Number(v.stock) || 0) > 0);
+      } else {
+        return (Number(item.stock) || 0) > 0;
+      }
+    });
+  };
+
   // Find matching active combo from database containing this product
   const matchedCombo = useMemo(() => {
     if (!product || combos.length === 0) return null;
     const currentProdId = product.id;
     return combos.find(c => 
       c.status !== false && 
-      c.selectedItemIds?.some(item => (item._id || item.id || item) === currentProdId)
+      c.selectedItemIds?.some(item => (item._id || item.id || item) === currentProdId) &&
+      isComboInStock(c)
     );
   }, [combos, product]);
 
@@ -1082,11 +1109,22 @@ useEffect(() => {
                 }}
                 className="w-full"
               >
-                {relatedProducts.map((p) => (
-                  <SwiperSlide key={p._id || p.id} className="py-1">
-                    <ProductCard product={p} />
-                  </SwiperSlide>
-                ))}
+                {relatedProducts.map((p) => {
+                  const pId = p._id || p.id;
+                  const isSaved = wishlist.some(item => (item.id || item._id) === pId);
+                  return (
+                    <SwiperSlide key={pId} className="py-1">
+                      <ProductCard 
+                        product={p} 
+                        isWishlisted={isSaved}
+                        onWishlist={addToWishlist}
+                        onRemoveWishlist={removeFromWishlist}
+                        onAddToCart={onAddToCart}
+                        onClick={() => navigate(`/product/${pId}`, { state: { product: p } })}
+                      />
+                    </SwiperSlide>
+                  );
+                })}
               </Swiper>
 
               <button className="related-next-btn absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">

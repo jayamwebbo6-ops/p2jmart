@@ -23,8 +23,7 @@ const Coupons = () => {
         setLoading(true);
         const res = await getEligibleCouponsAPI();
         if (res && res.success) {
-          const activeOnly = res.data.filter(c => c.status === 'Active');
-          setCoupons(activeOnly);
+          setCoupons(res.data);
         }
       } catch (err) {
         console.error('Error fetching coupons:', err);
@@ -36,12 +35,14 @@ const Coupons = () => {
   }, []);
 
   const handleCopyCode = (coupon) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isExpired = todayStr > coupon.validityTo;
     if (coupon.isExhausted) {
       toast.error('You have already used this coupon code to its maximum limit.');
       return;
     }
-    if (coupon.status !== 'Active') {
-      toast.error('This coupon is currently inactive and cannot be copied.');
+    if (coupon.status !== 'Active' || isExpired) {
+      toast.error('This coupon has expired or is inactive and cannot be copied.');
       return;
     }
     navigator.clipboard.writeText(coupon.code);
@@ -50,9 +51,13 @@ const Coupons = () => {
   };
 
   const filteredCoupons = coupons.filter(coupon => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'active') return coupon.status === 'Active';
-    if (activeTab === 'inactive') return coupon.status === 'Inactive';
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isExpired = todayStr > coupon.validityTo;
+    const isCouponActive = coupon.status === 'Active' && !isExpired && todayStr >= coupon.validityFrom;
+
+    if (activeTab === 'all') return isCouponActive;
+    if (activeTab === 'active') return isCouponActive;
+    if (activeTab === 'inactive') return coupon.status === 'Inactive' || isExpired;
     return true;
   });
 
@@ -112,7 +117,9 @@ const Coupons = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {filteredCoupons.map((coupon) => {
               const isPercentage = coupon.discountType === 'Percentage (%)';
-              const isCouponActive = coupon.status === 'Active';
+              const todayStr = new Date().toISOString().split('T')[0];
+              const isExpired = todayStr > coupon.validityTo;
+              const isCouponActive = coupon.status === 'Active' && !isExpired && todayStr >= coupon.validityFrom;
 
               return (
                 <div 
@@ -153,7 +160,7 @@ const Coupons = () => {
                           coupon.isExhausted ? 'bg-slate-100 text-slate-500 border border-slate-300' :
                           isCouponActive ? 'bg-green-50 text-green-700 border border-green-200/40' : 'bg-red-50 text-red-700'
                         }`}>
-                          {coupon.isExhausted ? 'Limit Reached' : coupon.status}
+                          {coupon.isExhausted ? 'Limit Reached' : isCouponActive ? 'Active' : isExpired ? 'Expired' : 'Inactive'}
                         </span>
                         <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1.5 shrink-0">
                           <Clock size={11} className="text-slate-300" /> 

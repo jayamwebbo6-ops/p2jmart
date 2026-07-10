@@ -375,12 +375,6 @@ export default function AuthFlow() {
                 <span className="font-bold text-gray-700 break-all">{email}</span>
               </p>
 
-              {resendTimer > 0 && (
-                <p className="text-amber-600 text-xs text-center font-bold">
-                  Code expires in {resendTimer}s
-                </p>
-              )}
-
               <button 
                 type="submit"
                 className="w-full bg-primary hover:bg-[#004260] active:scale-[0.99] text-white font-bold h-13 rounded-2xl text-sm transition-all shadow-md shadow-primary/10 hover:shadow-lg tracking-wide cursor-pointer"
