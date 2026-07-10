@@ -8,6 +8,7 @@ import Collections from '../../components/Collections';
 import { useLazySection } from '../../utils/helpers';
 import { getHomeCMS } from '../../api/homeCms'; 
 import { getProductsAPI } from '../../api/productApi'; // 1. IMPORT YOUR PRODUCTS FETCH UTILITY
+import SEO from '../../components/SEO';
 
 const SectionSkeleton = ({ height = '300px' }) => (
   <div className="w-full animate-pulse rounded-lg overflow-hidden" style={{ minHeight: height }}>
@@ -31,10 +32,13 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
       try {
         setLoading(true);
         
-        // 3. FETCH BOTH CMS DATA AND PRODUCTS SIMULTANEOUSLY
+        // 3. FETCH BOTH CMS DATA AND PRODUCTS SIMULTANEOUSLY (CONSUMING PREFETCHED PROMISES IF PRESENT)
+        const cmsPromise = window.__homeCmsPromise || getHomeCMS();
+        const productsPromise = window.__productsPromise || getProductsAPI();
+
         const [cmsRes, productsRes] = await Promise.all([
-          getHomeCMS(),
-          getProductsAPI() 
+          cmsPromise,
+          productsPromise
         ]);
 
         // Handle Master Products list extraction
@@ -62,6 +66,11 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
 
   return (
     <div className="w-full flex flex-col gap-10">
+      <SEO 
+        title={cmsData?.seo?.metaTitle}
+        description={cmsData?.seo?.metaDescription}
+        keywords={cmsData?.seo?.metaKeywords}
+      />
       {/* Top Row Layout */}
       <div className="w-full flex flex-col lg:flex-row gap-5 mt-7.5">
         <div className="hidden lg:block lg:w-1/4 xl:w-[22%] flex-shrink-0 lg:h-[460px]">

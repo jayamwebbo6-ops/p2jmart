@@ -11,6 +11,26 @@
     </noscript>
     <link rel="icon" type="image/webp" href="/logo1.webp" />
     <title>P2J Mart</title>
+    <script>
+      (function() {
+        let backendUrl = '%VITE_BACKEND_URL%';
+        if (backendUrl.startsWith('%VITE_') || !backendUrl) {
+          backendUrl = 'http://localhost:5000/api';
+        }
+        window.__homeCmsPromise = fetch(backendUrl + '/home-cms')
+          .then(res => res.json())
+          .catch(err => {
+            console.error('Error early fetching home CMS:', err);
+            return null;
+          });
+        window.__productsPromise = fetch(backendUrl + '/products')
+          .then(res => res.json())
+          .catch(err => {
+            console.error('Error early fetching products:', err);
+            return null;
+          });
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

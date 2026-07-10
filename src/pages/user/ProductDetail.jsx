@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import useThrottledCallback from '../../hooks/useThrottledCallback.js';
 import { ShoppingCart, Heart, Star, Share2, ShoppingBag, Eye, Plus } from 'lucide-react';
+import SEO from '../../components/SEO';
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -682,6 +683,12 @@ useEffect(() => {
 
   return (
     <div className="w-full font-sans mt-5">
+      <SEO 
+        title={loadedProduct?.seo?.metaTitle || loadedProduct?.title || loadedProduct?.name}
+        description={loadedProduct?.seo?.metaDescription || loadedProduct?.description?.substring(0, 155)}
+        keywords={loadedProduct?.seo?.metaKeywords}
+        image={loadedProduct?.image || (loadedProduct?.images && loadedProduct?.images[0])}
+      />
       <div className="w-full">
         {/* Breadcrumbs */}
         <div className="flex px-4 items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-5 flex-wrap">

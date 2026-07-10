@@ -11,7 +11,7 @@ const HeroBanner = () => {
   useEffect(() => {
     const fetchSliderData = async () => {
       try {
-        const res = await getHomeCMS();
+        const res = await (window.__homeCmsPromise || getHomeCMS());
         if (res && res.data && Array.isArray(res.data.heroSlider)) {
           setSlides(res.data.heroSlider);
         }
@@ -54,12 +54,16 @@ const HeroBanner = () => {
           key={slide._id || index}
           /* Displays 100% original full-color opacity with zero blend modes */
           className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${currentSlide === index ? 'opacity-100 z-0 group-hover:scale-105' : 'opacity-0 -z-10'}`}
-          style={{
-            backgroundImage: slide.image ? `url('${slide.image}')` : 'none',
-            backgroundPosition: "center",
-            backgroundSize: "cover"
-          }}
         >
+          {slide.image && (
+            <img 
+              src={slide.image} 
+              alt={slide.title || "Hero banner"}
+              className="w-full h-full object-cover object-center"
+              loading={index === 0 ? "eager" : "lazy"}
+              fetchpriority={index === 0 ? "high" : "low"}
+            />
+          )}
           {/* Light gray translucent overlay to improve text readability */}
           <div className="absolute inset-0 bg-slate-900/25 z-10" />
         </div>
