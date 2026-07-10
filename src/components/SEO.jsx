@@ -22,8 +22,16 @@ const SEO = ({ title, description, keywords, image, url, type = 'website', seo }
     return `${cleanBase}/${imgSrc.replace(/^\//, '')}`;
   };
 
-  const seoTitle = seo?.title || (title ? `${title} | ${siteName}` : siteName);
-  const seoDescription = seo?.description || description || defaultDescription;
+  const truncate = (str, maxLength) => {
+    if (!str || typeof str !== 'string') return '';
+    return str.length > maxLength ? str.substring(0, maxLength) : str;
+  };
+
+  const rawTitle = seo?.title || (title ? `${title} | ${siteName}` : siteName);
+  const rawDescription = seo?.description || description || defaultDescription;
+
+  const seoTitle = truncate(rawTitle, 120);
+  const seoDescription = truncate(rawDescription, 160);
   const seoKeywords = seo?.keywords || keywords;
   const seoImage = getAbsoluteImageUrl(seo?.image || image);
   const currentUrl = seo?.canonicalUrl || url || window.location.href;
