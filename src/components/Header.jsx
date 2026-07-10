@@ -392,22 +392,22 @@ const handleItemClick = (product) => {
                      ) : HeaderIconData ? (
                        <div>
                          <div className="flex items-center space-x-3 pl-2">
-                           {HeaderIconData.instagram && (
+                           {HeaderIconData.instagram && HeaderIconData.instagram.trim() !== '' && (
                              <a href={HeaderIconData.instagram} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                                <FaInstagram size={16} />
                              </a>
                            )}
-                           {HeaderIconData.twitter && (
+                           {HeaderIconData.twitter && HeaderIconData.twitter.trim() !== '' && (
                              <a href={HeaderIconData.twitter} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                                <FaXTwitter size={16} />
                              </a>
                            )}
-                           {HeaderIconData.youtube && (
+                           {HeaderIconData.youtube && HeaderIconData.youtube.trim() !== '' && (
                              <a href={HeaderIconData.youtube} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                                <FaYoutube size={16} />
                              </a>
                            )}
-                           {HeaderIconData.facebook && (
+                           {HeaderIconData.facebook && HeaderIconData.facebook.trim() !== '' && (
                              <a href={HeaderIconData.facebook} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                                <FaFacebookF size={16} />
                              </a>

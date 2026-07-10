@@ -1,10 +1,16 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { toast } from '../../../components/toast';
 
 const TermsCondition = ({ sections = [], setSections, onSave, isSaving, askConfirmation }) => {
 
   // 1. Core Section Action Handlers
   const handleAddSection = () => {
+    const incompleteSec = sections.find(s => !s.title.trim() || (s.points || []).some(p => !p.trim()));
+    if (incompleteSec) {
+      toast.error("Please fill in the title and all point text fields for the existing section before adding another.");
+      return;
+    }
     const newSection = {
       id: Date.now(),
       title: '',

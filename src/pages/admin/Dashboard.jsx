@@ -27,7 +27,7 @@ import {
   Trash2,
   Download
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '../../components/toast';
 import PageHeader from '../../components/PageHeader';
 import { getProductsAPI, updateProductAPI } from '../../api/productApi';
@@ -38,6 +38,14 @@ import { adminGetAllCustomersAPI } from '../../api/userApi';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('tab') === 'low-stock') {
+      setActiveDashboardTab('low-stock');
+    }
+  }, [location.search]);
 
   // All orders fetched from backend
   const [allOrders, setAllOrders] = useState([]);
@@ -458,6 +466,7 @@ const Dashboard = () => {
 
       // Reset individual input field
       setRestockInputs(prev => ({ ...prev, [variantKey]: '' }));
+      window.dispatchEvent(new Event('stockRestocked'));
       toast.success(`Restocked ${productTitle} (${variantLabel}) by +${qtyToAdd} units.`);
     } catch (err) {
       console.error(err);
@@ -557,6 +566,9 @@ const Dashboard = () => {
     }
 
     setSelectedItems([]);
+    if (successCount > 0) {
+      window.dispatchEvent(new Event('stockRestocked'));
+    }
     toast.success(`Successfully bulk restocked ${successCount} items by +${qty} units.`);
   };
 

@@ -86,22 +86,22 @@ const Footer = () => {
                   {contactData.address}
                 </p>
                 <div className="flex space-x-4 justify-center md:justify-start">
-                  {contactData.instagram && (
+                  {contactData.instagram && contactData.instagram.trim() !== '' && (
                     <a href={contactData.instagram} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                       <FaInstagram size={16} />
                     </a>
                   )}
-                  {contactData.twitter && (
+                  {contactData.twitter && contactData.twitter.trim() !== '' && (
                     <a href={contactData.twitter} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                       <FaXTwitter size={16} />
                     </a>
                   )}
-                  {contactData.youtube && (
+                  {contactData.youtube && contactData.youtube.trim() !== '' && (
                     <a href={contactData.youtube} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                       <FaYoutube size={16} />
                     </a>
                   )}
-                  {contactData.facebook && (
+                  {contactData.facebook && contactData.facebook.trim() !== '' && (
                     <a href={contactData.facebook} target="_blank" rel="noopener noreferrer" className="text-white transition-transform hover:scale-110">
                       <FaFacebookF size={16} />
                     </a>

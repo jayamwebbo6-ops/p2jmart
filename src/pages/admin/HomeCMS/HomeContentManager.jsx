@@ -15,6 +15,7 @@ import {
 import { SaveBtn } from '../../../components/AdminButtons';
 import PageHeader from '../../../components/PageHeader';
 import { getHomeCMS, updateHomeCMS } from '../../../api/homeCms';
+import { toast } from '../../../components/toast';
 
 // Import Split Sub-Components
 import HeroSliderTab from './HeroSliderTab';
@@ -261,7 +262,14 @@ const HomeContentManager = () => {
     }
   };
 
-  const addSlide = () => setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+  const addSlide = () => {
+    const incompleteSlide = slides.find(slide => !slide.title.trim() || !slide.image);
+    if (incompleteSlide) {
+      toast.error("Please fill in the title and upload an image for the existing slide before adding a new one.");
+      return;
+    }
+    setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+  };
 
   return (
     <div className="w-full text-slate-800 antialiased min-h-screen">

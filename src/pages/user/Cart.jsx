@@ -54,7 +54,6 @@ const Cart = ({
   const total = Math.max(0, subtotal - Number(couponDiscount || 0));
 
   const hasOutOfStockItems = cart.some(item => {
-    if (item.isComboProduct) return false;
     return item.isActiveProduct === false || item.availableStock === 0 || item.quantity > item.availableStock;
   });
 
@@ -152,7 +151,7 @@ const Cart = ({
                       <span className="text-[11px] text-gray-400 font-medium mr-1">Unit Price:</span>
                       <span className="text-xs font-bold text-gray-600">₹{item.price}</span>
                     </div>
-                    {!item.isComboProduct && (item.isActiveProduct === false ? (
+                    {(item.isActiveProduct === false ? (
                       <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded">
                         Unavailable
                       </span>

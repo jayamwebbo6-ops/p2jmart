@@ -72,6 +72,11 @@ const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
   };
 
   const handleAddSection = () => {
+    const incompleteSection = sections.find(sec => !sec.bannerImage || (sec.productIds || []).length === 0);
+    if (incompleteSection) {
+      toast.error("Please upload a banner image and select at least 1 product for the existing section before adding a new one.");
+      return;
+    }
     const firstCat = categories[0];
     const newSection = {
       id: `sec-${Date.now()}`,

@@ -20,6 +20,7 @@ export default function AdminLogin() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
 
   const navigate = useNavigate();
 
@@ -39,6 +40,18 @@ export default function AdminLogin() {
 
     fetchEmailFromMongo();
   }, []);
+
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   // Core Login Form Submission
   const handleLogin = async (e) => {
@@ -60,7 +73,7 @@ export default function AdminLogin() {
 
   // Flow Step 1: Dispatches Verification OTP Token
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     
     if (!resetEmail) {
       toast.error('Unable to locate dynamic administration email record. Check database logs.');
@@ -72,6 +85,7 @@ export default function AdminLogin() {
       const response = await forgotPasswordApi(resetEmail);
       if (response.success) {
         toast.success('OTP sent to your email Address!');
+        setResendTimer(60);
         setView('forgot_otp_pass');
       } else {
         toast.error(response.message || 'Failed to send OTP.');
@@ -246,6 +260,12 @@ export default function AdminLogin() {
               <h3 className="text-lg font-medium text-gray-900">Verification Required</h3>
               <p className="text-xs text-gray-600">An OTP code was sent to <strong className="text-gray-800">{resetEmail}</strong>.</p>
               
+              {resendTimer > 0 && (
+                <p className="text-amber-600 text-xs font-bold">
+                  Code expires in {resendTimer}s
+                </p>
+              )}
+              
               {/* OTP Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Enter 6-Digit OTP</label>
@@ -312,6 +332,22 @@ export default function AdminLogin() {
                     placeholder="Re-enter new password"
                   />
                 </div>
+              </div>
+
+              {/* Resend Block */}
+              <div className="text-center text-xs text-gray-500 font-semibold pt-1">
+                Didn't receive code?{' '}
+                {resendTimer > 0 ? (
+                  <span className="text-slate-400 font-bold">Resend OTP in {resendTimer}s</span>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={handleSendOtp} 
+                    className="text-primary font-bold hover:underline bg-transparent border-0 cursor-pointer"
+                  >
+                    Resend OTP
+                  </button>
+                )}
               </div>
 
               {/* Action Buttons */}

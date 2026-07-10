@@ -28,11 +28,12 @@ import { getAllShippingAPI } from '../../api/shippingApi';
 import { getAllGstAPI } from '../../api/gstApi';
 import { createOrderAPI, getOrderByIdAPI } from '../../api/orderApi';
 import { createPaymentAPI } from '../../api/paymentApi';
-import { applyCouponAPI } from '../../api/couponApi';
+import { applyCouponAPI, getEligibleCouponsAPI } from '../../api/couponApi';
 import { fetchCart } from '../../redux/cartSlice';
 import { getHomeCMS } from '../../api/homeCms';
 import { isUserAuthenticated } from '../../api/userApi';
-import {getEligibleCouponsAPI} from '../../api/couponApi'
+import { getProductByIdAPI } from '../../api/productApi';
+import { getCombosAPI } from '../../api/comboApi';
 
 const Checkout = ({
   cart = [],
@@ -98,6 +99,23 @@ const Checkout = ({
 
   // Saved placed order details for Success Screen
   const [placedOrder, setPlacedOrder] = useState(null);
+
+  // Live availability cache for checkout validation
+  const [liveAvailability, setLiveAvailability] = useState({});
+
+  const getItemAvailability = (item) => {
+    const key = item.isComboProduct 
+      ? `combo-${item.productId || item.id}`
+      : `prod-${item.productId || item.id}-${item.selectedOptions?.variantId || 'default'}`;
+    const live = liveAvailability[key];
+    if (live) {
+      return live;
+    }
+    return {
+      isActiveProduct: item.isActiveProduct !== false,
+      availableStock: item.availableStock
+    };
+  };
 
   // Coupon System State
   const [localCouponCode, setLocalCouponCode] = useState('');
@@ -197,8 +215,8 @@ const applyingCoupon = localApplyingCoupon;
   const total = Math.max(0, subtotal - couponDiscount + gstAmount + shippingFee);
 
   const hasUnavailableItems = checkoutItems.some(item => {
-    if (item.isComboProduct) return false;
-    return item.isActiveProduct === false || (item.availableStock !== undefined && (item.availableStock === 0 || item.quantity > item.availableStock));
+    const status = getItemAvailability(item);
+    return status.isActiveProduct === false || (status.availableStock !== undefined && (status.availableStock === 0 || item.quantity > status.availableStock));
   });
 
   // Load addresses, shipping states, and GST configurations from database safely
@@ -265,6 +283,147 @@ const applyingCoupon = localApplyingCoupon;
       }
     } catch (err) {
       console.error("Failed to load eligible coupons:", err);
+    }
+
+    // 6. Validate live availability of checkout items
+    try {
+      const availabilityMap = {};
+      
+      const productIdsToCheck = [];
+      let needsAllCombos = false;
+      
+      checkoutItems.forEach(item => {
+        const id = item.productId || item.id;
+        if (item.isComboProduct) {
+          needsAllCombos = true;
+        } else {
+          if (id && !productIdsToCheck.includes(id)) {
+            productIdsToCheck.push(id);
+          }
+        }
+      });
+      
+      let combosList = [];
+      if (needsAllCombos) {
+        const combosRes = await getCombosAPI();
+        if (combosRes && combosRes.success && Array.isArray(combosRes.data)) {
+          combosList = combosRes.data;
+        }
+      }
+      
+      const productsMap = {};
+      const allProductIds = [...productIdsToCheck];
+      
+      combosList.forEach(combo => {
+        if (combo.selectedVariants && combo.selectedVariants.length > 0) {
+          combo.selectedVariants.forEach(sv => {
+            const pId = sv.productId?._id || sv.productId?.id || sv.productId;
+            if (pId && !allProductIds.includes(pId)) {
+              allProductIds.push(pId);
+            }
+          });
+        } else if (combo.selectedItemIds && combo.selectedItemIds.length > 0) {
+          combo.selectedItemIds.forEach(item => {
+            const pId = item._id || item.id || item;
+            if (pId && !allProductIds.includes(pId)) {
+              allProductIds.push(pId);
+            }
+          });
+        }
+      });
+      
+      await Promise.all(allProductIds.map(async (pId) => {
+        try {
+          const prodRes = await getProductByIdAPI(pId);
+          if (prodRes && prodRes.success && prodRes.data) {
+            productsMap[pId] = prodRes.data;
+          }
+        } catch (e) {
+          console.error(`Failed to fetch product ${pId} details`, e);
+        }
+      }));
+      
+      checkoutItems.forEach(item => {
+        const id = item.productId || item.id;
+        if (item.isComboProduct) {
+          const key = `combo-${id}`;
+          const liveCombo = combosList.find(c => c._id === id || c.id === id);
+          if (!liveCombo || liveCombo.status === false) {
+            availabilityMap[key] = { isActiveProduct: false, availableStock: 0 };
+          } else {
+            let minStock = Infinity;
+            let allComponentsActive = true;
+            
+            if (liveCombo.selectedVariants && liveCombo.selectedVariants.length > 0) {
+              for (const sv of liveCombo.selectedVariants) {
+                const pId = sv.productId?._id || sv.productId?.id || sv.productId;
+                const prod = productsMap[pId];
+                if (!prod || prod.isActive === false) {
+                  allComponentsActive = false;
+                  minStock = 0;
+                  break;
+                }
+                const variant = prod.variants?.find(v => String(v.id || v._id) === String(sv.variantId));
+                if (!variant) {
+                  allComponentsActive = false;
+                  minStock = 0;
+                  break;
+                }
+                const variantStock = Math.max(0, Number(variant.stock) || 0);
+                if (variantStock < minStock) {
+                  minStock = variantStock;
+                }
+              }
+            } else {
+              const included = item.includedProducts || [];
+              for (const subItem of included) {
+                const subId = subItem.productId || subItem.id || subItem._id;
+                const prod = productsMap[subId];
+                if (!prod || prod.isActive === false) {
+                  allComponentsActive = false;
+                  minStock = 0;
+                  break;
+                }
+                const variant = prod.variants && prod.variants.length > 0 ? prod.variants[0] : null;
+                if (!variant) {
+                  allComponentsActive = false;
+                  minStock = 0;
+                  break;
+                }
+                const variantStock = Math.max(0, Number(variant.stock) || 0);
+                if (variantStock < minStock) {
+                  minStock = variantStock;
+                }
+              }
+            }
+            
+            availabilityMap[key] = {
+              isActiveProduct: allComponentsActive,
+              availableStock: minStock === Infinity ? 0 : minStock
+            };
+          }
+        } else {
+          const key = `prod-${id}-${item.selectedOptions?.variantId || 'default'}`;
+          const prod = productsMap[id];
+          if (!prod || prod.isActive === false) {
+            availabilityMap[key] = { isActiveProduct: false, availableStock: 0 };
+          } else {
+            const variantId = item.selectedOptions?.variantId || '';
+            const variant = variantId
+              ? prod.variants?.find(v => String(v.id || v._id) === String(variantId))
+              : prod.variants?.[0];
+            const stock = variant ? (variant.stock || 0) : 0;
+            availabilityMap[key] = {
+              isActiveProduct: true,
+              availableStock: stock
+            };
+          }
+        }
+      });
+      
+      setLiveAvailability(availabilityMap);
+    } catch (err) {
+      console.error('Error validating live availability on load:', err);
     }
 
     setLoading(false);
@@ -935,19 +1094,31 @@ const applyingCoupon = localApplyingCoupon;
                     <p className="text-[10px] sm:text-xs text-gray-500 font-semibold mt-1">
                       ₹{item.price.toFixed(2)} × {item.quantity}
                     </p>
-                    {!item.isComboProduct && (item.isActiveProduct === false ? (
-                      <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
-                        Currently Unavailable
-                      </span>
-                    ) : item.availableStock === 0 ? (
-                      <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
-                        Out of Stock
-                      </span>
-                    ) : (item.availableStock !== undefined && item.quantity > item.availableStock) ? (
-                      <span className="inline-block text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mt-1">
-                        Only {item.availableStock} units available
-                      </span>
-                    ) : null)}
+                    {(() => {
+                      const status = getItemAvailability(item);
+                      if (status.isActiveProduct === false) {
+                        return (
+                          <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
+                            Currently Unavailable
+                          </span>
+                        );
+                      }
+                      if (status.availableStock === 0) {
+                        return (
+                          <span className="inline-block text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded mt-1">
+                            Out of Stock
+                          </span>
+                        );
+                      }
+                      if (status.availableStock !== undefined && item.quantity > status.availableStock) {
+                        return (
+                          <span className="inline-block text-[9px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded mt-1">
+                            Only {status.availableStock} units available
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
                 

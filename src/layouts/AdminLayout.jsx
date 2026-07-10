@@ -17,11 +17,13 @@ import {
   Ticket,
   Layers,
   RefreshCw,
-  Menu
+  Menu,
+  Bell
 } from 'lucide-react';
 
 import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
 import { getEnqueriesAPI } from '../api/enqueriesApi';
+import { getProductsAPI } from '../api/productApi';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -105,6 +107,55 @@ const AdminLayout = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  const fetchLowStockCount = async () => {
+    if (!isAdminAuthenticated()) return;
+    try {
+      const threshold = (() => {
+        const saved = localStorage.getItem('p2j_mart_threshold');
+        return saved ? parseInt(saved, 10) : 5;
+      })();
+      
+      const res = await getProductsAPI({ includeInactive: 'true' });
+      if (res && res.success && Array.isArray(res.data)) {
+        let count = 0;
+        res.data.forEach(prod => {
+          const hasVariants = prod.variants && prod.variants.length > 0;
+          if (hasVariants) {
+            prod.variants.forEach(v => {
+              if ((Number(v.stock) || 0) <= threshold) {
+                count++;
+              }
+            });
+          } else {
+            const stockVal = prod.stock !== undefined ? Number(prod.stock) : 10;
+            if (stockVal <= threshold) {
+              count++;
+            }
+          }
+        });
+        setLowStockCount(count);
+      }
+    } catch (err) {
+      console.error("Error fetching products for low stock alert badge:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLowStockCount();
+    const interval = setInterval(fetchLowStockCount, 15000);
+    window.addEventListener('stockRestocked', fetchLowStockCount);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('stockRestocked', fetchLowStockCount);
+    };
+  }, [location.pathname]);
+
+  const handleBellClick = () => {
+    navigate('/admin?tab=low-stock');
+  };
 
   const isActive = (path) => {
     const current = location.pathname.replace(/\/$/, '') || '/admin';
@@ -226,8 +277,20 @@ const AdminLayout = () => {
             <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
           </div>
           <div className="flex items-center space-x-4">
-          
- 
+            {/* Notification Bell Icon */}
+            <button
+              onClick={handleBellClick}
+              className="relative p-2 text-gray-500 hover:text-primary hover:bg-slate-50 rounded-xl transition-all cursor-pointer border-0 bg-transparent flex items-center justify-center"
+              title="Low Stock Alert Center"
+            >
+              <Bell size={20} className={lowStockCount > 0 ? "text-amber-500 animate-pulse" : ""} />
+              {lowStockCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm animate-bounce">
+                  {lowStockCount}
+                </span>
+              )}
+            </button>
+
             {/* User Profile Dropdown */}
             <div className="relative pl-4 border-l border-gray-200" ref={dropdownRef}>
               <button 

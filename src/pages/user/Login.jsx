@@ -34,11 +34,24 @@ export default function AuthFlow() {
   const [step, setStep] = useState('methods');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
   const googleBtnRef = useRef(null);
   
   // Updated: Changed from 4 boxes to 6 boxes empty by default to match backend code
   const [otpBoxes, setOtpBoxes] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef([]);
+
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleSuccessfulLogin = async (result) => {
     window.dispatchEvent(new Event('userLoginStateChange'));
@@ -172,6 +185,7 @@ export default function AuthFlow() {
       toast.success(result.message || 'Verification code sent!');
       setOtpBoxes(['', '', '', '', '', '']);
       setStep('otp-verify');
+      setResendTimer(60);
     } else {
       toast.error(result.message || 'Failed to send verification code.');
     }
@@ -361,6 +375,12 @@ export default function AuthFlow() {
                 <span className="font-bold text-gray-700 break-all">{email}</span>
               </p>
 
+              {resendTimer > 0 && (
+                <p className="text-amber-600 text-xs text-center font-bold">
+                  Code expires in {resendTimer}s
+                </p>
+              )}
+
               <button 
                 type="submit"
                 className="w-full bg-primary hover:bg-[#004260] active:scale-[0.99] text-white font-bold h-13 rounded-2xl text-sm transition-all shadow-md shadow-primary/10 hover:shadow-lg tracking-wide cursor-pointer"
@@ -369,7 +389,18 @@ export default function AuthFlow() {
               </button>
 
               <div className="text-center text-xs text-gray-500 font-semibold mt-1">
-                Didn't receive code? <button type="button" onClick={() => handleSendCode(null)} className="text-secondary font-bold hover:underline bg-transparent border-0 cursor-pointer">Resend OTP</button>
+                Didn't receive code?{' '}
+                {resendTimer > 0 ? (
+                  <span className="text-slate-400 font-bold">Resend OTP in {resendTimer}s</span>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={() => handleSendCode(null)} 
+                    className="text-secondary font-bold hover:underline bg-transparent border-0 cursor-pointer"
+                  >
+                    Resend OTP
+                  </button>
+                )}
               </div>
             </form>
           )}

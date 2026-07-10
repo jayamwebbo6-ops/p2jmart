@@ -88,22 +88,24 @@ const HeroBanner = () => {
               </h2>
             </div>
             
-            <div className={`transition-all duration-1000 ease-out transform ${currentSlide === index ? 'translate-y-0 opacity-100 delay-1000' : 'translate-y-8 opacity-0'}`}>
-              <button 
-                onClick={() => {
-                  if (slide.btnLink) {
-                    if (slide.btnLink.startsWith('http://') || slide.btnLink.startsWith('https://')) {
-                      window.location.href = slide.btnLink;
-                    } else {
-                      navigate(slide.btnLink);
+            {slide.btnLabel && slide.btnLabel.trim() !== '' && (
+              <div className={`transition-all duration-1000 ease-out transform ${currentSlide === index ? 'translate-y-0 opacity-100 delay-1000' : 'translate-y-8 opacity-0'}`}>
+                <button 
+                  onClick={() => {
+                    if (slide.btnLink) {
+                      if (slide.btnLink.startsWith('http://') || slide.btnLink.startsWith('https://')) {
+                        window.location.href = slide.btnLink;
+                      } else {
+                        navigate(slide.btnLink);
+                      }
                     }
-                  }
-                }}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:-translate-y-0.5 hover:shadow-xl text-sm tracking-wide cursor-pointer"
-              >
-                {slide.btnLabel || 'SHOP NOW'}
-              </button>
-            </div>
+                  }}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:-translate-y-0.5 hover:shadow-xl text-sm tracking-wide cursor-pointer"
+                >
+                  {slide.btnLabel}
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
