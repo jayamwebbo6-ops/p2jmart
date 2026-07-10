@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Plus, Upload, Link2, Trash2 } from 'lucide-react';
 
-const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBanners, askConfirmation }) => {
+const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBanners, addOfferBanner, askConfirmation }) => {
   const fileInputRefs = useRef({});
 
   const handleSlideChange = (id, field, value) => {
@@ -36,18 +36,37 @@ const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBann
     });
   };
 
+  const deleteOfferBanner = (id) => {
+    askConfirmation({
+      title: "Delete Offer Banner",
+      message: "Are you sure you want to delete this offer banner? This action cannot be undone.",
+      onConfirm: () => {
+        setOfferBanners(offerBanners.filter(b => b.id !== id));
+      }
+    });
+  };
+
   return (
     <div className="flex flex-col gap-8 animate-fadeIn">
       {/* SECTION B: RIGHT SIDE PROMO/OFFERS FIXED PANELS SECTION */}
       <div className="flex flex-col gap-4 border-t border-gray-100 pt-4">
-        <div className="border-b border-gray-100 pb-2">
+        <div className="flex items-center justify-between border-b border-gray-100 pb-2 flex-wrap gap-2">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-            Right Column Side Offer Banners Configuration
+            Right Column Side Offer Banners Configuration ({offerBanners.length}/2)
           </h3>
+          {offerBanners.length < 2 && (
+            <button 
+              onClick={addOfferBanner}
+              type="button"
+              className="bg-primary cursor-pointer hover:bg-secondary text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+            >
+              <Plus size={14} /> Add Offer Banner
+            </button>
+          )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {offerBanners.map((banner, index) => (
-            <div key={banner.id || index} className="border border-gray-200 rounded-xl p-4 bg-white flex flex-col md:flex-row gap-4 items-stretch shadow-sm">
+            <div key={banner.id || index} className="border border-gray-200 rounded-xl p-4 bg-white flex flex-col md:flex-row gap-4 items-stretch shadow-sm relative group">
               <div className="flex-grow flex flex-col gap-3">
                 <div className="flex items-center gap-2 bg-slate-100 px-2 py-1 rounded w-max text-[10px] font-bold text-slate-600 uppercase">
                   Card Slot Position #{index + 1}
@@ -115,6 +134,16 @@ const HeroSliderTab = ({ slides, setSlides, addSlide, offerBanners, setOfferBann
                 </div>
                 <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg font-semibold mt-1 block">ℹ️ Recommended: 2:3 Aspect Ratio (Portrait, e.g. 400x600 px) for card slot grids.</span>
               </div>
+              
+              {/* Delete offer banner button */}
+              <button
+                type="button"
+                onClick={() => deleteOfferBanner(banner.id)}
+                className="absolute top-2 right-2 p-1.5 text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                title="Delete Offer Banner"
+              >
+                <Trash2 size={14} />
+              </button>
             </div>
           ))}
         </div>

@@ -27,11 +27,6 @@ const CategoryGridTab = ({ cards, setCards, askConfirmation }) => {
       toast.error("You can only add up to 3 category cards to the category grid.");
       return;
     }
-    const incompleteCard = cards.find(card => !card.title.trim() || !card.image);
-    if (incompleteCard) {
-      toast.error("Please fill in the title and upload an image for the existing card before adding a new one.");
-      return;
-    }
     const newCard = {
       id: `card-new-${Date.now()}`,
       title: "",

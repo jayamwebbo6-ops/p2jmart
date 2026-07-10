@@ -263,12 +263,15 @@ const HomeContentManager = () => {
   };
 
   const addSlide = () => {
-    const incompleteSlide = slides.find(slide => !slide.title.trim() || !slide.image);
-    if (incompleteSlide) {
-      toast.error("Please fill in the title and upload an image for the existing slide before adding a new one.");
+    setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+  };
+
+  const addOfferBanner = () => {
+    if (offerBanners.length >= 2) {
+      toast.error("You can add a maximum of 2 offer banners.");
       return;
     }
-    setSlides([...slides, { id: `slide-new-${Date.now()}`, title: "", description: "", btnLabel: "Shop Now", btnLink: "", image: null }]);
+    setOfferBanners([...offerBanners, { id: `offer-new-${Date.now()}`, title: "", tagline: "", btnLink: "", image: null }]);
   };
 
   return (
@@ -353,6 +356,7 @@ const HomeContentManager = () => {
                   addSlide={addSlide} 
                   offerBanners={offerBanners} 
                   setOfferBanners={setOfferBanners}
+                  addOfferBanner={addOfferBanner}
                   askConfirmation={askConfirmation}
                 />
               )}
