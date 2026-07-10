@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Star, Search, Filter, TrendingUp, ShieldAlert, ArrowRight, Trash2, Layers, Plus, Check, X, Image as ImageIcon } from 'lucide-react';
 import { getCategoriesAPI } from '../../../api/categoryApi';
 import { getProductsAPI } from '../../../api/productApi';
+import { toast } from '../../../components/toast';
 
 // Unified Design System Tokens
 const THEME = {
@@ -90,18 +91,30 @@ const MultiColumnShowcaseTab = ({
       if (featuredProducts.includes(id)) {
         setFeaturedProducts(prev => prev.filter(x => x !== id));
       } else {
+        if (featuredProducts.length >= 4) {
+          toast.error("Each category section is limited to a maximum of 4 products.");
+          return;
+        }
         setFeaturedProducts(prev => [...prev, id]);
       }
     } else if (targetColumn === 'trending') {
       if (trendingProducts.includes(id)) {
         setTrendingProducts(prev => prev.filter(x => x !== id));
       } else {
+        if (trendingProducts.length >= 4) {
+          toast.error("Each category section is limited to a maximum of 4 products.");
+          return;
+        }
         setTrendingProducts(prev => [...prev, id]);
       }
     } else if (targetColumn === 'exclusive') {
       if (exclusiveProducts.includes(id)) {
         setExclusiveProducts(prev => prev.filter(x => x !== id));
       } else {
+        if (exclusiveProducts.length >= 4) {
+          toast.error("Each category section is limited to a maximum of 4 products.");
+          return;
+        }
         setExclusiveProducts(prev => [...prev, id]);
       }
     }
@@ -203,7 +216,9 @@ const MultiColumnShowcaseTab = ({
             <div className="grid grid-cols-2 gap-3">
               {columnFeatured.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
-                const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
+                const prodOriginalPrice = item.originalPrice || (item.variants?.[0]?.originalPrice) || null;
+                const hasDiscount = item.discount > 0 && prodOriginalPrice && Number(prodOriginalPrice) > Number(prodPrice);
+                const prodDiscount = hasDiscount ? `${item.discount}% OFF` : 'Standard Pack';
                 const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
@@ -219,8 +234,10 @@ const MultiColumnShowcaseTab = ({
                     </div>
                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-100">
                       <p className="text-[10px] font-black text-slate-700">₹{prodPrice}</p>
-                      {prodDiscount && (
+                      {hasDiscount ? (
                         <p className="text-[9px] font-black text-blue-600 bg-blue-50 px-1 rounded">{prodDiscount}</p>
+                      ) : (
+                        <p className="text-[9px] font-medium text-slate-400 bg-slate-100 px-1 rounded">{prodDiscount}</p>
                       )}
                     </div>
                     <button 
@@ -253,7 +270,9 @@ const MultiColumnShowcaseTab = ({
             <div className="grid grid-cols-2 gap-3">
               {columnTrending.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
-                const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
+                const prodOriginalPrice = item.originalPrice || (item.variants?.[0]?.originalPrice) || null;
+                const hasDiscount = item.discount > 0 && prodOriginalPrice && Number(prodOriginalPrice) > Number(prodPrice);
+                const prodDiscount = hasDiscount ? `${item.discount}% OFF` : 'Standard Pack';
                 const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
@@ -269,8 +288,10 @@ const MultiColumnShowcaseTab = ({
                     </div>
                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-100">
                       <p className="text-[10px] font-black text-slate-700">₹{prodPrice}</p>
-                      {prodDiscount && (
+                      {hasDiscount ? (
                         <p className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1 rounded">{prodDiscount}</p>
+                      ) : (
+                        <p className="text-[9px] font-medium text-slate-400 bg-slate-100 px-1 rounded">{prodDiscount}</p>
                       )}
                     </div>
                     <button 
@@ -303,7 +324,9 @@ const MultiColumnShowcaseTab = ({
             <div className="grid grid-cols-2 gap-3">
               {columnExclusive.map(item => {
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
-                const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
+                const prodOriginalPrice = item.originalPrice || (item.variants?.[0]?.originalPrice) || null;
+                const hasDiscount = item.discount > 0 && prodOriginalPrice && Number(prodOriginalPrice) > Number(prodPrice);
+                const prodDiscount = hasDiscount ? `${item.discount}% OFF` : 'Standard Pack';
                 const prodImage = getProductDisplayImage(item);
                 return (
                   <div key={item.id} className="border border-slate-100 rounded-xl p-2 bg-slate-50 relative group flex flex-col justify-between h-44">
@@ -319,8 +342,10 @@ const MultiColumnShowcaseTab = ({
                     </div>
                     <div className="flex justify-between items-center mt-1 pt-1 border-t border-slate-100">
                       <p className="text-[10px] font-black text-slate-700">₹{prodPrice}</p>
-                      {prodDiscount && (
+                      {hasDiscount ? (
                         <p className="text-[9px] font-black text-purple-600 bg-purple-50 px-1 rounded">{prodDiscount}</p>
+                      ) : (
+                        <p className="text-[9px] font-medium text-slate-400 bg-slate-100 px-1 rounded">{prodDiscount}</p>
                       )}
                     </div>
                     <button 
@@ -450,7 +475,9 @@ const MultiColumnShowcaseTab = ({
                   (targetColumn === 'exclusive' && exclusiveProducts.includes(item.id));
                 
                 const prodPrice = item.price || (item.variants?.[0]?.price) || 0;
-                const prodDiscount = item.discount ? `${item.discount}% OFF` : '';
+                const prodOriginalPrice = item.originalPrice || (item.variants?.[0]?.originalPrice) || null;
+                const hasDiscount = item.discount > 0 && prodOriginalPrice && Number(prodOriginalPrice) > Number(prodPrice);
+                const prodDiscount = hasDiscount ? `${item.discount}% OFF` : 'Standard Pack';
                 const prodImage = getProductDisplayImage(item);
                 const catObj = item.category || {};
                 const catLabel = typeof catObj === 'object' ? (catObj.name || '') : catObj;
@@ -492,8 +519,10 @@ const MultiColumnShowcaseTab = ({
                     <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
                       <div>
                         <p className={`text-xs font-black ${THEME.primaryText}`}>₹{prodPrice.toFixed(2)}</p>
-                        {prodDiscount && (
-                          <p className="text-[9px] font-extrabold text-blue-600">{prodDiscount}</p>
+                        {hasDiscount ? (
+                          <p className="text-[9px] font-extrabold text-blue-600 bg-blue-50 px-1 rounded">{prodDiscount}</p>
+                        ) : (
+                          <p className="text-[9px] font-medium text-slate-400 bg-slate-100 px-1 rounded">{prodDiscount}</p>
                         )}
                       </div>
 

@@ -46,7 +46,7 @@ const CategoryPage = () => {
     <div className="w-full max-w-none  bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
       <main className="w-full py-2">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
-          {categoryData.map((category, index) => {
+          {categoryData.slice(0, 3).map((category, index) => {
             const categoryId = category._id || category.id || category.targetUrl?.split('catId=')[1];
 
             return (

@@ -170,9 +170,15 @@ const Collections = () => {
                         {product.title}
                       </h3>
 
-                      <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
-                        {typeof product.discount === 'number' ? `${product.discount}% OFF` : product.discount || "Sale"}
-                      </span>
+                      {product.discount > 0 && product.originalPrice && Number(product.originalPrice) > Number(product.price) ? (
+                        <span className="text-blue-600 text-xs font-semibold whitespace-nowrap bg-blue-50 px-1.5 py-0.5 rounded-xs">
+                          {product.discount}% OFF
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs font-semibold whitespace-nowrap bg-gray-50 px-1.5 py-0.5 rounded-xs">
+                          Standard Pack
+                        </span>
+                      )}
                     </div>
                   </Link>
                 );

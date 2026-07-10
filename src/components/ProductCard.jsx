@@ -238,7 +238,7 @@ const ProductCard = ({
                 <span className="text-[#003147] font-bold text-sm sm:text-[16px] whitespace-nowrap">
                   ₹{Number(product.price).toFixed(2)}
                 </span>
-                {product.originalPrice && (
+                {product.originalPrice && Number(product.originalPrice) > Number(product.price) && (
                   <span className="text-gray-400 text-xs sm:text-[13px] line-through whitespace-nowrap flex-shrink-0">
                     ₹{Number(product.originalPrice).toFixed(2)}
                   </span>
@@ -249,7 +249,7 @@ const ProductCard = ({
             )}
           </div>
           
-          {product.discount > 0 ? (
+          {product.discount > 0 && product.originalPrice && Number(product.originalPrice) > Number(product.price) ? (
             <span className="text-green-600 text-xs sm:text-[13px] font-medium block mt-0.5">{product.discount}% Off</span>
           ) : (
             <span className="text-gray-400 text-xs sm:text-[13px] font-medium block mt-0.5">Standard Pack</span>

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { Upload, Trash2, Plus } from 'lucide-react';
+import { toast } from '../../../components/toast';
 
 // Theme configuration matching the exact palette tokens from the layout architecture
 const THEME = {
@@ -22,6 +23,10 @@ const CategoryGridTab = ({ cards, setCards, askConfirmation }) => {
   };
 
   const handleAddNewCategory = () => {
+    if (cards.length >= 3) {
+      toast.error("You can only add up to 3 category cards to the category grid.");
+      return;
+    }
     const newCard = {
       id: `card-new-${Date.now()}`,
       title: "",

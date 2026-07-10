@@ -9,8 +9,8 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
   const categoryId = categorySectionData?.categoryId;
   const bannerImage = categorySectionData?.bannerImage;
 
-  // Use the clean products array passed down from Home.jsx
-  const activeProducts = products;
+  // Use the clean products array passed down from Home.jsx (limit to 4)
+  const activeProducts = products.slice(0, 4);
 
   // Handle centralized routing to safely feed the parent Category details into SubCategoryPage or custom redirect URL
   const handleNavigation = (e) => {

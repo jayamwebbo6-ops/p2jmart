@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { getCategoriesAPI } from '../../../api/categoryApi';
 import { getProductsAPI } from '../../../api/productApi';
+import { toast } from '../../../components/toast';
 
 // Unified Design System Tokens
 const THEME = {
@@ -138,6 +139,10 @@ const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
       if (sec.id === sectionId) {
         const sanitizedIds = (sec.productIds || []).map(id => String(id));
         if (sanitizedIds.includes(targetId)) return sec;
+        if (sanitizedIds.length >= 4) {
+          toast.error("Each category section is limited to a maximum of 4 products.");
+          return sec;
+        }
         return { ...sec, productIds: [...sanitizedIds, targetId] };
       }
       return sec;
@@ -526,7 +531,7 @@ const CategoryTab = ({ sections = [], setSections, askConfirmation }) => {
                               <div className="mt-2">
                                 <div className="flex items-baseline gap-1">
                                   <span className="text-[10px] font-black text-slate-900">₹{Number(prodPrice).toFixed(2)}</span>
-                                  {prodOriginalPrice && (
+                                  {prodOriginalPrice && Number(prodOriginalPrice) > Number(prodPrice) && (
                                     <span className="text-[8px] text-slate-400 line-through">₹{Number(prodOriginalPrice).toFixed(2)}</span>
                                   )}
                                 </div>
