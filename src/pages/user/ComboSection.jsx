@@ -149,15 +149,21 @@ const isCurrent =
     });
   }, [product, matchedCombos, selectedColor, selectedSize]);
 
+  const prevProductIdRef = useRef(null);
+
   // Handle setting default active combo setup
   useEffect(() => {
     if (!combosData.length) return;
 
+    const currentProdId = product?._id || product?.id;
+    const isNewProduct = prevProductIdRef.current !== currentProdId;
+    prevProductIdRef.current = currentProdId;
+
     setSelectionsByCombo(prev => {
-      const updated = { ...prev };
+      const updated = isNewProduct ? {} : { ...prev };
 
       combosData.forEach(combo => {
-        if (!updated[combo.id]) {
+        if (isNewProduct || !updated[combo.id]) {
           // Select all items in the combo by default
           updated[combo.id] = combo.items.map(item => item.uniqueKey);
         }
@@ -165,7 +171,7 @@ const isCurrent =
 
       return updated;
     });
-  }, [combosData]);
+  }, [combosData, product]);
 
   // FIX: `activeCombo` falls back to the first combo whenever no explicit
   // choice has been made yet, so "the active pack" always resolves to something
@@ -333,7 +339,7 @@ const isCurrent =
           )}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6 items-start justify-center">
+        <div className="flex flex-col xl:flex-row gap-6 items-start justify-center">
           {/* Main Swiper Workspace Canvas Frame */}
           <div
             key={activeCombo.id}
@@ -418,7 +424,7 @@ const isCurrent =
           </div>
 
           {/* Pricing Summary Calculation Card */}
-          <div className="w-full md:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm shrink-0">
+          <div className="w-full xl:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm shrink-0">
             <div>
               <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
                 Bundle Price Calculation
@@ -552,7 +558,7 @@ const isCurrent =
                       )}
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-6 items-start justify-center">
+                    <div className="flex flex-col xl:flex-row gap-6 items-start justify-center">
                       {/* Items Carousel Display */}
                       <div
                         className="w-full min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-3 sm:p-5 shadow-2xs flex items-center"
@@ -652,7 +658,7 @@ const isCurrent =
                       </div>
 
                       {/* Pricing Summary Card */}
-                      <div  className="w-full md:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col shadow-sm shrink-0">
+                      <div  className="w-full xl:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col shadow-sm shrink-0">
                         <div>
                           <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
                             Bundle Price Calculation
