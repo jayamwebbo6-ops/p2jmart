@@ -76,11 +76,16 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
 
         const currentActiveVariantId = product?.activeVariant?.id || product?.activeVariant?._id;
         const svVariantId = sv.variantId && sv.variantId !== 'default' ? sv.variantId : null;
-        
-        // To be considered "This Item" (locked), it must be the exact product AND exact active variant
-        const isCurrent = (item._id || item.id) === product.id && 
-                          (!svVariantId || !currentActiveVariantId || svVariantId === currentActiveVariantId);
-        
+
+     const itemId = String(item._id || item.id);
+const currentProductId = String(product._id || product.id);
+
+const isCurrent =
+  itemId === currentProductId &&
+  (!svVariantId ||
+    !currentActiveVariantId ||
+    String(svVariantId) === String(currentActiveVariantId));
+
         let resolvedPrice = item.price || 0;
         let resolvedWeight = item.weight || 0;
         let resolvedImage = item.image || '';
@@ -130,40 +135,53 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
           : 0;
 
       return {
-  id: matchedCombo._id || matchedCombo.id,
-  title: matchedCombo.name,
-  offerPrice,
-  totalOriginalPrice,
-  comboDiscountAmount,
-  rating: matchedCombo.rating || 5.0,
-  reviewCount: matchedCombo.reviewCount || 0,
-  discountPercent,
-  category: matchedCombo.category || '',
-  items
-};
+        id: matchedCombo._id || matchedCombo.id,
+        title: matchedCombo.name,
+        offerPrice,
+        totalOriginalPrice,
+        comboDiscountAmount,
+        rating: matchedCombo.rating || 5.0,
+        reviewCount: matchedCombo.reviewCount || 0,
+        discountPercent,
+        category: matchedCombo.category || '',
+        items
+      };
     });
   }, [product, matchedCombos, selectedColor, selectedSize]);
 
   // Handle setting default active combo setup
   useEffect(() => {
-    if (combosData.length > 0) {
-      setActiveComboId(combosData[0].id);
-    } else {
-      setActiveComboId(null);
-    }
-  }, [product?.id, combosData.length]);
+    if (!combosData.length) return;
 
+    setSelectionsByCombo(prev => {
+      const updated = { ...prev };
+
+      combosData.forEach(combo => {
+        if (!updated[combo.id]) {
+          const currentItem = combo.items.find(item => item.isCurrent);
+
+updated[combo.id] = currentItem
+  ? [currentItem.uniqueKey]
+  : [];
+        }
+      });
+
+      return updated;
+    });
+  }, [combosData]);
+
+  // FIX: `activeCombo` falls back to the first combo whenever no explicit
+  // choice has been made yet, so "the active pack" always resolves to something
+  // real from the very first render (this also drives the alternativeCombos fix below).
   const activeCombo = combosData.find(c => c.id === activeComboId) || combosData[0] || null;
 
-  useEffect(() => {
-    if (activeCombo && !selectionsByCombo[activeCombo.id]) {
-      setSelectionsByCombo(prev => ({
-        ...prev,
-        [activeCombo.id]: activeCombo.items.map(item => item.uniqueKey)
-      }));
-    }
-  }, [activeCombo, selectionsByCombo]);
-
+  // FIX: there used to be a SECOND effect here that also initialized default
+  // selections, racing with the effect above and non-deterministically
+  // overwriting it (sometimes "all items selected", sometimes "only the
+  // current item selected", depending on effect timing). There is now exactly
+  // one place that seeds default selections, so the starting state is
+  // predictable and toggling items up to a full set reliably flips
+  // `isFullComboSelected` below.
   const selectedComboUniqueKeys = activeCombo ? (selectionsByCombo[activeCombo.id] || []) : [];
 
   const toggleComboItem = (uniqueKey, isCurrent) => {
@@ -177,34 +195,57 @@ const ComboSection = ({ product, combos, selectedColor, selectedSize, onAddToCar
     });
   };
 
+  const toggleBundleComboItem = (comboId, uniqueKey) => {
+    setSelectionsByCombo(prev => {
+      const current = prev[comboId] || [];
+
+      const next = current.includes(uniqueKey)
+        ? current.filter(id => id !== uniqueKey)
+        : [...current, uniqueKey];
+
+      return {
+        ...prev,
+        [comboId]: next
+      };
+    });
+  };
+
+  
+
+
   const isFullComboSelected = activeCombo ? selectedComboUniqueKeys.length === activeCombo.items.length : false;
   const regularComboSum = (activeCombo?.items || [])
     .filter(item => selectedComboUniqueKeys.includes(item.uniqueKey))
     .reduce((sum, item) => sum + item.price, 0);
 
   const finalComboPrice = isFullComboSelected
-  ? Number(activeCombo?.offerPrice || 0)
-  : regularComboSum;
+    ? Number(activeCombo?.offerPrice || 0)
+    : regularComboSum;
 
-const totalComboSavings = isFullComboSelected
-  ? Number(activeCombo?.comboDiscountAmount || 0)
-  : 0;
+  const totalComboSavings = isFullComboSelected
+    ? Number(activeCombo?.comboDiscountAmount || 0)
+    : 0;
 
+  // FIX: now takes the combo + its selected keys as arguments instead of
+  // silently reading `activeCombo` / `selectedComboUniqueKeys` from closure.
+  // This is what makes "Bundle to Cart" work correctly for alternative packs.
+  const buildBundlePayload = (combo, selectedKeys) => {
+    const selectedItems = combo.items.filter(item => selectedKeys.includes(item.uniqueKey));
+    const isFull = selectedKeys.length === combo.items.length;
+    const price = isFull ? Number(combo.offerPrice || 0) : selectedItems.reduce((sum, item) => sum + item.price, 0);
 
-  const buildBundlePayload = () => {
-    const selectedItems = activeCombo.items.filter(item => selectedComboUniqueKeys.includes(item.uniqueKey));
     return {
-      id: isFullComboSelected ? activeCombo.id : `COMBO-CUSTOM-${Date.now()}`,
-      productId: isFullComboSelected ? activeCombo.id : `COMBO-CUSTOM-${Date.now()}`,
-      title: isFullComboSelected ? activeCombo.title : "Custom Pack Bundle Deal",
-      price: finalComboPrice,
+      id: isFull ? combo.id : `COMBO-CUSTOM-${Date.now()}`,
+      productId: isFull ? combo.id : `COMBO-CUSTOM-${Date.now()}`,
+      title: isFull ? combo.title : "Custom Pack Bundle Deal",
+      price,
       quantity: 1,
-      image: activeCombo.items[0].image,
+      image: selectedItems[0]?.image || combo.items[0]?.image,
       isComboProduct: true,
       selectedOptions: { color: selectedColor, size: selectedSize },
       weight: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
       freeShipping: 'No',
-      category: activeCombo.category || selectedItems[0]?.category || 'Catalog',
+      category: combo.category || selectedItems[0]?.category || 'Catalog',
       includedProducts: selectedItems.map(item => ({
         productId: item.id,
         id: item.id,
@@ -218,9 +259,11 @@ const totalComboSavings = isFullComboSelected
     };
   };
 
-  const handleAddBundleToCart = useThrottledCallback(() => {
-    if (!activeCombo) return;
-    const payload = buildBundlePayload();
+  // FIX: generic, parameterized handlers — usable both for the main workspace
+  // combo AND for any alternative combo card, each with its own selections.
+  const handleAddBundleToCart = useThrottledCallback((combo, selectedKeys) => {
+    if (!combo || !selectedKeys?.length) return;
+    const payload = buildBundlePayload(combo, selectedKeys);
     if (!isUserAuthenticated()) {
       toast.info('Please login to buy this combo bundle.');
       navigate('/login', { state: { from: location.pathname, addToCartPayload: payload } });
@@ -230,9 +273,9 @@ const totalComboSavings = isFullComboSelected
     navigate('/cart');
   }, 1000);
 
-  const handleAddBundleToBuy = useThrottledCallback(() => {
-    if (!activeCombo) return;
-    const payload = buildBundlePayload();
+  const handleAddBundleToBuy = useThrottledCallback((combo, selectedKeys) => {
+    if (!combo || !selectedKeys?.length) return;
+    const payload = buildBundlePayload(combo, selectedKeys);
     if (!isUserAuthenticated()) {
       toast.info('Please login to checkout this combo bundle.');
       navigate('/login', { state: { from: '/checkout', directPurchaseBundlePayload: payload } });
@@ -250,13 +293,19 @@ const totalComboSavings = isFullComboSelected
   };
 
   // Dynamic filter for alternative array split (safely placed above early condition escape check)
+  // FIX: this previously keyed off `activeComboId`, which starts (and stays)
+  // `null` until the user clicks something *inside* this very panel — a
+  // deadlock that meant "View More Combos" never appeared, and other packs
+  // containing the same product were never surfaced. Keying off `activeCombo`
+  // (which always resolves to a real combo via its fallback above) fixes both.
   const alternativeCombos = useMemo(() => {
-    if (!activeComboId) return [];
-    return combosData.filter(combo => combo.id !== activeComboId);
-  }, [combosData, activeComboId]);
+    if (!activeCombo) return [];
+    return combosData.filter(combo => combo.id !== activeCombo.id);
+  }, [combosData, activeCombo]);
 
   // Safe runtime breakout check sequence
   if (combosData.length === 0 || !activeCombo) return null;
+
 
   return (
     <div id="main-combo-workspace" className="w-full px-4 mt-10">
@@ -287,10 +336,10 @@ const totalComboSavings = isFullComboSelected
           )}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6 items-stretch justify-center">
+        <div className="flex flex-col md:flex-row gap-6 items-start justify-center">
           {/* Main Swiper Workspace Canvas Frame */}
-          <div 
-            key={activeCombo.id} 
+          <div
+            key={activeCombo.id}
             className="min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-5 shadow-2xs flex items-center"
           >
             {activeCombo.items.length > 0 && (
@@ -304,51 +353,53 @@ const totalComboSavings = isFullComboSelected
                     modules={[Navigation]}
                     navigation={{ prevEl: '.combo-prev-btn', nextEl: '.combo-next-btn' }}
                     spaceBetween={16}
-                    slidesPerView={1.2}
+                    slidesPerView={1}
                     breakpoints={{
-                      400: { slidesPerView: Math.min(1.5, activeCombo.items.length), spaceBetween: 12 },
-                      550: { slidesPerView: Math.min(2, activeCombo.items.length), spaceBetween: 14 },
-                      850: { slidesPerView: Math.min(3, activeCombo.items.length), spaceBetween: 16 },
-                      1100: { slidesPerView: Math.min(4, activeCombo.items.length), spaceBetween: 16 }
+                      400: { slidesPerView: Math.min(1.3, activeCombo.items.length), spaceBetween: 12 },
+                      550: { slidesPerView: Math.min(1.5, activeCombo.items.length), spaceBetween: 14 },
+                      850: { slidesPerView: Math.min(2.2, activeCombo.items.length), spaceBetween: 16 },
+                      1100: { slidesPerView: Math.min(3, activeCombo.items.length), spaceBetween: 16 }
                     }}
                     className="w-full"
                   >
                     {activeCombo.items.map((item, idx) => (
-                      <SwiperSlide key={item.uniqueKey} className="py-1">
+                      <SwiperSlide key={item.uniqueKey} className="py-2">
                         <div
                           onClick={() => toggleComboItem(item.uniqueKey, item.isCurrent)}
-                          className={`w-full bg-white border rounded-xl p-4 flex flex-col items-center gap-3 transition-all relative ${
+                          className={`w-full bg-white border rounded-xl p-5 flex flex-col items-center gap-3 transition-all relative ${
                             item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
                           } ${
                             selectedComboUniqueKeys.includes(item.uniqueKey)
-                              ? 'border-blue-500 shadow-xs'
+                              ? 'border-blue-500 shadow-md'
                               : 'opacity-40 border-gray-200 grayscale scale-95 hover:opacity-70'
                           }`}
                         >
-                          <div className="absolute top-2 left-2 z-10">
+                          <div className="absolute top-3 left-3 z-10">
                             <input
                               type="checkbox"
                               checked={selectedComboUniqueKeys.includes(item.uniqueKey)}
                               onChange={() => {}}
                               disabled={item.isCurrent}
-                              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
+                              className="w-5 h-5 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
                             />
                           </div>
 
-                          <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden shrink-0 bg-white border border-gray-100 flex items-center justify-center p-1">
+                          {/* ENLARGED IMAGE CONTAINER - MEDIUM TO LARGE SIZE */}
+                          <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
                             <img
                               src={formatImageUrl(item.image)}
                               alt={item.title}
-                              className="w-full h-full object-contain mix-blend-multiply"
-                              onError={(e) => { e.target.src = "https://via.placeholder.com/150?text=No+Image"; }}
+                              className="w-full h-full object-contain"
+                              onError={(e) => { e.target.src = "https://via.placeholder.com/200?text=No+Image"; }}
                             />
                           </div>
 
-                          <div className="text-center min-w-0 w-full">
-                            <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-snug h-8">
+                          {/* ITEM DETAILS - CLEAR AND PROMINENT */}
+                          <div className="text-center min-w-0 w-full px-2">
+                            <h4 className="text-sm text-gray-800 line-clamp-2 leading-snug h-10">
                               {item.title}
                             </h4>
-                            <p className="text-sm font-black text-gray-900 mt-1">₹{item.price}</p>
+                            <p className="text-[#003147] font-bold text-sm sm:text-[16px] whitespace-nowrap">₹{item.price}</p>
                           </div>
 
                           {idx < activeCombo.items.length - 1 && (
@@ -380,25 +431,25 @@ const totalComboSavings = isFullComboSelected
                   <span>Selected Items ({selectedComboUniqueKeys.length}):</span>
                   <span className="font-medium text-gray-900">₹{regularComboSum}</span>
                 </div>
-              {isFullComboSelected ? (
-  <>
-    <div className="flex justify-between text-green-600 font-medium">
-      <span>Combo Promotion Pack Discount:</span>
-      <span>{activeCombo.discountPercent.toFixed(0)}%</span>
-    </div>
+                {isFullComboSelected ? (
+                  <>
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>Combo Promotion Pack Discount:</span>
+                      <span>{activeCombo.discountPercent.toFixed(0)}%</span>
+                    </div>
 
-    <div className="flex justify-between text-xs text-gray-600">
-      <span>Combo Savings:</span>
-      <span className="font-bold text-green-700">
-        ₹{activeCombo.comboDiscountAmount.toLocaleString('en-IN')}
-      </span>
-    </div>
-  </>
-) : (
-  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
-    💡 Select all components to qualify for the bundle discount structure.
-  </div>
-)}
+                    <div className="flex justify-between text-xs text-gray-600">
+                      <span>Combo Savings:</span>
+                      <span className="font-bold text-green-700">
+                        ₹{activeCombo.comboDiscountAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
+                    💡 Add {activeCombo.items.length - selectedComboUniqueKeys.length} more {activeCombo.items.length - selectedComboUniqueKeys.length === 1 ? 'item' : 'items'} to unlock the bundle discount.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -414,13 +465,13 @@ const totalComboSavings = isFullComboSelected
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={handleAddBundleToCart}
+                  onClick={() => handleAddBundleToCart(activeCombo, selectedComboUniqueKeys)}
                   className="w-full border border-gray-300 py-2 text-xs rounded-md font-bold hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Bundle to Cart
                 </button>
                 <button
-                  onClick={handleAddBundleToBuy}
+                  onClick={() => handleAddBundleToBuy(activeCombo, selectedComboUniqueKeys)}
                   className="w-full bg-[#003147] text-white py-2 text-xs rounded-md font-bold hover:bg-[#002232] transition-colors cursor-pointer"
                 >
                   Buy Bundle Set
@@ -433,18 +484,18 @@ const totalComboSavings = isFullComboSelected
 
       {/* VIEW MORE BUNDLES TOGGLE TRIGGER PANEL CONTAINER */}
       {alternativeCombos.length > 0 && (
-        <div className="mt-4 flex flex-col items-center">
+        <div className="mt-6 flex flex-col items-center w-full">
           <button
             onClick={() => setShowAllCombos(!showAllCombos)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#003147] hover:border-gray-400 font-bold text-xs rounded-xl shadow-2xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 text-gray-800 hover:text-[#003147] hover:border-[#003147] hover:bg-blue-50 font-bold text-sm rounded-xl shadow-sm transition-all cursor-pointer"
           >
             {showAllCombos ? (
               <>
-                Hide Alternative Packages <ChevronUp size={14} />
+                Hide<ChevronUp size={12} />
               </>
             ) : (
               <>
-                View More Combos ({alternativeCombos.length} alternative packs available) <ChevronDown size={14} />
+                View More Combos ({alternativeCombos.length}) <ChevronDown size={12} />
               </>
             )}
           </button>
@@ -458,67 +509,216 @@ const totalComboSavings = isFullComboSelected
             }}
             className="w-full overflow-hidden transition-all duration-300 ease-in-out"
           >
-            <div className="pt-5 space-y-3">
-              <div className="border-t border-dashed border-gray-200 my-2" />
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                Other Pack Bundles for this Item:
-              </p>
-              
+            <div className="pt-6 space-y-5 px-2">
+              <div className="border-t border-dashed border-gray-300 my-2" />
+
               {alternativeCombos.map((combo) => {
+                // FIX: combosData objects don't have `finalComboPrice`, `regularPrice`,
+                // or `discountAmount` properties — those fallbacks were dead code.
+                // Reading directly from the combo's real fields instead.
+                const offerPrice = combo.offerPrice || 0;
+                const discountAmount = combo.comboDiscountAmount || 0;
+                const discountPercent = combo.discountPercent || 0;
+                const rating = combo.rating || 0;
+                const reviewCount = combo.reviewCount || 0;
+
+                const allSelectedKeys = selectionsByCombo[combo.id] || [];
+
+                const isFullComboSelected =
+                  allSelectedKeys.length === combo.items.length;
+
+                // Calculate total for selected items (including main product)
+                let selectedItemsSum = 0;
+                if (combo.items && allSelectedKeys.length > 0) {
+                  selectedItemsSum = combo.items
+                    .filter(item => allSelectedKeys.includes(item.uniqueKey))
+                    .reduce((sum, item) => sum + (item.price || 0), 0);
+                }
+
+                // Calculate final price
+                const finalBundlePrice = isFullComboSelected && discountPercent > 0
+                  ? offerPrice
+                  : selectedItemsSum;
+
                 return (
-                  <div 
-                    key={combo.id}
-                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-2xs hover:border-gray-300 transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-                  >
-                    {/* Pack Meta Specifications */}
-                    <div className="space-y-1 max-w-xs shrink-0">
-                      <div className="flex items-center gap-2">
-                        <span className="bg-red-50 text-red-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-red-100">
-                          {combo.discountPercent}% OFF
+                  <div key={combo.id} className="bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200">
+                    {/* Bundle Header */}
+                    <div className="flex items-center gap-2 mb-6">
+                      <h4 className="text-base font-black text-gray-900">{combo.title || 'Combo Bundle'}</h4>
+                      <span className="flex items-center gap-1 text-xs bg-amber-50 border border-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold">
+                        ★ {rating.toFixed(1)} ({reviewCount})
+                      </span>
+                      {combo.id !== combosData[0]?.id && (
+                        <span className="text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full uppercase">
+                          Alternative Pack Selection
                         </span>
-                        <span className="text-xs font-bold text-amber-600">★ {combo.rating.toFixed(1)}</span>
-                      </div>
-                      <h4 className="text-sm font-black text-gray-900 truncate">{combo.title}</h4>
-                      <p className="text-xs text-gray-400">{combo.items.length} items included</p>
-                      <div className="pt-1">
-                        <span className="text-base font-black text-gray-900">₹{combo.offerPrice.toLocaleString('en-IN')}</span>
-                      </div>
+                      )}
                     </div>
 
-                    {/* Miniature Horizontal Item Preview Row */}
-                    <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none flex-1 min-w-0">
-                      {combo.items.map((item, idx) => (
-                        <React.Fragment key={item.uniqueKey}>
-                          <div className={`flex items-center gap-2 bg-gray-50 border rounded-lg p-2 shrink-0 max-w-[160px] ${item.isCurrent ? 'border-blue-200 bg-blue-50/20' : 'border-gray-150'}`}>
-                            <div className="w-10 h-10 bg-white border border-gray-100 rounded flex-shrink-0 p-0.5 flex items-center justify-center">
-                              <img 
-                                src={formatImageUrl(item.image)} 
-                                alt="" 
-                                className="w-full h-full object-contain mix-blend-multiply" 
-                              />
+                    <div className="flex flex-col md:flex-row gap-6 items-start justify-center">
+                      {/* Items Carousel Display */}
+                      <div
+                        className="min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-5 shadow-2xs flex items-center"
+                      >
+                        {combo.items && combo.items.length > 0 && (
+                          <>
+                            <button className={`bundle-prev-btn-${combo.id} absolute -left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer`}>
+                              <ChevronLeft size={20} className="text-gray-700" />
+                            </button>
+
+                            <div className="w-full overflow-hidden px-2">
+                              <Swiper
+                                modules={[Navigation]}
+                                navigation={{ prevEl: `.bundle-prev-btn-${combo.id}`, nextEl: `.bundle-next-btn-${combo.id}` }}
+                                spaceBetween={16}
+                                slidesPerView={1}
+                                breakpoints={{
+                                  400: { slidesPerView: Math.min(1.3, combo.items.length), spaceBetween: 12 },
+                                  550: { slidesPerView: Math.min(1.5, combo.items.length), spaceBetween: 14 },
+                                  850: { slidesPerView: Math.min(2.2, combo.items.length), spaceBetween: 16 },
+                                  1100: { slidesPerView: Math.min(3, combo.items.length), spaceBetween: 16 }
+                                }}
+                                className="w-full"
+                              >
+                                {combo.items.map((item, idx) => {
+                                  const isItemSelected = allSelectedKeys.includes(item.uniqueKey);
+
+                                  return (
+                                    <SwiperSlide key={item.uniqueKey || idx} className="py-2">
+                                      <div
+                                        onClick={() => !item.isCurrent && toggleBundleComboItem(combo.id, item.uniqueKey)}
+                                        className={`w-full bg-white border rounded-xl p-5 flex flex-col items-center gap-3 transition-all relative ${
+                                          item.isCurrent
+                                            ? 'cursor-default border-blue-400 ring-2 ring-blue-200 shadow-lg'
+                                            : 'cursor-pointer'
+                                        } ${
+                                          isItemSelected
+                                            ? 'border-blue-500 shadow-md'
+                                            : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                                        }`}
+                                      >
+
+                                        {/* CHECKBOX - Main product always checked and disabled */}
+                                        <div className="absolute top-3 left-3 z-10">
+                                          <input
+                                            type="checkbox"
+                                            checked={isItemSelected}
+                                            onChange={() => {}}
+                                            disabled={item.isCurrent}
+                                            className="w-5 h-5 rounded text-blue-600 focus:ring-blue-400 border-gray-300 cursor-pointer"
+                                          />
+                                        </div>
+
+                                        {/* ENLARGED IMAGE CONTAINER */}
+                                        <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
+                                          <img
+                                            src={formatImageUrl(item.image)}
+                                            alt={item.title || 'Product'}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => { e.target.src = "https://via.placeholder.com/200?text=No+Image"; }}
+                                          />
+                                        </div>
+
+                                        {/* ITEM DETAILS - CLEAR AND PROMINENT */}
+                                        <div className="text-center min-w-0 w-full px-2">
+                                          <h4 className="text-sm font-bold text-gray-900 line-clamp-2 leading-snug h-10">
+                                            {item.title || 'Product'}
+                                          </h4>
+                                          <p className="text-lg font-black text-gray-900 mt-2">₹{(item.price || 0).toLocaleString('en-IN')}</p>
+                                        </div>
+
+                                        {/* Current Item Badge */}
+                                        {item.isCurrent && (
+                                          <span className="absolute top-2 right-2 text-xs bg-blue-600 text-white px-2 py-1 rounded font-bold">
+                                            current item
+                                          </span>
+                                        )}
+
+                                        {/* Plus separator */}
+                                        {idx < combo.items.length - 1 && (
+                                          <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden lg:flex">
+                                            <Plus size={10} strokeWidth={3} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    </SwiperSlide>
+                                  );
+                                })}
+                              </Swiper>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-bold text-gray-700 truncate leading-tight">
-                                {item.isCurrent ? 'Main Product' : item.title}
-                              </p>
-                              <p className="text-[11px] font-black text-gray-900 mt-0.5">₹{item.price}</p>
+
+                            <button className={`bundle-next-btn-${combo.id} absolute -right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer`}>
+                              <ChevronRight size={20} className="text-gray-700" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Pricing Summary Card */}
+                      <div  className="w-full md:w-80 bg-white border border-gray-200 rounded-xl p-4 flex flex-col shadow-sm shrink-0">
+                        <div>
+                          <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider mb-3">
+                            Bundle Price Calculation
+                          </h4>
+                          <div className="space-y-2 text-xs text-gray-600">
+                            <div className="flex justify-between">
+                              <span>Selected Items ({allSelectedKeys.length}):</span>
+                              <span className="font-medium text-gray-900">₹{selectedItemsSum.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            {isFullComboSelected && discountPercent > 0 ? (
+                              <>
+                                <div className="flex justify-between text-green-600 font-medium">
+                                  <span>Combo Discount:</span>
+                                  <span>{discountPercent.toFixed(0)}%</span>
+                                </div>
+                                <div className="flex justify-between text-xs text-gray-600">
+                                  <span>Combo Savings:</span>
+                                  <span className="font-bold text-green-700">₹{discountAmount.toLocaleString('en-IN')}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2 text-[11px] text-amber-800 leading-normal">
+                                💡 Add {(combo.items?.length || 0) - allSelectedKeys.length} more {(combo.items?.length || 0) - allSelectedKeys.length === 1 ? 'item' : 'items'} to unlock the bundle discount.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="flex justify-between items-baseline mb-4">
+                            <span className="text-sm font-bold text-gray-800">Total Price:</span>
+                            <div className="text-right">
+                              <span className="text-xl font-black text-gray-900">
+                                ₹{finalBundlePrice.toLocaleString('en-IN')}
+                              </span>
+                              {isFullComboSelected && discountAmount > 0 && (
+                                <p className="text-[11px] font-bold text-green-600">Save ₹{discountAmount.toLocaleString('en-IN')}</p>
+                              )}
                             </div>
                           </div>
-                          {idx < combo.items.length - 1 && (
-                            <Plus size={11} className="text-gray-300 shrink-0" />
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => handleAddBundleToCart(combo, allSelectedKeys)}
+                              className="w-full border border-gray-300 py-2 text-xs rounded-md font-bold hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50"
+                              disabled={allSelectedKeys.length === 0}
+                            >
+                              Bundle to Cart
+                            </button>
+  <button
+  onClick={() => {
+    handleSelectAlternativeCombo(combo.id);
+    handleAddBundleToBuy(combo, allSelectedKeys);
+  }}
+  className="w-full bg-[#003147] text-white py-2 text-xs rounded-md font-bold hover:bg-[#002232] transition-colors cursor-pointer"
+  disabled={allSelectedKeys.length === 0}
+>
+  Customize Pack
+</button>
+                          </div>
+                        </div>
+                      </div>
 
-                    {/* Action Selector Trigger */}
-                    <div className="shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 flex justify-end">
-                      <button
-                        onClick={() => handleSelectAlternativeCombo(combo.id)}
-                        className="bg-[#003147] hover:bg-[#002232] text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer"
-                      >
-                        Customize This Pack
-                      </button>
                     </div>
                   </div>
                 );
