@@ -31,7 +31,7 @@ const CategoryGridTab = ({ cards, setCards, askConfirmation }) => {
       id: `card-new-${Date.now()}`,
       title: "",
       description: "",
-      buttonText: "View Collection",
+      buttonText: "",
       targetUrl: "",
       image: ""
     };
