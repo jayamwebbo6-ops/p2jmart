@@ -12,6 +12,7 @@ import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import ProductCard from '../../components/ProductCard';
+import ProductReviews from '../../components/ProductReviews';
 import { getCategoriesAPI } from '../../api/categoryApi';
 import { getProductByIdAPI, getProductsAPI } from '../../api/productApi';
 
@@ -32,37 +33,45 @@ const fileToBase64 = (file) => {
 };
 
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
-    const { subcategoryId, id: productId } = useParams();
+  const { productId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-    const [categoryName, setCategoryName] = useState('');
+  const incomingProduct = location.state?.product;
+  const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
+  const [loading, setLoading] = useState(!incomingProduct);
+
+  const [categoryName, setCategoryName] = useState('');
   const [subcategoryName, setSubcategoryName] = useState('');
 
+  const subcategoryId = typeof loadedProduct?.subcategory === 'object' 
+    ? loadedProduct.subcategory._id || loadedProduct.subcategory.id 
+    : loadedProduct?.subcategory;
 
-    useEffect(() => {
-      if (!subcategoryId) return;
-      const fetchNames = async () => {
-        try {
-          const catRes = await getCategoriesAPI();
-          if (catRes && catRes.success && Array.isArray(catRes.data)) {
-            for (const cat of catRes.data) {
-              const matchedSub = (cat.subcategories || []).find(
-                sub => (sub._id || sub.id) === subcategoryId
-              );
-              if (matchedSub) {
-                setCategoryName(cat.name);
-                setSubcategoryName(matchedSub.name || matchedSub);
-                break;
-              }
+  useEffect(() => {
+    if (!subcategoryId) return;
+
+    const fetchNames = async () => {
+      try {
+        const catRes = await getCategoriesAPI();
+        if (catRes && catRes.success && Array.isArray(catRes.data)) {
+          for (const cat of catRes.data) {
+            const matchedSub = (cat.subcategories || []).find(
+              sub => (sub._id || sub.id) === subcategoryId
+            );
+            if (matchedSub) {
+              setCategoryName(cat.name);
+              setSubcategoryName(matchedSub.name || matchedSub);
+              break;
             }
           }
-        } catch (err) {
-          console.error("Error looking up names for breadcrumbs:", err);
         }
-      };
-      fetchNames();
-    }, [subcategoryId]);
+      } catch (err) {
+        console.error("Error looking up names for breadcrumbs:", err);
+      }
+    };
+    fetchNames();
+  }, [loadedProduct, subcategoryId]);
   
 
   // Color Mapping Configurations matching your branding requirements
@@ -72,10 +81,6 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     secondary: 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500',
     customizeBtn: 'bg-slate-500 hover:bg-slate-600 text-white'
   };
-
-  const incomingProduct = location.state?.product;
-  const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
-  const [loading, setLoading] = useState(!incomingProduct);
 
   useEffect(() => {
     if (incomingProduct) {
@@ -214,6 +219,17 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   };
 
   const [quantity, setQuantity] = useState(1);
+
+  // Sync quantity with active stock changes (e.g. variant change)
+  useEffect(() => {
+    if (activeStock > 0) {
+      if (quantity > activeStock) {
+        setQuantity(activeStock);
+      }
+    } else {
+      setQuantity(1);
+    }
+  }, [activeStock]);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [customImageURL, setCustomImageURL] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -393,10 +409,8 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
     if (!product) return;
     if (isWishlisted) {
       if (removeFromWishlist) removeFromWishlist(product.id);
-      toast.success("Removed from wishlist");
     } else {
       if (addToWishlist) addToWishlist(product);
-      toast.success("Added to wishlist!");
     }
   }, 1000);
 
@@ -450,7 +464,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         price: activePrice || product.price,
         originalPrice: activeOriginalPrice || product.originalPrice,
         weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
-        quantity: quantity,
+        quantity: Math.min(activeStock || 1, quantity),
         selectedOptions: options
       });
     }
@@ -491,7 +505,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
             price: activePrice || product.price,
             originalPrice: activeOriginalPrice || product.originalPrice,
             weight: selectedVariant ? (selectedVariant.weight || 0) : product.weight,
-            quantity: quantity,
+            quantity: Math.min(activeStock || 1, quantity),
             selectedOptions: options
           }
         ]
@@ -797,18 +811,19 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               <div className={`flex items-center border border-gray-300 rounded-md overflow-hidden h-10 sm:h-11 w-28 sm:w-32 shadow-sm ${product.isActive === false ? 'opacity-50 pointer-events-none' : ''}`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={product.isActive === false}
+                  disabled={product.isActive === false || activeStock === 0}
                   className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
                 >
                   -
                 </button>
                 <div className="w-1/3 h-full flex items-center justify-center border-x border-gray-300 font-bold text-sm bg-gray-50 text-gray-800">
-                  {quantity}
+                  {activeStock === 0 ? 0 : quantity}
                 </div>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  disabled={product.isActive === false}
-                  className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors"
+                  onClick={() => setQuantity(Math.min(activeStock, quantity + 1))}
+                  disabled={product.isActive === false || quantity >= activeStock || activeStock === 0}
+                  className="w-1/3 h-full flex items-center justify-center hover:bg-gray-100 text-gray-600 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+                  title={quantity >= activeStock ? `Maximum stock available: ${activeStock}` : 'Add quantity'}
                 >
                   +
                 </button>
@@ -1007,6 +1022,15 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
           </div>
         </div>
       )}
+
+      {/* Product Reviews Section */}
+      <div className="w-full max-w-[2500px] mx-auto px-4 mt-8">
+        <ProductReviews
+          productId={product.id}
+          initialRating={product.rating}
+          initialReviewCount={product.reviews}
+        />
+      </div>
 
       {/* Back to top scroll button element */}
       {showScrollTop && (

@@ -431,6 +431,7 @@ const ComboPacks = () => {
     const prodSubCatName = prod.subcategory?.name || prod.subcategory;
     
     if (formData.category && prodCatName !== formData.category) return;
+    if (prod.customizeProduct === 'Yes') return;
 
     if (prod.variants && prod.variants.length > 0) {
       prod.variants.forEach(v => {
