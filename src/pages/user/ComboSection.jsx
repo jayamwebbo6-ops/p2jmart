@@ -158,11 +158,8 @@ const isCurrent =
 
       combosData.forEach(combo => {
         if (!updated[combo.id]) {
-          const currentItem = combo.items.find(item => item.isCurrent);
-
-updated[combo.id] = currentItem
-  ? [currentItem.uniqueKey]
-  : [];
+          // Select all items in the combo by default
+          updated[combo.id] = combo.items.map(item => item.uniqueKey);
         }
       });
 
@@ -340,7 +337,7 @@ updated[combo.id] = currentItem
           {/* Main Swiper Workspace Canvas Frame */}
           <div
             key={activeCombo.id}
-            className="min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-5 shadow-2xs flex items-center"
+            className="w-full min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-3 sm:p-5 shadow-2xs flex items-center"
           >
             {activeCombo.items.length > 0 && (
               <>
@@ -355,10 +352,10 @@ updated[combo.id] = currentItem
                     spaceBetween={16}
                     slidesPerView={1}
                     breakpoints={{
-                      400: { slidesPerView: Math.min(1.3, activeCombo.items.length), spaceBetween: 12 },
-                      550: { slidesPerView: Math.min(1.5, activeCombo.items.length), spaceBetween: 14 },
-                      850: { slidesPerView: Math.min(2.2, activeCombo.items.length), spaceBetween: 16 },
-                      1100: { slidesPerView: Math.min(3, activeCombo.items.length), spaceBetween: 16 }
+                      320: { slidesPerView: Math.min(1.2, activeCombo.items.length), spaceBetween: 12 },
+                      480: { slidesPerView: Math.min(1.5, activeCombo.items.length), spaceBetween: 12 },
+                      640: { slidesPerView: Math.min(2, activeCombo.items.length), spaceBetween: 16 },
+                      1024: { slidesPerView: Math.min(3, activeCombo.items.length), spaceBetween: 16 }
                     }}
                     className="w-full"
                   >
@@ -366,7 +363,7 @@ updated[combo.id] = currentItem
                       <SwiperSlide key={item.uniqueKey} className="py-2">
                         <div
                           onClick={() => toggleComboItem(item.uniqueKey, item.isCurrent)}
-                          className={`w-full bg-white border rounded-xl p-5 flex flex-col items-center gap-3 transition-all relative ${
+                          className={`w-full bg-white border rounded-xl p-3 sm:p-5 flex flex-col items-center gap-3 transition-all relative ${
                             item.isCurrent ? 'cursor-default border-blue-400 ring-1 ring-blue-100' : 'cursor-pointer select-none'
                           } ${
                             selectedComboUniqueKeys.includes(item.uniqueKey)
@@ -385,7 +382,7 @@ updated[combo.id] = currentItem
                           </div>
 
                           {/* ENLARGED IMAGE CONTAINER - MEDIUM TO LARGE SIZE */}
-                          <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
+                          <div className="w-24 h-24 xs:w-32 xs:h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
                             <img
                               src={formatImageUrl(item.image)}
                               alt={item.title}
@@ -403,7 +400,7 @@ updated[combo.id] = currentItem
                           </div>
 
                           {idx < activeCombo.items.length - 1 && (
-                            <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden lg:flex">
+                            <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden md:flex">
                               <Plus size={10} strokeWidth={3} />
                             </div>
                           )}
@@ -558,7 +555,7 @@ updated[combo.id] = currentItem
                     <div className="flex flex-col md:flex-row gap-6 items-start justify-center">
                       {/* Items Carousel Display */}
                       <div
-                        className="min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-5 shadow-2xs flex items-center"
+                        className="w-full min-w-0 flex-1 relative bg-white border border-gray-150 rounded-xl p-3 sm:p-5 shadow-2xs flex items-center"
                       >
                         {combo.items && combo.items.length > 0 && (
                           <>
@@ -573,10 +570,10 @@ updated[combo.id] = currentItem
                                 spaceBetween={16}
                                 slidesPerView={1}
                                 breakpoints={{
-                                  400: { slidesPerView: Math.min(1.3, combo.items.length), spaceBetween: 12 },
-                                  550: { slidesPerView: Math.min(1.5, combo.items.length), spaceBetween: 14 },
-                                  850: { slidesPerView: Math.min(2.2, combo.items.length), spaceBetween: 16 },
-                                  1100: { slidesPerView: Math.min(3, combo.items.length), spaceBetween: 16 }
+                                  320: { slidesPerView: Math.min(1.2, combo.items.length), spaceBetween: 12 },
+                                  480: { slidesPerView: Math.min(1.5, combo.items.length), spaceBetween: 12 },
+                                  640: { slidesPerView: Math.min(2, combo.items.length), spaceBetween: 16 },
+                                  1024: { slidesPerView: Math.min(3, combo.items.length), spaceBetween: 16 }
                                 }}
                                 className="w-full"
                               >
@@ -587,7 +584,7 @@ updated[combo.id] = currentItem
                                     <SwiperSlide key={item.uniqueKey || idx} className="py-2">
                                       <div
                                         onClick={() => !item.isCurrent && toggleBundleComboItem(combo.id, item.uniqueKey)}
-                                        className={`w-full bg-white border rounded-xl p-5 flex flex-col items-center gap-3 transition-all relative ${
+                                        className={`w-full bg-white border rounded-xl p-3 sm:p-5 flex flex-col items-center gap-3 transition-all relative ${
                                           item.isCurrent
                                             ? 'cursor-default border-blue-400 ring-2 ring-blue-200 shadow-lg'
                                             : 'cursor-pointer'
@@ -610,7 +607,7 @@ updated[combo.id] = currentItem
                                         </div>
 
                                         {/* ENLARGED IMAGE CONTAINER */}
-                                        <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
+                                        <div className="w-24 h-24 xs:w-32 xs:h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-gray-50 to-white border-2 border-gray-200 flex items-center justify-center p-3 shadow-md hover:shadow-lg transition-shadow">
                                           <img
                                             src={formatImageUrl(item.image)}
                                             alt={item.title || 'Product'}
@@ -634,12 +631,12 @@ updated[combo.id] = currentItem
                                           </span>
                                         )}
 
-                                        {/* Plus separator */}
-                                        {idx < combo.items.length - 1 && (
-                                          <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden lg:flex">
-                                            <Plus size={10} strokeWidth={3} />
-                                          </div>
-                                        )}
+                                         {/* Plus separator */}
+                                         {idx < combo.items.length - 1 && (
+                                           <div className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 text-gray-400 bg-gray-100 p-1 rounded-full border-2 border-white shadow-xs pointer-events-none hidden md:flex">
+                                             <Plus size={10} strokeWidth={3} />
+                                           </div>
+                                         )}
                                       </div>
                                     </SwiperSlide>
                                   );
