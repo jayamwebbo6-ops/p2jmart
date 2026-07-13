@@ -257,8 +257,8 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
               sub => (sub._id || sub.id) === subcategoryId
             );
             if (matchedSub) {
-              setCategoryName(cat.name);
-              setSubcategoryName(matchedSub.name || matchedSub);
+              setCategoryName(cat.name || 'Shop');
+              setSubcategoryName(matchedSub.name || 'Catalog');
               break;
             }
           }

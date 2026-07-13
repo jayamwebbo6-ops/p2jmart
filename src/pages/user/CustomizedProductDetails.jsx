@@ -32,6 +32,8 @@ const fileToBase64 = (file) => {
   });
 };
 
+let lastProcessedCustomizationPrompt = null;
+
 const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWishlist }) => {
   const { productId } = useParams();
   const location = useLocation();
@@ -41,8 +43,16 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
   const [loadedProduct, setLoadedProduct] = useState(incomingProduct || null);
   const [loading, setLoading] = useState(!incomingProduct);
 
-  const [categoryName, setCategoryName] = useState('');
-  const [subcategoryName, setSubcategoryName] = useState('');
+  const [categoryName, setCategoryName] = useState(
+    typeof incomingProduct?.category === 'object' && incomingProduct?.category?.name
+      ? incomingProduct.category.name
+      : (typeof incomingProduct?.category === 'string' ? incomingProduct.category : 'Shop')
+  );
+  const [subcategoryName, setSubcategoryName] = useState(
+    typeof incomingProduct?.subcategory === 'object' && incomingProduct?.subcategory?.name
+      ? incomingProduct.subcategory.name
+      : (typeof incomingProduct?.subcategory === 'string' ? incomingProduct.subcategory : '')
+  );
 
   const subcategoryId = typeof loadedProduct?.subcategory === 'object' 
     ? loadedProduct.subcategory._id || loadedProduct.subcategory.id 
@@ -60,8 +70,8 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
               sub => (sub._id || sub.id) === subcategoryId
             );
             if (matchedSub) {
-              setCategoryName(cat.name);
-              setSubcategoryName(matchedSub.name || matchedSub);
+              setCategoryName(cat.name || 'Shop');
+              setSubcategoryName(matchedSub.name || 'Catalog');
               break;
             }
           }
@@ -147,8 +157,8 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       originalPrice: defaultOriginalPrice,
       weight: defaultWeight,
       freeShipping: raw.freeShipping || 'No',
-      category: typeof raw.category === 'object' && raw.category?.name
-        ? raw.category.name 
+      category: typeof raw.category === 'object'
+        ? raw.category.name || 'Catalog'
         : (raw.category || 'Catalog'),
       variants: Array.isArray(raw.variants) ? raw.variants : []
     };
@@ -413,6 +423,34 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       if (addToWishlist) addToWishlist(product);
     }
   }, 1000);
+
+  useEffect(() => {
+    const promptToken = location.state?.promptCustomization;
+    if (promptToken && lastProcessedCustomizationPrompt !== promptToken) {
+      lastProcessedCustomizationPrompt = promptToken;
+      const customType = product.customizationType || 'Both';
+      if (customType === 'Both') {
+        toast.info("Please provide the required image and text customization below before adding to cart.");
+      } else if (customType === 'Image') {
+        toast.info("Please upload the required customization image below before adding to cart.");
+      } else if (customType === 'Text') {
+        toast.info("Please enter the required customization text below before adding to cart.");
+      }
+
+      // Smooth scroll to the customization section
+      setTimeout(() => {
+        const element = document.getElementById("customization-section");
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+
+      // Clean up state so refreshing or navigating doesn't keep showing the toast
+      const stateCopy = { ...location.state };
+      delete stateCopy.promptCustomization;
+      navigate(location.pathname, { replace: true, state: stateCopy });
+    }
+  }, [location.state, product.customizationType, location.pathname, navigate]);
 
   const validateCustomization = () => {
     if (product.customizeProduct !== 'Yes') return true;
@@ -882,7 +920,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
 
  
           {product.customizeProduct === 'Yes' && (
-            <div className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-4 mt-2">
+            <div id="customization-section" className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-4 mt-2">
               <div>
                 <h3 className="text-sm font-bold text-gray-900 tracking-wide">Customize This Product</h3>
                 <p className="text-[11px] text-gray-400 mt-0.5">

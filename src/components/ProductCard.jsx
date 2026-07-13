@@ -137,11 +137,14 @@ const ProductCard = ({
 
   const handleWishlistClick = useThrottledCallback((e) => {
     e.stopPropagation();
+    console.log("Wishlist click product:", product);
     const targetId = product.id || product._id;
+    console.log("targetId:", targetId, "isWishlisted:", isWishlisted);
+    console.log("onWishlist prop function:", onWishlist);
     if (isWishlisted) {
-      onRemoveWishlist?.(targetId);
+      if (onRemoveWishlist) onRemoveWishlist(targetId);
     } else {
-      onWishlist?.(product);
+      if (onWishlist) onWishlist(product);
     }
   }, 1000);
 
@@ -152,9 +155,8 @@ const ProductCard = ({
       return;
     }
     if (product?.customizeProduct === 'Yes') {
-      toast.info('Please provide customization (upload image or text) before adding to cart.');
       const targetId = product.id || product._id;
-      navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
+      navigate(`/customizedProductDetail/${targetId}`, { state: { product, promptCustomization: Date.now() } });
       return;
     }
     onAddToCart?.(product);
