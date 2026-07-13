@@ -4,6 +4,7 @@ import ProductCard from "../../components/ProductCard";
 import OfferFilter from "../../components/OfferFilter";
 import { getProductsAPI } from "../../api/productApi";
 import { getCategoriesAPI, getSubcategoryDetailsAPI } from "../../api/categoryApi";
+import SEO from "../../components/SEO";
 
 /* ==========================================================================
    ISOLATED SMOOTH PRICE SLIDER SUB-COMPONENT
@@ -391,6 +392,11 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
 
   return (
     <div className="w-full pt-4 max-w-[1440px] mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-2 sm:px-4 lg:px-6">
+      <SEO 
+        title={isCustomizedPage ? "Customized Products | P2J Mart" : `${subcategoryName} - P2J Mart`}
+        description={isCustomizedPage ? "Explore our customized products at P2J Mart." : `Shop the best collection of ${subcategoryName} online at P2J Mart. High-quality personalized gifts, customized prints, combo packs, and more.`}
+        url={isCustomizedPage ? `${window.location.origin}/customized` : `${window.location.origin}/sub-category/${subcategoryId}`}
+      />
       
       {/* Page Breadcrumbs */}
       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium mb-2 flex-wrap">
