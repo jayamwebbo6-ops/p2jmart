@@ -589,7 +589,7 @@ export default function SalesAnalytics() {
 
         {/* Secondary Metrics Row */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <MetricCard label="Net Sales" value={fmt(stats.netSales)} subtext="After GST" colors={COLORS} />
+       
           <MetricCard label="Cancelled Orders" value={stats.cancelledOrders} subtext="Total voids" colors={COLORS} warning />
           <MetricCard label="Lost Revenue" value={fmt(stats.cancelledValue)} subtext="From cancellations" colors={COLORS} />
         </div>

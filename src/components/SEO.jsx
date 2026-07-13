@@ -3,13 +3,17 @@ import { Helmet } from 'react-helmet-async';
 
 const SEO = ({ title, description, keywords, image, url, type = 'website', seo }) => {
   const siteName = "P2J Mart";
-  const defaultDescription = "Your one-stop destination for gifts, combos, and custom prints.";
+  const defaultTitle = "P2J Mart | Customized Gifts, Personalized Combo Packs & Custom Printing";
+  const defaultDescription = "Discover P2J Mart - India's premium destination for personalized customized gifts, custom prints, mugs, photo frames, and handpicked combo gift packs for every occasion. Fast shipping & secure checkout.";
+  const defaultKeywords = "customized gifts, personalized gifts online, custom printing, photo mugs online, customized photo frames, combo gift packs, anniversary gifts, corporate gifting, P2J Mart";
   
   // Resolve host/env logic for production vs demo
   const isProduction = 
     import.meta.env.VITE_ENABLE_SEO === 'true' || 
     window.location.hostname === 'p2jmart.com' || 
-    window.location.hostname === 'www.p2jmart.com';
+    window.location.hostname === 'www.p2jmart.com' ||
+    window.location.hostname === 'p2jmart.in' ||
+    window.location.hostname === 'www.p2jmart.in';
 
   // Fallback default image resolving absolute URL if relative
   const getAbsoluteImageUrl = (imgSrc) => {
@@ -27,12 +31,12 @@ const SEO = ({ title, description, keywords, image, url, type = 'website', seo }
     return str.length > maxLength ? str.substring(0, maxLength) : str;
   };
 
-  const rawTitle = seo?.title || (title ? `${title} | ${siteName}` : siteName);
+  const rawTitle = seo?.title || title || defaultTitle;
   const rawDescription = seo?.description || description || defaultDescription;
 
   const seoTitle = truncate(rawTitle, 120);
   const seoDescription = truncate(rawDescription, 160);
-  const seoKeywords = seo?.keywords || keywords;
+  const seoKeywords = seo?.keywords || keywords || defaultKeywords;
   const seoImage = getAbsoluteImageUrl(seo?.image || image);
   const currentUrl = seo?.canonicalUrl || url || window.location.href;
 

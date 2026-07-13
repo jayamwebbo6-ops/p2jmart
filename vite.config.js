@@ -9,7 +9,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   // Format the base URL to always start and end with a slash
-  const baseUrl = env.BASE_URL ? `/${env.BASE_URL.replace(/^\/|\/$/g, '')}/` : '/';
+  let baseUrl = '/';
+  if (env.BASE_URL && env.BASE_URL !== '/') {
+    baseUrl = `/${env.BASE_URL.replace(/^\/|\/$/g, '')}/`;
+  }
 
   return {
     base: baseUrl,
