@@ -172,6 +172,17 @@ function App() {
                 />
               } 
             />
+            <Route 
+              path="subcategory/:subcategoryId/:id" 
+              element={
+                <ProductDetail 
+                  onAddToCart={addToCart} 
+                  addToWishlist={addToWishlist}
+                  wishlist={wishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
             
             <Route path="privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/products/:id/reviews" element={<ProductReviews />} />
@@ -251,7 +262,7 @@ function App() {
 
 
 
-           <Route 
+            <Route 
               path="sub-category" 
               element={
                 <Subcategory 
@@ -263,7 +274,29 @@ function App() {
               } 
             />
             <Route 
+              path="subcategory" 
+              element={
+                <Subcategory 
+                  wishlist={wishlist}
+                  addToWishlist={addToWishlist}
+                  removeFromWishlist={removeFromWishlist}
+                  onAddToCart={addToCart}
+                />
+              } 
+            />
+            <Route 
               path="sub-category/:subcategoryId" 
+              element={
+                <Subcategory 
+                  wishlist={wishlist}
+                  addToWishlist={addToWishlist}
+                  removeFromWishlist={removeFromWishlist}
+                  onAddToCart={addToCart}
+                />
+              } 
+            />
+            <Route 
+              path="subcategory/:subcategoryId" 
               element={
                 <Subcategory 
                   wishlist={wishlist}
