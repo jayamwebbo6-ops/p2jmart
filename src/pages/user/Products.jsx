@@ -88,7 +88,7 @@ const CategoryRow = memo(({ category }) => {
       <div 
         ref={scrollRef}
         onScroll={checkScroll}
-        className="flex overflow-x-auto gap-6 md:gap-12 pb-4 scrollbar-hide snap-x px-2"
+        className="flex overflow-x-auto gap-6 md:gap-12 scrollbar-hide snap-x px-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {category.subcategories && category.subcategories.map((sub, idx) => {
@@ -141,7 +141,7 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
 
   return (
     <div ref={ref}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6 ">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-4 ">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
         <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -188,7 +188,7 @@ const Products = () => {
       <div className="max-w-7xl mx-auto w-full flex flex-col h-full px-4">
 
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
           <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
             <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -210,7 +210,7 @@ const Products = () => {
           ) : (
             <div className="space-y-10">
               {categories.map((category) => (
-                <div key={category._id || category.id} className="pb-4">
+                <div key={category._id || category.id} >
                   <CategoryRow category={category} />
                 </div>
               ))}
