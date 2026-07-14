@@ -44,7 +44,7 @@ const CategoryPage = () => {
 
   return (
     <div className="w-full max-w-none  bg-gray-50 font-sans text-gray-800 antialiased selection:bg-primary selection:text-white flex flex-col gap-4">
-      <main className="w-full py-2">
+      <main className="w-full">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
           {categoryData.slice(0, 3).map((category, index) => {
             const categoryId = category._id || category.id || category.targetUrl?.split('catId=')[1];
@@ -60,13 +60,14 @@ const CategoryPage = () => {
                   {/* Scrim overlay for font visibility */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/5 z-10" />
                   
-                  <img
-                    src={category.image}
-                    alt={category.title || "Category Image"}
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full h-full object-cover transform scale-100 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
-                  />
+                 <img
+  src={category.image}
+  alt={category.title || "Category Image"}
+  loading="lazy"
+  decoding="async"
+  /* Changed object-cover to object-contain */
+  className="w-full h-full object-contain transform scale-100 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+/>
 
                   {/* Content Overlay Layout */}
                   <div className="absolute inset-0 z-20 p-4 flex flex-col justify-end items-start gap-2.5">

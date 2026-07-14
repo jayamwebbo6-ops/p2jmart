@@ -88,7 +88,7 @@ const Collections = () => {
       
       {/* Banner */}
       <section className="bg-primary text-white w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] overflow-x-hidden">
-  <div className="px-6 py-11 flex flex-col md:flex-row items-center justify-between gap-5 max-w-7xl mx-auto w-full">
+  <div className="px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-5 max-w-7xl mx-auto w-full">
     
     <div className="flex items-center gap-4">
       <Send size={48} className="text-white/60 shrink-0" />
@@ -118,7 +118,7 @@ const Collections = () => {
 
       {/* Real Live Products Sections */}
     {/* CHANGED: Added w-full px-4 md:px-6 lg:px-0 to handle edge-to-edge on small screens */}
-<section className="pt-8 w-full max-w-7xl mx-auto lg:px-0">
+<section className="pt-4 w-full max-w-7xl mx-auto lg:px-0">
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
     {sections.map((section) => {
       if (section.products.length === 0) return null;
@@ -129,7 +129,7 @@ const Collections = () => {
           className="bg-white border border-gray-200  flex flex-col justify-between shadow-xs rounded-sm"
         >
           <div>
-            <div className="flex items-center justify-center pt-4 mb-4">
+            <div className="flex items-center justify-center pt-3 mb-3">
               <h2 className="text-xl font-medium text-gray-800 ">
                 {section.title}
               </h2> 
@@ -150,7 +150,7 @@ const Collections = () => {
                   <Link
                     key={productId}
                     to={`/product/${productId}`}
-                    className="border border-gray-200 rounded-xs p-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
+                    className="border border-gray-200 rounded-xs p-1.5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 bg-white flex flex-col justify-between group"
                   >
                     <div className="aspect-square bg-gray-50/50 rounded overflow-hidden flex items-center justify-center">
                       <img
@@ -158,7 +158,7 @@ const Collections = () => {
                         alt={product.title || "Product Image"}
                         loading="lazy"
                         decoding="async"
-                        className="w-full h-full object-contain p-1 group-hover:scale-[1.02] transition-transform duration-300"
+                        className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300"
                         onError={(e) => {
                           e.target.src = "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500&q=80";
                         }}

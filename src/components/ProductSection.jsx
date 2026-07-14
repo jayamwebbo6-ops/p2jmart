@@ -96,7 +96,7 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
               <img 
                 src={bannerImage} 
                 alt={`${title} Banner`}
-                className="absolute inset-0 w-full h-full object-cover transform scale-100 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+                className="absolute inset-0 w-full h-full object-contain transform scale-100 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
               />
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-900" />
