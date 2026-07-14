@@ -65,7 +65,7 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
   }, []);
 
   return (
-    <div className="w-full flex flex-col gap-10">
+    <div className="w-full flex flex-col gap-5">
       <SEO 
         title={cmsData?.seo?.metaTitle}
         description={cmsData?.seo?.metaDescription}

@@ -599,7 +599,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       </div>
 
       {/* Main Container Layout */}
-      <div className="w-full px-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative mt-4">        
+      <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-6 items-start max-w-[2500px] mx-auto relative mt-4">        
         {/* Left Column Image Layout: Swiper when <= 638px, Grid Desk layout when larger */}
         <div className="col-span-1 md:col-span-7 w-full min-w-0 relative">        
           {/* Mobile Swiper: Targets screens 638px and below exclusively */}
@@ -683,7 +683,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         </div>
 
         {/* Right Details Panel Dashboard */}
-        <div className="col-span-1 md:col-span-5 px-4 flex flex-col gap-3 w-full min-w-0 relative">
+        <div className="col-span-1 md:col-span-5 flex flex-col gap-3 w-full min-w-0 relative">
           <div className='flex flex-col gap-3'>
                       <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
 
@@ -920,7 +920,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
 
  
           {product.customizeProduct === 'Yes' && (
-            <div id="customization-section" className="w-full border border-gray-200/80 rounded-lg p-4 bg-gray-50/30 flex flex-col gap-4 mt-2">
+            <div id="customization-section" className="w-full border border-gray-200/80 rounded-lg bg-gray-50/30 flex flex-col gap-4 mt-2">
               <div>
                 <h3 className="text-sm font-bold text-gray-900 tracking-wide">Customize This Product</h3>
                 <p className="text-[11px] text-gray-400 mt-0.5">
@@ -980,7 +980,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       </div>
 
       {/* Info Specifications Tabs */}
-      <div className="w-full max-w-[2500px] mx-auto px-4 mt-6">
+      <div className="w-full max-w-[2500px] mt-6">
         <div className="border-b border-gray-200 flex items-center">
           <button className="border-b-2 border-blue-900 px-4 py-2.5 text-xs font-bold uppercase text-blue-900 tracking-wider">
             Additional Info Specification
@@ -998,12 +998,12 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
 
       {/* Related Products Section */}
       {relatedProducts.length > 0 && (
-        <div className="w-full max-w-[2500px] mx-auto px-4 mt-12 mb-10">
+        <div className="w-full max-w-[2500px] mt-12 mb-10">
           <h2 className="text-lg font-bold text-gray-900 mb-6 tracking-tight relative pb-2 after:absolute after:bottom-0 after:left-0 after:w-12 after:h-0.5 after:bg-blue-600">
             Related Customized Products
           </h2>
 
-          <div className="relative px-8 flex items-center">
+          <div className="relative flex items-center">
             <button className="rel-custom-prev absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
               <ChevronLeft size={18} className="text-gray-700" />
             </button>
@@ -1062,7 +1062,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       )}
 
       {/* Product Reviews Section */}
-      <div className="w-full max-w-[2500px] mx-auto px-4 mt-8">
+      <div className="w-full max-w-[2500px] mt-8">
         <ProductReviews
           productId={product.id}
           initialRating={product.rating}

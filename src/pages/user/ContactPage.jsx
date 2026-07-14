@@ -167,7 +167,7 @@ export default function ContactPage() {
     <div className="w-full pt-7 min-h-screen bg-[#f5f5f5]">
       {/* Contact Cards */}
       {/* This grid stays 1 column until exactly 850px, then becomes 3 columns */}
-<div className="grid grid-cols-1 px-4 min-[570px]:grid-cols-2 min-[800px]:grid-cols-3 gap-6 w-full">
+<div className="grid grid-cols-1 min-[570px]:grid-cols-2 min-[800px]:grid-cols-3 gap-6 w-full">
   {/* ADDRESS CARD */}
   <div className="group bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 py-6 px-4 text-center flex flex-col justify-between min-h-[220px]">
     <div>
@@ -274,7 +274,7 @@ export default function ContactPage() {
 </div>
 
       {/* Form & Map */}
-      <div className="grid lg:grid-cols-2 px-4 gap-8 mt-9 items-stretch">
+      <div className="grid lg:grid-cols-2 gap-8 mt-9 items-stretch">
         {/* Left */}
         <div className="flex flex-col h-full">
           <h2 className="text-3xl font-bold text-gray-900">

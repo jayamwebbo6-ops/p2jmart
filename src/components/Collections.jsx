@@ -118,7 +118,7 @@ const Collections = () => {
 
       {/* Real Live Products Sections */}
     {/* CHANGED: Added w-full px-4 md:px-6 lg:px-0 to handle edge-to-edge on small screens */}
-<section className="pt-12 w-full max-w-7xl mx-auto lg:px-0">
+<section className="pt-8 w-full max-w-7xl mx-auto lg:px-0">
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
     {sections.map((section) => {
       if (section.products.length === 0) return null;
@@ -129,7 +129,7 @@ const Collections = () => {
           className="bg-white border border-gray-200  flex flex-col justify-between shadow-xs rounded-sm"
         >
           <div>
-            <div className="flex items-center justify-center mb-4">
+            <div className="flex items-center justify-center pt-4 mb-4">
               <h2 className="text-xl font-medium text-gray-800 ">
                 {section.title}
               </h2> 

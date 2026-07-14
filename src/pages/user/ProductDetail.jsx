@@ -740,7 +740,7 @@ useEffect(() => {
         </div>
 
         {/* Product Media Gallery + Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start w-full max-w-[2500px] mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start w-full max-w-[2500px]">
           {/* Left: Images */}
           <div className="col-span-1 md:col-span-7 w-full min-w-0">
             {/* Mobile Slider */}
@@ -837,7 +837,7 @@ useEffect(() => {
           </div>
 
           {/* Right: Info */}
-          <div className="col-span-1 md:col-span-5 w-full px-4 min-w-0 flex flex-col gap-3">
+          <div className="col-span-1 md:col-span-5 w-full min-w-0 flex flex-col gap-3">
             {product.brand && <span className="text-blue-600 font-bold text-xs sm:text-sm">{product.brand}</span>}
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">{product.title}</h1>
             
@@ -1035,7 +1035,7 @@ useEffect(() => {
         </div>
 
         {/* Specifications Block */}
-        <div className="w-full max-w-[2500px] mx-auto px-4 mt-6">
+        <div className="w-full max-w-[2500px] mt-6">
           <div className="border-b border-gray-200 flex items-center">
             <button className="border-b-2 border-blue-900 px-4 py-2.5 text-xs font-bold uppercase text-blue-900 tracking-wider">
               Additional Info Specification
@@ -1063,76 +1063,106 @@ useEffect(() => {
 />
 
         {/* You May Also Like Section */}
-        {relatedProducts.length > 0 && (
-          <div className="w-full mt-2 bg-white rounded-xl p-4 sm:p-6 border border-gray-200 shadow-2xs">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-2">
-                  You May Also Like
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Handpicked recommendations based on your current selection
-                </p>
+ {relatedProducts.length > 0 && (
+  <div className="w-full mt-2 bg-white rounded-xl p-2.5 xs:p-4 sm:p-6 border border-gray-200 shadow-2xs overflow-hidden">
+    {/* Header Section */}
+    <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 mb-4 sm:mb-6">
+      <div>
+        <h3 className="text-base sm:text-lg md:text-xl font-black text-gray-900 flex items-center gap-2 leading-tight">
+          You May Also Like
+        </h3>
+        <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 leading-normal">
+          Handpicked recommendations based on your current selection
+        </p>
+      </div>
+
+      {/* Navigation Buttons for Small Screens (Hidden on mobile side, shown in header instead for < 480px) */}
+      <div className="flex items-center gap-2 self-end xs:self-auto sm:hidden">
+        <button className="related-prev-btn w-8 h-8 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+          <ChevronLeft size={16} className="text-gray-700" />
+        </button>
+        <button className="related-next-btn w-8 h-8 rounded-full bg-white border border-gray-200 shadow-xs flex items-center justify-center hover:bg-gray-50 active:bg-gray-100 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+          <ChevronRight size={16} className="text-gray-700" />
+        </button>
+      </div>
+    </div>
+
+    {/* Swiper Wrapper */}
+    <div className="relative px-0 sm:px-8 flex items-center">
+      {/* Desktop/Tablet Left Button (Hidden below sm: 640px to prevent card overlap) */}
+      <button className="related-prev-btn absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hidden sm:flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+        <ChevronLeft size={18} className="text-gray-700" />
+      </button>
+
+      <Swiper
+        modules={[Navigation]}
+        navigation={{
+          prevEl: '.related-prev-btn',
+          nextEl: '.related-next-btn',
+        }}
+        spaceBetween={12}
+        slidesPerView={1}
+        breakpoints={{
+          // Ultra-small screens / smartwatch sizes (200px - 319px)
+          200: {
+            slidesPerView: 1,
+            spaceBetween: 8
+          },
+          // Standard mobile portrait (320px - 479px)
+          320: {
+            slidesPerView: 1.2,
+            spaceBetween: 12
+          },
+          // Mobile landscape / phablets (480px - 767px)
+          480: {
+            slidesPerView: 2,
+            spaceBetween: 16
+          },
+          // Tablets (768px - 1023px)
+          768: {
+            slidesPerView: 3,
+            spaceBetween: 18
+          },
+          // Small Laptops / Desktops (1024px - 1199px)
+          1024: {
+            slidesPerView: 3,
+            spaceBetween: 20
+          },
+          // Large Desktops (1200px+)
+          1200: {
+            slidesPerView: 4,
+            spaceBetween: 20
+          }
+        }}
+        className="w-full"
+      >
+        {relatedProducts.map((p) => {
+          const pId = p._id || p.id;
+          const isSaved = wishlist.some(item => (item.id || item._id) === pId);
+          return (
+            <SwiperSlide key={pId} className="py-1">
+              <div className="w-full h-full min-w-0"> {/* Prevents flex-child blowouts in older engines */}
+                <ProductCard 
+                  product={p} 
+                  isWishlisted={isSaved}
+                  onWishlist={addToWishlist}
+                  onRemoveWishlist={removeFromWishlist}
+                  onAddToCart={onAddToCart}
+                  onClick={() => navigate(`/product/${pId}`, { state: { product: p } })}
+                />
               </div>
-            </div>
+            </SwiperSlide>
+          );
+        })}
+      </Swiper>
 
-            <div className="relative px-8 flex items-center">
-              <button className="related-prev-btn absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
-                <ChevronLeft size={18} className="text-gray-700" />
-              </button>
-
-              <Swiper
-                modules={[Navigation]}
-                navigation={{
-                  prevEl: '.related-prev-btn',
-                  nextEl: '.related-next-btn',
-                }}
-                spaceBetween={20}
-                slidesPerView={4}
-                breakpoints={{
-                  320: {
-                    slidesPerView: 1.2,
-                    spaceBetween: 12
-                  },
-                  480: {
-                    slidesPerView: 2,
-                    spaceBetween: 16
-                  },
-                  768: {
-                    slidesPerView: 3,
-                    spaceBetween: 18
-                  },
-                  1200: {
-                    slidesPerView: 4,
-                    spaceBetween: 20
-                  }
-                }}
-                className="w-full"
-              >
-                {relatedProducts.map((p) => {
-                  const pId = p._id || p.id;
-                  const isSaved = wishlist.some(item => (item.id || item._id) === pId);
-                  return (
-                    <SwiperSlide key={pId} className="py-1">
-                      <ProductCard 
-                        product={p} 
-                        isWishlisted={isSaved}
-                        onWishlist={addToWishlist}
-                        onRemoveWishlist={removeFromWishlist}
-                        onAddToCart={onAddToCart}
-                        onClick={() => navigate(`/product/${pId}`, { state: { product: p } })}
-                      />
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
-
-              <button className="related-next-btn absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
-                <ChevronRight size={18} className="text-gray-700" />
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Desktop/Tablet Right Button (Hidden below sm: 640px) */}
+      <button className="related-next-btn absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 shadow-sm hidden sm:flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-30 disabled:pointer-events-none cursor-pointer">
+        <ChevronRight size={18} className="text-gray-700" />
+      </button>
+    </div>
+  </div>
+)}
             <ProductReviews
           productId={product.id}
           initialRating={product.rating}

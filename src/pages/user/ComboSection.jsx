@@ -311,7 +311,7 @@ const isCurrent =
 
 
   return (
-    <div id="main-combo-workspace" className="w-full px-4 mt-10">
+    <div id="main-combo-workspace" className="w-full mt-10">
       {/* Title Section Heading Layout */}
       <div className="mb-5">
         <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-extrabold tracking-wider px-2.5 py-1 rounded-full uppercase border border-emerald-100">
@@ -326,7 +326,7 @@ const isCurrent =
       </div>
 
       {/* Main Workspace Layout displaying Current Focus Package */}
-      <div className="bg-gray-50 rounded-xl p-4 sm:p-6 border border-gray-200">
+      <div className="bg-gray-50 rounded-xl sm:p-6 border border-gray-200">
         <div className="flex items-center gap-2 mb-4">
           <h4 className="text-sm font-black text-gray-900">{activeCombo.title}</h4>
           <span className="flex items-center gap-1 text-xs bg-amber-50 border border-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
@@ -483,22 +483,23 @@ const isCurrent =
                   )}
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleAddBundleToCart(activeCombo, selectedComboUniqueKeys)}
-                  disabled={!isFullComboSelected}
-                  className="w-full border border-gray-300 py-2 text-xs rounded-md font-bold hover:bg-gray-50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Bundle to Cart
-                </button>
-                <button
-                  onClick={() => handleAddBundleToBuy(activeCombo, selectedComboUniqueKeys)}
-                  disabled={!isFullComboSelected}
-                  className="w-full bg-[#003147] text-white py-2 text-xs rounded-md font-bold hover:bg-[#002232] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Buy Bundle Set
-                </button>
-              </div>
+            <div className="grid grid-cols-1 min-[340px]:grid-cols-2 gap-2 w-full">
+  <button
+    onClick={() => handleAddBundleToCart(activeCombo, selectedComboUniqueKeys)}
+    disabled={!isFullComboSelected}
+    className="w-full border border-gray-300 py-2.5 px-2 text-xs rounded-md font-bold hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center whitespace-nowrap overflow-hidden text-ellipsis min-w-0"
+  >
+    Bundle to Cart
+  </button>
+  
+  <button
+    onClick={() => handleAddBundleToBuy(activeCombo, selectedComboUniqueKeys)}
+    disabled={!isFullComboSelected}
+    className="w-full bg-[#003147] text-white py-2.5 px-2 text-xs rounded-md font-bold hover:bg-[#002232] active:bg-[#00141d] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center whitespace-nowrap overflow-hidden text-ellipsis min-w-0"
+  >
+    Buy Bundle Set
+  </button>
+</div>
             </div>
           </div>
         </div>
