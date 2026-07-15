@@ -23,8 +23,8 @@ const Wishlist = ({ wishlist = [], removeFromWishlist, addToCart }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto  py-8">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-7xl mx-auto  pt-4">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
           My Wishlist
         </h1>

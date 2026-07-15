@@ -65,7 +65,7 @@ const CategoryPage = () => {
   alt={category.title || "Category Image"}
   loading="lazy"
   decoding="async"
-  /* Changed object-cover to object-contain */
+ 
   className="w-full h-full object-contain transform scale-100 group-hover:scale-[1.03] transition-transform duration-500 ease-out"
 />
 

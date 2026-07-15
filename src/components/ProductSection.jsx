@@ -41,7 +41,7 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
   return (
     <div className="w-full mt-2">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-gray-200 pb-3">
+      <div className="flex justify-between items-center border-b border-gray-200 pb-2">
         <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
         <button 
           onClick={handleNavigation}

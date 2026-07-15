@@ -40,7 +40,7 @@ const UserLayout = ({ wishlist = [], cart = [] }) => {
     <div className="min-h-screen bg-[#FDFDFB] flex flex-col font-sans">
       <Header wishlist={wishlist} cart={cart} />
       {/* REMOVED layout side padding here so children control their full alignment bounds */}
-      <main className="w-full flex-1 pb-4 px-4">
+      <main className="w-full flex-1 px-4">
         <Outlet />
       </main>
       <Footer />

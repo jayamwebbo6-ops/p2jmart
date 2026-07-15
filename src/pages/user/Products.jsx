@@ -68,18 +68,18 @@ const CategoryRow = memo(({ category }) => {
             type="button"
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+            className={`w-6 h-6 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           
           <button 
             type="button"
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+            className={`w-6 h-6 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
       </div>
@@ -100,13 +100,13 @@ const CategoryRow = memo(({ category }) => {
               key={subId}
               type="button"
               onClick={() => navigate(`/sub-category/${subId}`)}
-              className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
+              className="flex flex-col items-center flex-shrink-0 snap-start group w-33 md:w-44 bg-transparent border-0 outline-none text-left"
             >
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">
                 <img 
                   src={getSubcategoryImage(category.name, subName, idx, sub.image)} 
                   alt={subName}
-                  className="w-full h-full object-contain p-2"
+                  className="w-full h-full object-contain"
                   loading="lazy"
                   onError={(e) => {
                     e.target.src = "https://via.placeholder.com/150?text=No+Image";
@@ -185,7 +185,7 @@ const Products = () => {
             display: none;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto w-full flex flex-col h-full px-4">
+      <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
 
         {/* Page Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-4">
