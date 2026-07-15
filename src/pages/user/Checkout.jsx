@@ -865,42 +865,50 @@ const Checkout = ({
     <div className="max-w-4xl mx-auto px-3 sm:px-4 font-sans">
       
       {/* Steps Indicator Section */}
-      <div className="flex items-center justify-center gap-4 my-8">
-        <div className="flex items-center">
-          {step === 1 ? (
-            <div className="flex items-center bg-primary text-white px-5 py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-2 font-bold text-xs sm:text-sm">
-              <span className="w-5 h-5 rounded-full bg-[#001f2e] flex items-center justify-center text-[10px] sm:text-xs">01</span>
-              <span>Address</span>
-            </div>
-          ) : (
-            <button 
-              onClick={() => setStep(1)}
-              className="flex items-center bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-full gap-2 font-bold text-xs sm:text-sm transition-all"
-            >
-              <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-[10px] sm:text-xs">
-                <Check size={10} strokeWidth={4} />
-              </span>
-              <span>Address</span>
-            </button>
-          )}
-        </div>
-
-        <div className={`w-12 sm:w-16 h-[2px] ${step === 2 ? 'bg-primary' : 'bg-gray-300'} transition-all`}></div>
-
-        <div className="flex items-center">
-          {step === 2 ? (
-            <div className="flex items-center bg-primary text-white px-5 py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-2 font-bold text-xs sm:text-sm">
-              <span className="w-5 h-5 rounded-full bg-[#001f2e] flex items-center justify-center text-[10px] sm:text-xs">02</span>
-              <span>Payment</span>
-            </div>
-          ) : (
-            <div className="flex items-center text-gray-400 gap-2 font-medium text-xs sm:text-sm">
-              <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] sm:text-xs">02</span>
-              <span>Payment</span>
-            </div>
-          )}
-        </div>
+    <div className="flex items-center justify-center w-full max-w-xl mx-auto my-5 px-4 gap-2 sm:gap-4">
+  {/* STEP 1 */}
+  <div className="flex items-center shrink-0">
+    {step === 1 ? (
+      <div className="flex items-center bg-primary text-white px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm transition-all">
+        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#001f2e] flex items-center justify-center text-[9px] sm:text-xs shrink-0">01</span>
+        <span>Address</span>
       </div>
+    ) : (
+      <button 
+        onClick={() => setStep(1)}
+        className="flex items-center bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-full gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm transition-all"
+      >
+        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary text-white flex items-center justify-center text-[9px] sm:text-xs shrink-0">
+          <Check size={10} strokeWidth={4} />
+        </span>
+        <span className="hidden min-[400px]:inline">Address</span>
+      </button>
+    )}
+  </div>
+
+  {/* CONNECTING LINE */}
+  <div className="flex-1 max-w-[64px] h-[2px] relative bg-gray-300 rounded overflow-hidden transition-all">
+    <div 
+      className="absolute top-0 left-0 h-full bg-primary transition-all duration-300" 
+      style={{ width: step >= 2 ? '100%' : '0%' }}
+    />
+  </div>
+
+  {/* STEP 2 */}
+  <div className="flex items-center shrink-0">
+    {step === 2 ? (
+      <div className="flex items-center bg-primary text-white px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-full shadow-[0_4px_10px_rgba(0,49,71,0.2)] gap-1.5 sm:gap-2 font-bold text-xs sm:text-sm transition-all">
+        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#001f2e] flex items-center justify-center text-[9px] sm:text-xs shrink-0">02</span>
+        <span>Payment</span>
+      </div>
+    ) : (
+      <div className="flex items-center text-gray-400 gap-1.5 sm:gap-2 font-medium text-xs sm:text-sm px-1">
+        <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-[9px] sm:text-xs shrink-0">02</span>
+        <span className="hidden min-[400px]:inline">Payment</span>
+      </div>
+    )}
+  </div>
+</div>
 
       {/* STEP 1: ADDRESS SELECTION */}
       {step === 1 && (
