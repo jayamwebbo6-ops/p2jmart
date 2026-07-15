@@ -327,7 +327,7 @@ const isCurrent =
 
       {/* Main Workspace Layout displaying Current Focus Package */}
       <div className="bg-gray-50 rounded-xl sm:p-6 border border-gray-200">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex px-2 pt-2 items-center gap-2 mb-4">
           <h4 className="text-sm font-black text-gray-900">{activeCombo.title}</h4>
           <span className="flex items-center gap-1 text-xs bg-amber-50 border border-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">
             ★ {activeCombo.rating.toFixed(1)} ({activeCombo.reviewCount})

@@ -51,7 +51,7 @@ const PriceSliderSection = ({ minPrice, maxPrice, absoluteMin = 0, absoluteMax =
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex px-2 pt-2 items-center gap-2 mb-4">
         <div className="w-1 h-6 bg-gray-800 rounded-sm"></div>
         <h3 className="font-bold text-lg text-gray-800">Price (₹)</h3>
       </div>
@@ -395,7 +395,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
       <SEO 
         title={isCustomizedPage ? "Customized Products | P2J Mart" : `${subcategoryName} - P2J Mart`}
         description={isCustomizedPage ? "Explore our customized products at P2J Mart." : `Shop the best collection of ${subcategoryName} online at P2J Mart. High-quality personalized gifts, customized prints, combo packs, and more.`}
-        url={isCustomizedPage ? `${window.location.origin}/customized` : `${window.location.origin}/sub-category/${subcategoryId}`}
+        url={isCustomizedPage ? `${window.location.origin}/customized` : `${window.location.origin}/${subcategoryId}`}
       />
       
       {/* Page Breadcrumbs */}
@@ -488,12 +488,15 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
               onRemoveWishlist={removeFromWishlist}
               onAddToCart={onAddToCart}
               onClick={() => {
+                const productSlug = product.slug || productId;
+                const subcategorySlug = product.subcategory?.slug || subcategoryId;
+
                 if (product.customizeProduct === 'Yes') {
-                  navigate(`/customizedProductDetail/${productId}`, { state: { product } });
-                } else if (subcategoryId) {
-                  navigate(`/sub-category/${subcategoryId}/${productId}`, { state: { product } });
+                  navigate(`/customizedProductDetail/${productSlug}`, { state: { product } });
+                } else if (subcategorySlug) {
+                  navigate(`/${subcategorySlug}/${productSlug}`, { state: { product } });
                 } else {
-                  navigate(`/product/${productId}`, { state: { product } });
+                  navigate(`/product/${productSlug}`, { state: { product } });
                 }
               }}
             />
