@@ -75,6 +75,18 @@ const ContactSocialSettings = ({ formData = {}, setFormData, onSave, isSaving })
               placeholder="Plot No 1, 3rd Street..."
             />
           </div>
+
+          {/* REGISTERED OFFICE ADDRESS CONTAINER */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black uppercase text-slate-500 tracking-wider block">Registered Office Address</label>
+            <textarea 
+              rows={4}
+              value={formData.registeredAddress || ''}
+              onChange={(e) => handleInputChange('registeredAddress', e.target.value)}
+              className="w-full bg-white border border-slate-200 focus:border-slate-400 rounded-xl p-4 text-sm font-semibold text-slate-800 focus:outline-none resize-none leading-relaxed transition-all"
+              placeholder="Buildings Alyssa, Begonia & Clove Embassy Tech Village, Outer Ring Road, Devarabeesanahalli Village, Bengaluru, 560103, Karnataka, India\nCIN: U51109KA2012PTC066107\nTelephone: +91 925537662"
+            />
+          </div>
         </div>
 
         {/* RIGHT COLUMN PANEL: SOCIAL INTERFACES INPUTS REGISTRY */}

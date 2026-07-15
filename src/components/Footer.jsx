@@ -116,15 +116,18 @@ const Footer = () => {
           {/* REGISTERED OFFICE */}
           <div className="text-center md:text-left flex flex-col items-center md:items-start col-span-1">
             <h4 className="text-white font-bold mb-4 text-[14px] tracking-wider">REGISTERED OFFICE ADDRESS</h4>
-            <div className="leading-relaxed mb-4 space-y-1 text-white max-w-xs text-center md:text-left">
-              <p className="m-0 text-[13px] text-white">Buildings Alyssa, Begonia &amp; Clove Embassy Tech Village,</p>
-              <p className="m-0 text-[13px] text-white">Outer Ring Road, Devarabeesanahalli Village,</p>
-              <p className="m-0 text-[13px] text-white">Bengaluru, 560103, Karnataka, India</p>
-              <p className="m-0 text-[13px] text-white">CIN: U51109KA2012PTC066107</p>
-              <p className="m-0 text-[13px] text-white font-medium mt-1">
-                Telephone: {contactData?.phones ? contactData.phones.split(',')[0] : "123-456-7890"}
-              </p>
-            </div>
+            
+            {isLoading ? (
+              <p className="text-[13px] text-gray-400 animate-pulse">Loading address data...</p>
+            ) : contactData ? (
+              <div className="w-full flex flex-col items-center md:items-start">
+                <p className="text-[13px] text-white leading-relaxed mb-4 break-words max-w-xs text-center md:text-left whitespace-pre-line">
+                  {contactData.registeredAddress || `Buildings Alyssa, Begonia & Clove Embassy Tech Village,\nOuter Ring Road, Devarabeesanahalli Village,\nBengaluru, 560103, Karnataka, India\nCIN: U51109KA2012PTC066107\nTelephone: ${contactData.phones ? contactData.phones.split(',')[0] : "123-456-7890"}`}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[13px] text-gray-400">Registered Office Address currently unavailable.</p>
+            )}
             
             <div className="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
               <img src={`${import.meta.env.BASE_URL}payment_logos/visa.jpg`} alt="Visa" className="h-6 w-9 object-contain rounded bg-white p-0.5" />
@@ -138,10 +141,10 @@ const Footer = () => {
         </div>
 
         {/* Divider */}
-        <hr className="border-gray-500/40 my-8" />
+        {/* <hr className="border-gray-500/40 my-8" /> */}
 
         {/* Middle Section: Value Props */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-center sm:text-left">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-center sm:text-left">
           <div className="flex flex-col items-center sm:items-start">
             <Truck size={32} className="text-[#1890ff] mb-3" strokeWidth={1.5} />
             <h5 className="text-white font-bold mb-1 text-[14px]">Free Delivery</h5>
@@ -163,7 +166,7 @@ const Footer = () => {
               Phasellus blandit massa enim elit, of passage varius nunc.
             </p>
           </div>
-        </div>
+        </div> */}
 
       </div>
 
