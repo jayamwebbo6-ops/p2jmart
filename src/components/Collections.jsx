@@ -118,7 +118,7 @@ const Collections = () => {
 
       {/* Real Live Products Sections */}
     {/* CHANGED: Added w-full px-4 md:px-6 lg:px-0 to handle edge-to-edge on small screens */}
-<section className="pt-4 w-full max-w-7xl mx-auto lg:px-0">
+<section className="pt-4 pb-4 w-full max-w-7xl mx-auto lg:px-0">
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
     {sections.map((section) => {
       if (section.products.length === 0) return null;

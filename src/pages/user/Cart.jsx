@@ -243,7 +243,7 @@ const Cart = ({
       </div>
 
       {/* Right Side Order Summary calculation box: Holds fixed 80px width ONLY at >=801px layout setups */}
-      <div className="w-full shrink-0 min-[801px]:w-80 bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col gap-4 min-w-0">
+      <div className="w-full shrink-0 min-[801px]:w-80 bg-white border border-gray-200 rounded-2xl mb-4 p-4 sm:p-5 shadow-sm flex flex-col gap-4 min-w-0">
         <h2 className="text-xs sm:text-base font-bold text-[#003147] border-b border-gray-100 pb-2">Order Summary</h2>
         
         <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-2.5">

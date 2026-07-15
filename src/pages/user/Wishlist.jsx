@@ -59,13 +59,7 @@ const Wishlist = ({ wishlist = [], removeFromWishlist, addToCart }) => {
           </Link>
         </div>
       ) : (
-        /* 
-          Grid Responsiveness breakdown:
-          - Default (below 350px): grid-cols-1 (1 column to prevent side-by-side breakage)
-          - From 350px to 825px: min-[350px]:grid-cols-2 (2 columns)
-          - From 825px to 1020px: min-[825px]:grid-cols-3 (3 columns)
-          - Above 1020px: min-[1020px]:grid-cols-4 (4 columns)
-        */
+       
         <div className="grid grid-cols-1 min-[350px]:grid-cols-2 min-[825px]:grid-cols-3 min-[1020px]:grid-cols-4 gap-3 xs:gap-4">
           {wishlist.map((product) => (
             <ProductCard
