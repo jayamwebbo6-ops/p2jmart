@@ -25,7 +25,8 @@ const Sidebar = () => {
             subcategories: Array.isArray(cat.subcategories) 
               ? cat.subcategories.map(sub => ({
                   id: sub._id || sub.id || sub,
-                  name: sub.name || sub
+                  name: sub.name || sub,
+                  slug: sub.slug || ''
                 }))
               : []
           }));
@@ -106,7 +107,7 @@ const Sidebar = () => {
                   {categories[hoveredIndex].subcategories.map((sub, i) => (
                     <li key={i}>
                       <Link 
-                        to={`/sub-category/${sub.id}`}
+                        to={sub.slug ? `/${sub.slug}` : `/sub-category/${sub.id}`}
                         className="group/sub flex items-center justify-between px-3 py-2 rounded-xl text-xs sm:text-[13px] font-bold text-gray-600 hover:text-[#009EDB] hover:bg-slate-50 transition-all duration-200"
                       >
                         <span className="truncate">{sub.name}</span>

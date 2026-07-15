@@ -195,6 +195,25 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
       : (typeof incomingProduct?.subcategory === 'string' ? incomingProduct.subcategory : '')
   );
 
+  useEffect(() => {
+    if (loadedProduct) {
+      if (loadedProduct.category) {
+        setCategoryName(
+          typeof loadedProduct.category === 'object' && loadedProduct.category.name
+            ? loadedProduct.category.name
+            : (typeof loadedProduct.category === 'string' ? loadedProduct.category : 'Shop')
+        );
+      }
+      if (loadedProduct.subcategory) {
+        setSubcategoryName(
+          typeof loadedProduct.subcategory === 'object' && loadedProduct.subcategory.name
+            ? loadedProduct.subcategory.name
+            : (typeof loadedProduct.subcategory === 'string' ? loadedProduct.subcategory : '')
+        );
+      }
+    }
+  }, [loadedProduct]);
+
   // Sync loadedProduct state if URL id or incomingProduct changes
   useEffect(() => {
     const fetchProduct = async (silent = false) => {
@@ -254,7 +273,7 @@ const ProductDetail = ({ onAddToCart, addToWishlist, wishlist = [], removeFromWi
         if (catRes && catRes.success && Array.isArray(catRes.data)) {
           for (const cat of catRes.data) {
             const matchedSub = (cat.subcategories || []).find(
-              sub => (sub._id || sub.id) === subcategoryId
+              sub => (sub._id || sub.id) === subcategoryId || sub.slug === subcategoryId
             );
             if (matchedSub) {
               setCategoryName(cat.name || 'Shop');
@@ -708,6 +727,14 @@ useEffect(() => {
     );
   }
 
+  const subcategorySlug = loadedProduct?.subcategory?.slug || subcategoryId;
+  const productSlug = loadedProduct?.slug || id;
+  const canonicalUrl = loadedProduct?.customizeProduct === 'Yes'
+    ? `${window.location.origin}/customizedProductDetail/${productSlug}`
+    : subcategorySlug && productSlug
+      ? `${window.location.origin}/${subcategorySlug}/${productSlug}`
+      : `${window.location.origin}/product/${productSlug}`;
+
   return (
     <div className="w-full font-sans mt-5">
       <SEO 
@@ -715,6 +742,7 @@ useEffect(() => {
         description={loadedProduct?.seo?.metaDescription || loadedProduct?.description?.substring(0, 155)}
         keywords={loadedProduct?.seo?.metaKeywords}
         image={loadedProduct?.image || (loadedProduct?.images && loadedProduct?.images[0])}
+        url={canonicalUrl}
       />
       <div className="w-full">
         {/* Breadcrumbs */}
@@ -728,7 +756,7 @@ useEffect(() => {
             <>
               <span className="text-gray-300">/</span>
               <Link 
-                to={`/sub-category/${subcategoryId}`}
+                to={loadedProduct?.subcategory?.slug ? `/${loadedProduct.subcategory.slug}` : `/sub-category/${subcategoryId}`}
                 className="hover:text-primary transition-colors cursor-pointer"
               >
                 {subcategoryName}

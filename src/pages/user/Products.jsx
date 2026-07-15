@@ -99,7 +99,7 @@ const CategoryRow = memo(({ category }) => {
             <button
               key={subId}
               type="button"
-              onClick={() => navigate(`/sub-category/${subId}`)}
+              onClick={() => navigate(sub.slug ? `/${sub.slug}` : `/sub-category/${subId}`)}
               className="flex flex-col items-center flex-shrink-0 snap-start group w-32 md:w-44 bg-transparent border-0 outline-none text-left"
             >
               <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border border-gray-200 shadow-sm overflow-hidden mb-4 bg-white transition-transform group-hover:shadow-md">

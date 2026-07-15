@@ -54,6 +54,25 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
       : (typeof incomingProduct?.subcategory === 'string' ? incomingProduct.subcategory : '')
   );
 
+  useEffect(() => {
+    if (loadedProduct) {
+      if (loadedProduct.category) {
+        setCategoryName(
+          typeof loadedProduct.category === 'object' && loadedProduct.category.name
+            ? loadedProduct.category.name
+            : (typeof loadedProduct.category === 'string' ? loadedProduct.category : 'Shop')
+        );
+      }
+      if (loadedProduct.subcategory) {
+        setSubcategoryName(
+          typeof loadedProduct.subcategory === 'object' && loadedProduct.subcategory.name
+            ? loadedProduct.subcategory.name
+            : (typeof loadedProduct.subcategory === 'string' ? loadedProduct.subcategory : '')
+        );
+      }
+    }
+  }, [loadedProduct]);
+
   const subcategoryId = typeof loadedProduct?.subcategory === 'object' 
     ? loadedProduct.subcategory._id || loadedProduct.subcategory.id 
     : loadedProduct?.subcategory;
@@ -67,7 +86,7 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
         if (catRes && catRes.success && Array.isArray(catRes.data)) {
           for (const cat of catRes.data) {
             const matchedSub = (cat.subcategories || []).find(
-              sub => (sub._id || sub.id) === subcategoryId
+              sub => (sub._id || sub.id) === subcategoryId || sub.slug === subcategoryId
             );
             if (matchedSub) {
               setCategoryName(cat.name || 'Shop');
@@ -585,12 +604,12 @@ const CustomizedProductDetails = ({ onAddToCart, addToWishlist, wishlist = [], r
            {subcategoryId && subcategoryName && (
                      <>
                        <span className="text-gray-300">/</span>
-                       <Link 
-                         to={`/sub-category/${subcategoryId}`}
-                         className="hover:text-primary transition-colors cursor-pointer"
-                       >
-                         {subcategoryName}
-                       </Link>
+                        <Link 
+                          to={loadedProduct?.subcategory?.slug ? `/${loadedProduct.subcategory.slug}` : `/sub-category/${subcategoryId}`}
+                          className="hover:text-primary transition-colors cursor-pointer"
+                        >
+                          {subcategoryName}
+                        </Link>
                      </>
                    )}
           <span className="text-gray-300">/</span>

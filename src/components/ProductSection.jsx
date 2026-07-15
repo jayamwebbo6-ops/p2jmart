@@ -28,14 +28,27 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
 
     if (!categoryId) return;
     
-    navigate(`/sub-category/${categoryId}`, {
-      state: {
-        subcategoryId: categoryId,
-        categoryId: categoryId,
-        subcategoryName: title || "Catalog",
-        categoryName: "Shop"
-      }
-    });
+    const subcategorySlug = products[0]?.subcategory?.slug;
+    
+    if (subcategorySlug) {
+      navigate(`/${subcategorySlug}`, {
+        state: {
+          subcategoryId: categoryId,
+          categoryId: categoryId,
+          subcategoryName: title || "Catalog",
+          categoryName: "Shop"
+        }
+      });
+    } else {
+      navigate(`/sub-category/${categoryId}`, {
+        state: {
+          subcategoryId: categoryId,
+          categoryId: categoryId,
+          subcategoryName: title || "Catalog",
+          categoryName: "Shop"
+        }
+      });
+    }
   };
 
   return (
@@ -71,7 +84,17 @@ const ProductSection = ({ title, products = [], wishlist = [], onWishlist, onRem
                     onWishlist={onWishlist}
                     onRemoveWishlist={onRemoveWishlist}
                     onAddToCart={onAddToCart}
-                    onClick={() => navigate(`/product/${productId}`, { state: { product } })}
+                    onClick={() => {
+                      const productSlug = product.slug || productId;
+                      const subcategorySlug = product.subcategory?.slug;
+                      if (product.customizeProduct === 'Yes') {
+                        navigate(`/customizedProductDetail/${productSlug}`, { state: { product } });
+                      } else if (subcategorySlug) {
+                        navigate(`/${subcategorySlug}/${productSlug}`, { state: { product } });
+                      } else {
+                        navigate(`/product/${productSlug}`, { state: { product } });
+                      }
+                    }}
                   />
                 );
               })}

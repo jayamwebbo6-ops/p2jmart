@@ -120,13 +120,19 @@ const ProductCard = ({
 
   const handleNavigation = (e) => {
     e.preventDefault();
-    const targetId = product.id || product._id;
     if (onClick) {
       onClick(product);
-    } else if (product.customizeProduct === 'Yes') {
-      navigate(`/customizedProductDetail/${targetId}`, { state: { product } });
+      return;
+    }
+    const productSlug = product.slug || product.id || product._id;
+    const subcategorySlug = product.subcategory?.slug;
+
+    if (product.customizeProduct === 'Yes') {
+      navigate(`/customizedProductDetail/${productSlug}`, { state: { product } });
+    } else if (subcategorySlug) {
+      navigate(`/${subcategorySlug}/${productSlug}`, { state: { product } });
     } else {
-      navigate(`/product/${targetId}`, { state: { product } });
+      navigate(`/product/${productSlug}`, { state: { product } });
     }
   };
 

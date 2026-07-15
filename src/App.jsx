@@ -317,6 +317,30 @@ function App() {
             </Route>
 
             <Route path="my-account/order/:id" element={<OrderDetails />} />
+
+            {/* SEO Slug Routes */}
+            <Route 
+              path=":subcategoryId" 
+              element={
+                <Subcategory 
+                  wishlist={wishlist}
+                  addToWishlist={addToWishlist}
+                  removeFromWishlist={removeFromWishlist}
+                  onAddToCart={addToCart}
+                />
+              } 
+            />
+            <Route 
+              path=":subcategoryId/:id" 
+              element={
+                <ProductDetail 
+                  onAddToCart={addToCart} 
+                  addToWishlist={addToWishlist}
+                  wishlist={wishlist}
+                  removeFromWishlist={removeFromWishlist}
+                />
+              } 
+            />
           </Route>
 
           {/* User Complete Profile Route */}

@@ -225,11 +225,15 @@ const handleItemClick = (product) => {
   setIsMobileSearchOpen(false);
   setSearchQuery('');
   
-  // FIXED: Added state passing configuration mapping to 'product' context key
+  const productSlug = product.slug || targetId;
+  const subcategorySlug = product.subcategory?.slug;
+
   if (product.customizeProduct === 'Yes') {
-    navigate(`/customizedProductDetail/${targetId}`, { state: { product: product } });
+    navigate(`/customizedProductDetail/${productSlug}`, { state: { product: product } });
+  } else if (subcategorySlug) {
+    navigate(`/${subcategorySlug}/${productSlug}`, { state: { product: product } });
   } else {
-    navigate(`/product/${targetId}`, { state: { product: product } });
+    navigate(`/product/${productSlug}`, { state: { product: product } });
   }
 };
 
@@ -588,11 +592,11 @@ const handleItemClick = (product) => {
                         {cat.subcategories.map((sub, i) => {
                           const subName = typeof sub === 'object' ? sub.name : sub;
                           const subId = typeof sub === 'object' ? (sub._id || sub.id) : null;
+                          const subSlug = typeof sub === 'object' ? sub.slug : null;
                           return (
                             <li key={subId || i}>
                               <Link 
-                                to="/products" 
-                                state={{ subcategoryId: subId, subcategoryName: subName }}
+                                to={subSlug ? `/${subSlug}` : `/sub-category/${subId}`}
                                 onClick={() => setIsMobileMenuOpen(false)} 
                                 className="text-gray-600 text-sm hover:text-primary transition-colors block"
                               >
