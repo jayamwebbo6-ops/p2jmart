@@ -60,7 +60,7 @@ const Wishlist = ({ wishlist = [], removeFromWishlist, addToCart }) => {
         </div>
       ) : (
        
-        <div className="grid grid-cols-1 min-[350px]:grid-cols-2 min-[825px]:grid-cols-3 min-[1020px]:grid-cols-4 gap-3 xs:gap-4">
+        <div className="grid grid-cols-1 min-[350px]:grid-cols-2 min-[825px]:grid-cols-3 min-[1020px]:grid-cols-4 mb-4 gap-3 xs:gap-4">
           {wishlist.map((product) => (
             <ProductCard
               key={product.id}

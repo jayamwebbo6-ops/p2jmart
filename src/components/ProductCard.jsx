@@ -213,19 +213,25 @@ const ProductCard = ({
         
         {/* Wishlist Actions Button */}
         {variant === "wishlist" ? (
-          <button
-            onClick={handleRemoveWishlistClick}
-            className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-white p-2 rounded-full shadow border border-gray-100 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 z-10 cursor-pointer transition-all duration-200"
-          >
-            <Trash2 size={14} strokeWidth={2} />
-          </button>
-        ) : (
-          <button
-            onClick={handleWishlistClick}
-            className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-white p-1.5 rounded-full shadow border border-gray-100 z-10 cursor-pointer transition-colors"
-          >
-            <Heart size={16} strokeWidth={2} fill={isWishlisted ? "#EF4444" : "none"} className={isWishlisted ? "text-red-500" : "text-gray-600 hover:text-red-500"} />
-          </button>
+         <button
+    onClick={handleRemoveWishlistClick}
+    className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-white p-1.5 sm:p-2 rounded-full shadow border border-gray-100 text-red-500 hover:text-white hover:bg-red-500 hover:border-red-500 z-10 cursor-pointer transition-all duration-200"
+  >
+    {/* Using responsive sizing or a smaller default for the trash icon */}
+    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" strokeWidth={2} />
+  </button>
+) : (
+  <button
+    onClick={handleWishlistClick}
+    className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 bg-white p-1 sm:p-1.5 rounded-full shadow border border-gray-100 z-10 cursor-pointer transition-colors"
+  >
+    {/* Using responsive sizing for the heart icon */}
+    <Heart 
+      strokeWidth={2} 
+      fill={isWishlisted ? "#EF4444" : "none"} 
+      className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isWishlisted ? "text-red-500" : "text-gray-600 hover:text-red-500"}`} 
+    />
+  </button>
         )}
       </div>
 
