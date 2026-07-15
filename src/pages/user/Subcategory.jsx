@@ -391,7 +391,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
   };
 
   return (
-    <div className="w-full pt-4 max-w-[1440px] mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased px-2 sm:px-4 lg:px-6">
+    <div className="w-full pt-4 max-w-[1440px] mx-auto min-h-screen bg-[#FDFDFB] text-gray-800 font-sans antialiased pb-4">
       <SEO 
         title={isCustomizedPage ? "Customized Products | P2J Mart" : `${subcategoryName} - P2J Mart`}
         description={isCustomizedPage ? "Explore our customized products at P2J Mart." : `Shop the best collection of ${subcategoryName} online at P2J Mart. High-quality personalized gifts, customized prints, combo packs, and more.`}
@@ -456,7 +456,7 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
 
       {/* Main Page Layout Body */}
       {/* Main Page Layout Body */}
-<div className="w-full flex flex-col min-[850px]:flex-row gap-4 lg:gap-6 items-start relative z-0 mt-6">
+<div className="w-full flex flex-col min-[850px]:flex-row gap-4 lg:gap-4 items-start relative z-0 ">
   
   {/* Desktop Sidebar - Absolute visual ceiling protection applied */}
   <aside className="hidden min-[850px]:block w-[240px] lg:w-[260px] flex-shrink-0 sticky top-[104px] max-h-[calc(100vh-120px)] overflow-y-auto pr-1">

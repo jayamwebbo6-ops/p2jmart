@@ -55,8 +55,8 @@ const AccountLayout = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#fcf9f5] font-sans py-6 md:py-8">
-      <div className="max-w-7xl mx-auto px-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className=" bg-[#fcf9f5] font-sans py-4 md:py-3">
+      <div className="max-w-7xl  mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-2 text-sm text-gray-500">
           <Link to="/" className="hover:text-primary transition-colors flex items-center">
@@ -94,7 +94,7 @@ const AccountLayout = () => {
         )}
       </div>
 
-      <div className="max-w-7xl mx-auto  flex flex-col min-[825px]:flex-row gap-6">
+      <div className="max-w-7xl flex flex-col min-[825px]:flex-row gap-2">
         
         {/* Responsive Sidebar Container */}
         <div className="w-full min-[825px]:w-64 flex-shrink-0 relative">

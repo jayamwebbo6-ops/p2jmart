@@ -195,7 +195,7 @@ const AddressBook = () => {
 
   if (isFormOpen) {
     return (
-      <div className="p-8 flex flex-col bg-white flex-1 h-full">
+      <div className="p-2 flex flex-col bg-white flex-1 h-full">
         <div className="flex justify-between items-center gap-3 mb-5 sm:mb-6 border-b border-gray-100 pb-3 sm:pb-4 w-full">
   <h2 className="text-lg [screen-width<=380px]:text-base sm:text-2xl font-black text-gray-900 tracking-tight text-left truncate select-none">
     {editingId ? 'Edit Address' : 'Add New Address'}
@@ -351,7 +351,7 @@ const AddressBook = () => {
   }
 
   return (
-    <div className="p-8 flex flex-col bg-white flex-1 h-full">
+    <div className="p-2 flex flex-col bg-white flex-1 h-full">
     
 
     <div className="w-full flex flex-col [@media(min-width:400px)]:flex-row [@media(min-width:400px)]:items-center justify-between gap-4 mb-6 sm:mb-8 border-b border-gray-100 pb-4 select-none">

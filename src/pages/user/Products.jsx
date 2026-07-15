@@ -68,18 +68,18 @@ const CategoryRow = memo(({ category }) => {
             type="button"
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+            className={`w-6 h-6 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollLeft ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           
           <button 
             type="button"
             onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
+            className={`w-6 h-6 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors ${canScrollRight ? 'bg-gray-200 hover:bg-gray-300 text-gray-700 cursor-pointer' : 'bg-gray-50 text-gray-300 cursor-not-allowed'}`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
           </button>
         </div>
       </div>
@@ -88,7 +88,7 @@ const CategoryRow = memo(({ category }) => {
       <div 
         ref={scrollRef}
         onScroll={checkScroll}
-        className="flex overflow-x-auto gap-6 md:gap-12 pb-4 scrollbar-hide snap-x px-2"
+        className="flex overflow-x-auto gap-6 md:gap-12 scrollbar-hide snap-x px-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {category.subcategories && category.subcategories.map((sub, idx) => {
@@ -106,7 +106,7 @@ const CategoryRow = memo(({ category }) => {
                 <img 
                   src={getSubcategoryImage(category.name, subName, idx, sub.image)} 
                   alt={subName}
-                  className="w-full h-full object-contain p-2"
+                  className="w-full h-full object-contain"
                   loading="lazy"
                   onError={(e) => {
                     e.target.src = "https://via.placeholder.com/150?text=No+Image";
@@ -141,7 +141,7 @@ const HeaderRow = memo(({ setHeaderHeight }) => {
 
   return (
     <div ref={ref}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6 ">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-4 ">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
         <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
           <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -185,10 +185,10 @@ const Products = () => {
             display: none;
         }
       `}</style>
-      <div className="max-w-7xl mx-auto w-full flex flex-col h-full px-4">
+      <div className="max-w-7xl mx-auto w-full flex flex-col h-full">
 
         {/* Page Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center pt-4 pb-4">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800">All Categories</h1>
           <div className="text-sm text-gray-500 mt-2 md:mt-0 flex items-center">
             <Link to="/" className="hover:text-primary transition-colors">Home</Link>
@@ -210,7 +210,7 @@ const Products = () => {
           ) : (
             <div className="space-y-10">
               {categories.map((category) => (
-                <div key={category._id || category.id} className="pb-4">
+                <div key={category._id || category.id} >
                   <CategoryRow category={category} />
                 </div>
               ))}
