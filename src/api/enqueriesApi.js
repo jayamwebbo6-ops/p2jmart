@@ -43,3 +43,9 @@ export const getEnqueryByIdAPI = async (id) => {
   const response = await api.get(`/enquiries/${id}`);
   return response.data;
 };
+
+// Reply to enquiry
+export const replyEnqueriesAPI = async (id, replyMessage) => {
+  const response = await api.post(`/enquiries/${id}/reply`, { replyMessage });
+  return response.data;
+};

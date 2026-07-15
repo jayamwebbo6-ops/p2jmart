@@ -5,7 +5,7 @@ import { toast } from '../../components/toast';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { DeleteBtn } from '../../components/AdminButtons';
 import PageHeader from '../../components/PageHeader';
-import { getEnqueriesAPI, updateEnqueriesAPI, deleteEnqueriesAPI } from '../../api/enqueriesApi';
+import { getEnqueriesAPI, updateEnqueriesAPI, deleteEnqueriesAPI, replyEnqueriesAPI } from '../../api/enqueriesApi';
 
 const STATIC_ENQUIRIES = [
   {
@@ -57,9 +57,43 @@ const Enquiries = () => {
     onConfirm: () => {}
   });
 
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+
+  useEffect(() => {
+    setReplyText('');
+  }, [activeEnquiryId]);
+
   const triggerConfirm = (title, message, onConfirm) => {
     setConfirmConfig({ title, message, onConfirm });
     setConfirmOpen(true);
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim()) return;
+    try {
+      setSendingReply(true);
+      const res = await replyEnqueriesAPI(activeEnquiryId, replyText);
+      if (res && res.success) {
+        toast.success('Reply email sent successfully');
+        setEnquiries(prev => {
+          const updated = prev.map(item => 
+            item.id === activeEnquiryId ? { ...item, replied: true, replyMessage: replyText, read: true } : item
+          );
+          localStorage.setItem('p2j_mart_enquiries', JSON.stringify(updated));
+          window.dispatchEvent(new Event('enquiriesUpdated'));
+          return updated;
+        });
+        setReplyText('');
+      } else {
+        toast.error(res.message || 'Failed to send reply');
+      }
+    } catch (err) {
+      console.error('Error replying to enquiry:', err);
+      toast.error('Failed to send reply email');
+    } finally {
+      setSendingReply(false);
+    }
   };
 
   const fetchEnquiries = async () => {
@@ -358,22 +392,64 @@ const Enquiries = () => {
 
               {/* Message Body */}
               <div className="p-6 flex-grow overflow-y-auto custom-scrollbar">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
-                  Message Content:
-                </span>
-                <p className="text-xs text-gray-700 leading-6 whitespace-pre-wrap bg-gray-50/50 p-4 rounded-xl border border-gray-100">
-                  {activeEnquiry.message}
-                </p>
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                      Message Content:
+                    </span>
+                    <p className="text-xs text-gray-700 leading-6 whitespace-pre-wrap bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                      {activeEnquiry.message}
+                    </p>
+                  </div>
+
+                  {/* Message Reply Composition Area */}
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                      Reply Content:
+                    </span>
+                    {activeEnquiry.replied ? (
+                      <div className="bg-emerald-50 text-emerald-800 p-4 rounded-xl border border-emerald-100 text-xs">
+                        <p className="font-semibold mb-1 flex items-center gap-1.5">
+                          <CheckCircle size={14} className="text-emerald-600" />
+                          Replied:
+                        </p>
+                        <p className="whitespace-pre-wrap text-slate-700 leading-relaxed">
+                          {activeEnquiry.replyMessage}
+                        </p>
+                      </div>
+                    ) : (
+                      <textarea
+                        rows={5}
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Compose your email response here..."
+                        className="w-full bg-white border border-gray-250 focus:border-gray-450 focus:ring-1 focus:ring-blue-500 rounded-xl p-4 text-xs font-medium text-slate-800 focus:outline-none resize-none leading-relaxed transition-all"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Action reply footer */}
-              <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+              <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center px-6">
                 <a
-                  href={`mailto:${activeEnquiry.email}?subject=Re: ${activeEnquiry.subject}`}
-                  className="bg-[#001E3C] hover:bg-[#003147] text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center gap-1.5"
+                  href={`mailto:${activeEnquiry.email}?subject=Re: ${activeEnquiry.subject}&body=${encodeURIComponent(replyText)}`}
+                  className="text-xs font-semibold text-blue-650 hover:text-blue-800 transition-colors"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <Mail size={14} /> Send Email Reply
+                  Or reply via mail app
                 </a>
+                
+                {!activeEnquiry.replied && (
+                  <button
+                    onClick={handleSendReply}
+                    disabled={sendingReply || !replyText.trim()}
+                    className="bg-[#001E3C] hover:bg-[#003147] text-white px-5 py-2 rounded-lg text-xs font-bold transition-colors shadow-sm inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {sendingReply ? 'Sending...' : <><Mail size={14} /> Send Email Reply</>}
+                  </button>
+                )}
               </div>
             </div>
           ) : (
