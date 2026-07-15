@@ -82,7 +82,7 @@ const Cart = ({
 
   return (
     /* Base wrapper layout: stacks on mobile (<800px), shifts side-by-side at >=801px */
-    <div className="w-full pt-6 flex flex-col min-[801px]:flex-row gap-6 font-['Inter'] items-start   max-w-7xl mx-auto">       
+    <div className="w-full pt-4 flex flex-col min-[801px]:flex-row gap-6 font-['Inter'] items-start   max-w-7xl mx-auto">       
       
       {/* Left Container: Items list */}
       <div className="flex-1 w-full flex flex-col gap-4 min-w-0">
