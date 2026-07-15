@@ -208,6 +208,17 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
 
   const stateData = location.state || {};
   const subcategoryId = paramSubcategoryId || stateData.subcategoryId || stateData.id;
+
+  useEffect(() => {
+    if (paramSubcategoryId) {
+      const lower = paramSubcategoryId.toLowerCase();
+      if (lower === 'sitemap.xml' || lower === 'sitemap.xsl') {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+        const rootBackendUrl = backendUrl.replace(/\/api$/, '');
+        window.location.replace(`${rootBackendUrl}/${lower}`);
+      }
+    }
+  }, [paramSubcategoryId]);
   
   const [categoryName, setCategoryName] = useState(stateData.categoryName || "Shop");
   const [subcategoryName, setSubcategoryName] = useState(stateData.subcategoryName || "Catalog");
