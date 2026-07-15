@@ -72,6 +72,7 @@ const Products = () => {
   const debouncedSearchQuery = useDebounce(searchQuery, 350);
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Preview Modal States
   const [previewProduct, setPreviewProduct] = useState(null);
@@ -282,6 +283,7 @@ useEffect(() => {
 
   const handleSaveCategory = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!catForm.name.trim()) return toast.error('Category Name is required');
 
     const defaultImage = 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=150&h=150&q=80';
@@ -294,6 +296,7 @@ useEffect(() => {
     };
 
     try {
+      setIsSaving(true);
       if (editItem) {
         const res = await updateCategoryAPI(editItem.id, payload);
         if (res.success) {
@@ -314,6 +317,8 @@ useEffect(() => {
       setModalType(null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error saving category');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -356,9 +361,11 @@ useEffect(() => {
 
   const handleSaveSubcategory = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!subForm.name.trim()) return toast.error('Subcategory Name is required');
 
     try {
+      setIsSaving(true);
       if (editItem) {
         const payload = {
           name: subForm.name.trim(),
@@ -389,6 +396,8 @@ useEffect(() => {
       setModalType(null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error saving subcategory');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -449,6 +458,7 @@ useEffect(() => {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!prodForm.title.trim()) return toast.error('Product Title is required');
     if (!prodForm.price) return toast.error('Price is required');
 
@@ -456,23 +466,24 @@ useEffect(() => {
     const finalImageUrl = prodForm.image.trim() || defaultProdImage;
     const discountValue = parseInt(prodForm.discount) || 0;
 
-    if (editItem) {
-      const existingProduct = activeProducts.find(p => p.id === editItem.id || p._id === editItem.id) || {};
-      const apiPayload = {
-        ...existingProduct,
-        title: prodForm.title,
-        price: parseFloat(prodForm.price),
-        originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
-        discount: discountValue,
-        image: finalImageUrl,
-        rating: parseFloat(prodForm.rating),
-        reviews: parseInt(prodForm.reviews),
-        categoryId: selectedCatId,
-        subcategoryId: parentId || selectedSubId,
-        freeShipping: prodForm.freeShipping || 'No'
-      };
+    try {
+      setIsSaving(true);
+      if (editItem) {
+        const existingProduct = activeProducts.find(p => p.id === editItem.id || p._id === editItem.id) || {};
+        const apiPayload = {
+          ...existingProduct,
+          title: prodForm.title,
+          price: parseFloat(prodForm.price),
+          originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
+          discount: discountValue,
+          image: finalImageUrl,
+          rating: parseFloat(prodForm.rating),
+          reviews: parseInt(prodForm.reviews),
+          categoryId: selectedCatId,
+          subcategoryId: parentId || selectedSubId,
+          freeShipping: prodForm.freeShipping || 'No'
+        };
 
-      try {
         const res = await updateProductAPI(editItem.id || editItem._id, apiPayload);
         if (res && res.success) {
           toast.success('Product updated successfully');
@@ -481,26 +492,22 @@ useEffect(() => {
         } else {
           toast.error(res.message || 'Failed to update product');
         }
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Error updating product');
-      }
-    } else {
-      const apiPayload = {
-        title: prodForm.title,
-        price: parseFloat(prodForm.price),
-        originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
-        discount: discountValue,
-        image: finalImageUrl,
-        rating: parseFloat(prodForm.rating),
-        reviews: parseInt(prodForm.reviews),
-        categoryId: selectedCatId,
-        subcategoryId: parentId || selectedSubId,
-        variants: [],
-        selectedAttributes: {},
-        freeShipping: prodForm.freeShipping || 'No'
-      };
+      } else {
+        const apiPayload = {
+          title: prodForm.title,
+          price: parseFloat(prodForm.price),
+          originalPrice: prodForm.originalPrice ? parseFloat(prodForm.originalPrice) : null,
+          discount: discountValue,
+          image: finalImageUrl,
+          rating: parseFloat(prodForm.rating),
+          reviews: parseInt(prodForm.reviews),
+          categoryId: selectedCatId,
+          subcategoryId: parentId || selectedSubId,
+          variants: [],
+          selectedAttributes: {},
+          freeShipping: prodForm.freeShipping || 'No'
+        };
 
-      try {
         const res = await createProductAPI(apiPayload);
         if (res && res.success) {
           toast.success('Product added successfully');
@@ -509,9 +516,11 @@ useEffect(() => {
         } else {
           toast.error(res.message || 'Failed to add product');
         }
-      } catch (err) {
-        toast.error(err.response?.data?.message || 'Error adding product');
       }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error saving product');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1397,8 +1406,8 @@ useEffect(() => {
 
               {/* Form Actions */}
               <div className="flex justify-end gap-2 border-t border-gray-100 pt-4 mt-2">
-                <CancelBtn onClick={() => setModalType(null)} />
-                <SaveBtn type="submit">Save Changes</SaveBtn>
+                <CancelBtn onClick={() => setModalType(null)} disabled={isSaving} />
+                <SaveBtn type="submit" disabled={isSaving}>{isSaving ? 'Saving...' : 'Save Changes'}</SaveBtn>
               </div>
 
             </form>

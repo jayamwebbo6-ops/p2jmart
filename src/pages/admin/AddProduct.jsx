@@ -561,6 +561,7 @@ const AddProduct = () => {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    if (loading) return;
     if (!selectedSubId) return toast.error('Please select a Subcategory');
     if (!prodForm.title.trim()) return toast.error('Product Title is required');
     
@@ -1397,12 +1398,12 @@ const AddProduct = () => {
               )}
             </div>
 
-            {/* Right side: Next or Save */}
+              {/* Right side: Next or Save */}
             <div className="flex items-center gap-2">
               {!isLastTab ? (
                 <NextBtn onClick={goNextTab} />
               ) : (
-                <SaveBtn type="submit">Save Product</SaveBtn>
+                <SaveBtn type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Product'}</SaveBtn>
               )}
             </div>
           </div>

@@ -104,6 +104,7 @@ const HomeContentManager = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [fetchSuccess, setFetchSuccess] = useState(false);
   const [toastMessage, setToastMessage] = useState('Saved changes successfully!');
   const [toastType, setToastType] = useState('success');
 
@@ -175,6 +176,7 @@ const HomeContentManager = () => {
           setCancellationReturnPolicy(cmsData.cancellationReturnPolicy || []);
           setDeliveryPolicy(cmsData.deliveryPolicy || []);
           setTermsConditions(cmsData.termsConditions || []);
+          setFetchSuccess(true);
         }
       } catch (err) {
         console.error('Fetch Home CMS error:', err);
@@ -190,6 +192,13 @@ const HomeContentManager = () => {
   }, []);
 
   const handleSaveChanges = async (customPayload = {}) => {
+    if (!fetchSuccess) {
+      setToastMessage('Cannot save changes: homepage settings were not successfully loaded from server.');
+      setToastType('error');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 4000);
+      return;
+    }
     try {
       setIsSaving(true);
       // Merge parent states with any state overrides provided on action invocation
@@ -291,7 +300,7 @@ const HomeContentManager = () => {
         title="Home Content Manager"
         subtitle="Customize your storefront experience. Manage banners, asset layouts, and metadata profiles."
       >
-        <SaveBtn onClick={() => handleSaveChanges()} type="button" disabled={isSaving || isLoading}>
+        <SaveBtn onClick={() => handleSaveChanges()} type="button" disabled={isSaving || isLoading || !fetchSuccess}>
           {isSaving ? 'Saving...' : 'Save Changes'}
         </SaveBtn>
       </PageHeader>
