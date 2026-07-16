@@ -19,9 +19,9 @@ export const getOrderByIdAPI = async (id) => {
   return response.data;
 };
 
-// Cancel an order
-export const cancelOrderAPI = async (id) => {
-  const response = await userApi.put(`/orders/cancel-order/${id}`);
+// Cancel an order (Updated to accept and pass the reason object)
+export const cancelOrderAPI = async (id, reason) => {
+  const response = await userApi.put(`/orders/cancel-order/${id}`, { reason });
   return response.data;
 };
 
@@ -43,11 +43,6 @@ export const requestItemReturnAPI = async (orderId, itemId, returnData) => {
   return response.data;
 };
 
-// Admin: Approve or Reject a return request
-export const adminReviewReturnAPI = async (orderId, itemId, action) => {
-  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { action });
-  return response.data;
-};
 
 // Admin: Mark returned item parcel as received
 export const adminReceiveParcelAPI = async (orderId, itemId) => {
@@ -61,11 +56,45 @@ export const adminRefundItemAPI = async (orderId, itemId) => {
   return response.data;
 };
 
-// Admin: Get all return requests
+
+
+// Admin: Get all return requests (Points to the pooled backend route)
 export const adminGetReturnRequestsAPI = async () => {
   const response = await api.get('/orders/admin/return-requests');
   return response.data;
 };
 
+// Admin: Get all cancellation requests (Pulls from the pooled data route)
+export const adminGetCancellationRequestsAPI = async () => {
+  // Fix: Point this to your actual cancellation backend route
+  const response = await api.get('/orders/admin/cancellations'); 
+  return response.data;
+};
+
+export const adminReviewCancellationAPI = async (orderId, itemId, action) => {
+  const targetStatus = action === 'approve' ? 'Cancelled' : 'Cancellation Rejected';
+  const response = await api.put(`/orders/admin/orders/review-cancellation/${orderId}`, { 
+    status: targetStatus 
+  });
+  return response.data;
+};
 
 
+
+// Admin: Approve or Reject an individual item return request
+// FIX: Swapped from POST to PUT, matching your structural URL mapping
+export const adminReviewReturnAPI = async (orderId, itemId, action) => {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { 
+    action // expects 'approve' or 'reject' inside the request body
+  });
+  return response.data;
+};
+
+
+export const adminLogout = () => {
+  deleteCookie('p2jmart_admin_token');
+};
+
+export const isAdminAuthenticated = () => {
+  return !!getCookie('p2jmart_admin_token');
+};
