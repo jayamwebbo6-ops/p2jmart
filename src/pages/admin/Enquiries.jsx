@@ -10,8 +10,8 @@ import { getEnqueriesAPI, updateEnqueriesAPI, deleteEnqueriesAPI, replyEnqueries
 const STATIC_ENQUIRIES = [
   {
     id: 'enq-static-1',
-    name: 'Zubair Ahmed',
-    email: 'zubair.ahmed@example.com',
+    name: ' ',
+    email: '@example.com',
     phone: '+91 9840123456',
     subject: 'Custom Product Inquiry',
     message: 'I would like to order a customized acrylic nameplate with a floral design. Do you support custom font styles or logos? Let me know the dimensions supported and the expected delivery date for Chennai.',

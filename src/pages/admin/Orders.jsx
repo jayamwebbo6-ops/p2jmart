@@ -25,7 +25,9 @@ import {
   adminUpdateOrderStatusAPI,
   adminReviewReturnAPI,
   adminReceiveParcelAPI,
-  adminRefundItemAPI
+  adminRefundItemAPI,
+  adminInitiateOrderRefundAPI,
+  adminCompleteOrderRefundAPI
 } from '../../api/orderApi';
 import { toast } from '../../components/toast';
 
@@ -36,16 +38,44 @@ const formatImageUrl = (path) => {
   return `${BACKEND_URL}/${path.replace(/^\//, '')}`;
 };
 
-const getFrontendProductUrl = (productId) => {
+const slugify = (text) => {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars except hyphens
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
+const getFrontendProductUrl = (item) => {
   const base = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
   const cleanBase = base.endsWith('/') ? base.slice(0, -1) : base;
-  return `${cleanBase}/product/${productId}`;
+  if (!item) return `${cleanBase}/products`;
+  
+  const title = item.title || item.productName || '';
+  if (title) {
+    return `${cleanBase}/product/${slugify(title)}`;
+  }
+  
+  const id = item.productId || item._id || item.id || '';
+  return `${cleanBase}/product/${id}`;
 };
 
 const getDisplayStatus = (order) => {
   if (!order) return '';
   const hasRefunded = order.items?.some(item => item.returnStatus === 'Returned & Refunded');
   if (hasRefunded) return 'Refunded';
+
+  const payStatus = String(order.paymentStatus || '').toLowerCase();
+  if (payStatus.includes('refund required')) return 'Refund Required';
+  if (payStatus.includes('refund pending')) return 'Refund Pending';
+  if (payStatus === 'refunded') return 'Refunded';
+  if (payStatus === 'awaiting gateway confirmation') return 'Awaiting Gateway Confirmation';
+
   return order.fulfillmentStatus || order.status || 'Pending';
 };
 
@@ -95,8 +125,8 @@ const mapOrderData = (order) => {
           : order.paymentStatus)
       : 'Pending',
     paymentMethod: order.paymentMethod || 'Card',
-    razorpayOrderId: order.orderId || '',
-    razorpayPaymentId: 'pay_simulated_' + order._id?.slice(-6),
+    ccavenueTrackingId: order.ccavenueTrackingId || '',
+    bankRefNo: order.bankRefNo || '',
     amount: order.total,
     trackingId: order.trackingId || '',
     trackingLink: order.trackingLink || '',
@@ -192,6 +222,48 @@ const OrderManagement = () => {
     } catch (err) {
       console.error(err);
       toast.error(err.response?.data?.message || 'Server error issuing refund');
+    }
+  };
+
+  const handleInitiateRefund = async (orderId) => {
+    try {
+      const res = await adminInitiateOrderRefundAPI(orderId, 'Initiated from orders management screen');
+      if (res.success) {
+        toast.success('Refund workflow initiated successfully');
+        const updatedRaw = res.data;
+        const mappedOrder = mapOrderData(updatedRaw);
+
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(mappedOrder);
+        }
+      } else {
+        toast.error(res.message || 'Failed to initiate refund');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error initiating refund');
+    }
+  };
+
+  const handleCompleteRefund = async (orderId) => {
+    try {
+      const res = await adminCompleteOrderRefundAPI(orderId, 'Marked as refunded from orders management screen');
+      if (res.success) {
+        toast.success('Refund marked as completed successfully');
+        const updatedRaw = res.data;
+        const mappedOrder = mapOrderData(updatedRaw);
+
+        setOrders(prev => prev.map(o => o._id === orderId ? mappedOrder : o));
+        if (selectedOrder && selectedOrder._id === orderId) {
+          setSelectedOrder(mappedOrder);
+        }
+      } else {
+        toast.error(res.message || 'Failed to complete refund');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || 'Server error completing refund');
     }
   };
 
@@ -448,7 +520,7 @@ const OrderManagement = () => {
                     title={`Click to view ${item.title} on storefront`}
                     onClick={() => {
                       if (item.productId) {
-                        window.open(getFrontendProductUrl(item.productId), '_blank');
+                        window.open(getFrontendProductUrl(item), '_blank');
                       }
                     }}
                     className="w-10 h-10 object-cover rounded-lg ring-2 ring-white border border-slate-100 flex-shrink-0 shadow-sm cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
@@ -471,8 +543,10 @@ const OrderManagement = () => {
                 title={`Click to view ${order.productName} on storefront`}
                 onClick={() => {
                   const firstItem = order.items?.[0];
-                  if (firstItem && firstItem.productId) {
-                    window.open(getFrontendProductUrl(firstItem.productId), '_blank');
+                  if (firstItem) {
+                    window.open(getFrontendProductUrl(firstItem), '_blank');
+                  } else if (order.productName) {
+                    window.open(getFrontendProductUrl({ title: order.productName }), '_blank');
                   }
                 }}
                 className="w-10 h-10 object-cover rounded-lg border border-slate-100 flex-shrink-0 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
@@ -487,8 +561,10 @@ const OrderManagement = () => {
               title={`Click to view ${order.items?.[0]?.title || order.productName} on storefront`}
               onClick={() => {
                 const firstItem = order.items?.[0];
-                if (firstItem && firstItem.productId) {
-                  window.open(getFrontendProductUrl(firstItem.productId), '_blank');
+                if (firstItem) {
+                  window.open(getFrontendProductUrl(firstItem), '_blank');
+                } else if (order.productName) {
+                  window.open(getFrontendProductUrl({ title: order.productName }), '_blank');
                 }
               }}
             >
@@ -521,6 +597,9 @@ const OrderManagement = () => {
           getDisplayStatus(order) === 'Shipped' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
           getDisplayStatus(order) === 'Pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
           getDisplayStatus(order) === 'Refunded' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+          getDisplayStatus(order) === 'Refund Pending' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+          getDisplayStatus(order) === 'Refund Required' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+          getDisplayStatus(order) === 'Awaiting Gateway Confirmation' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' :
           'bg-yellow-50 text-yellow-600 border border-yellow-100'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${
@@ -529,16 +608,40 @@ const OrderManagement = () => {
             getDisplayStatus(order) === 'Shipped' ? 'bg-blue-500' : 
             getDisplayStatus(order) === 'Pending' ? 'bg-amber-500' : 
             getDisplayStatus(order) === 'Refunded' ? 'bg-purple-500' : 
+            getDisplayStatus(order) === 'Refund Pending' ? 'bg-orange-500' : 
+            getDisplayStatus(order) === 'Refund Required' ? 'bg-rose-500' :
+            getDisplayStatus(order) === 'Awaiting Gateway Confirmation' ? 'bg-indigo-500' :
             'bg-yellow-500'
           }`} />
           {getDisplayStatus(order)}
         </span>
       </td>
       <td className="py-3 px-2.5">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold border border-emerald-100">
-          <CheckCircle2 size={11} className="text-emerald-600" />
-          {order.paymentStatus}
-        </span>
+        {(() => {
+          const s = String(order.paymentStatus || '').toLowerCase();
+          if (s === 'paid') {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold border border-emerald-100">
+                <CheckCircle2 size={11} className="text-emerald-600" />
+                {order.paymentStatus}
+              </span>
+            );
+          } else if (s === 'failed') {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-50 text-red-600 rounded-lg text-[10px] font-bold border border-red-100">
+                <XCircle size={11} className="text-red-600" />
+                {order.paymentStatus}
+              </span>
+            );
+          } else {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-600 rounded-lg text-[10px] font-bold border border-amber-100">
+                <AlertCircle size={11} className="text-amber-600" />
+                {order.paymentStatus}
+              </span>
+            );
+          }
+        })()}
       </td>
       <td className="py-3 px-2.5 text-right font-bold text-slate-900 text-sm whitespace-nowrap">
         ₹{order.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
@@ -554,7 +657,14 @@ const OrderManagement = () => {
             <select
               value={getDisplayStatus(order)}
               onChange={(e) => handleFulfillmentChange(order._id, e.target.value)}
-              disabled={getDisplayStatus(order) === 'Cancelled' || getDisplayStatus(order) === 'Delivered' || getDisplayStatus(order) === 'Refunded'}
+              disabled={
+                getDisplayStatus(order) === 'Cancelled' || 
+                getDisplayStatus(order) === 'Delivered' || 
+                getDisplayStatus(order) === 'Refunded' || 
+                getDisplayStatus(order) === 'Refund Required' || 
+                getDisplayStatus(order) === 'Refund Pending' || 
+                getDisplayStatus(order) === 'Awaiting Gateway Confirmation'
+              }
               className="bg-white border border-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 pr-7 rounded-lg appearance-none focus:outline-none transition-all cursor-pointer shadow-2xs disabled:bg-slate-50 disabled:cursor-not-allowed"
             >
               <option value="Pending" disabled={order.fulfillmentStatus !== 'Pending'}>Pending</option>
@@ -563,6 +673,9 @@ const OrderManagement = () => {
               <option value="Delivered" disabled={order.fulfillmentStatus !== 'Shipped' && order.fulfillmentStatus !== 'Delivered'}>Delivered</option>
               {getDisplayStatus(order) === 'Cancelled' && <option value="Cancelled">Cancelled</option>}
               {getDisplayStatus(order) === 'Refunded' && <option value="Refunded">Refunded</option>}
+              {getDisplayStatus(order) === 'Refund Required' && <option value="Refund Required">Refund Required</option>}
+              {getDisplayStatus(order) === 'Refund Pending' && <option value="Refund Pending">Refund Pending</option>}
+              {getDisplayStatus(order) === 'Awaiting Gateway Confirmation' && <option value="Awaiting Gateway Confirmation">Awaiting Gateway</option>}
             </select>
             <ChevronDown size={12} className="absolute right-2 top-2.5 text-slate-400 pointer-events-none" />
           </div>
@@ -697,6 +810,10 @@ const OrderManagement = () => {
                   <option value="DELIVERED">Delivered</option>
                   <option value="CANCELLED">Cancelled</option>
                   <option value="RETURNED">Returned</option>
+                  <option value="REFUND REQUIRED">Refund Required</option>
+                  <option value="REFUND PENDING">Refund Pending</option>
+                  <option value="REFUNDED">Refunded</option>
+                  <option value="AWAITING GATEWAY CONFIRMATION">Awaiting Gateway</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-4 top-4 text-slate-500 pointer-events-none" />
               </div>
@@ -803,12 +920,14 @@ const OrderManagement = () => {
                 <div>
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-xl text-xs font-black uppercase tracking-wider ${
                     getDisplayStatus(selectedOrder) === 'Refunded' ? 'bg-purple-50 border-purple-200 text-purple-700' :
+                    getDisplayStatus(selectedOrder) === 'Refund Pending' ? 'bg-orange-50 border-orange-200 text-orange-700' :
                     getDisplayStatus(selectedOrder) === 'Delivered' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
                     getDisplayStatus(selectedOrder) === 'Cancelled' ? 'bg-red-50 border-red-200 text-red-700' :
                     'bg-amber-50 border-amber-200 text-amber-700'
                   }`}>
                     <Clock size={12} strokeWidth={2.5} className={
                       getDisplayStatus(selectedOrder) === 'Refunded' ? 'text-purple-700' :
+                      getDisplayStatus(selectedOrder) === 'Refund Pending' ? 'text-orange-700' :
                       getDisplayStatus(selectedOrder) === 'Delivered' ? 'text-emerald-700' :
                       getDisplayStatus(selectedOrder) === 'Cancelled' ? 'text-red-700' :
                       'text-amber-700'
@@ -837,23 +956,95 @@ const OrderManagement = () => {
                     <div className="flex gap-1"><span className="text-slate-400 font-normal">Method:</span> <span className="text-slate-900 font-black">{selectedOrder.paymentMethod}</span></div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-slate-400 font-normal">Status:</span>
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[9px] font-bold border border-emerald-100">
-                        <CheckCircle2 size={10} strokeWidth={3} className="text-emerald-600" />{selectedOrder.paymentStatus}
-                      </span>
+                      {(() => {
+                        const s = String(selectedOrder.paymentStatus || '').toLowerCase();
+                        if (s === 'paid') {
+                          return (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[9px] font-bold border border-emerald-100">
+                              <CheckCircle2 size={10} strokeWidth={3} className="text-emerald-600" />{selectedOrder.paymentStatus}
+                            </span>
+                          );
+                        } else if (s === 'failed') {
+                          return (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-red-50 text-red-600 rounded-md text-[9px] font-bold border border-red-100">
+                              <XCircle size={10} strokeWidth={3} className="text-red-600" />{selectedOrder.paymentStatus}
+                            </span>
+                          );
+                        } else if (s.includes('refund required') || s.includes('refund pending')) {
+                          return (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-orange-50 text-orange-600 rounded-md text-[9px] font-bold border border-orange-100">
+                              <AlertCircle size={10} strokeWidth={3} className="text-orange-600" />{selectedOrder.paymentStatus}
+                            </span>
+                          );
+                        } else if (s === 'refunded') {
+                          return (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded-md text-[9px] font-bold border border-purple-100">
+                              <CheckCircle2 size={10} strokeWidth={3} className="text-purple-600" />{selectedOrder.paymentStatus}
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md text-[9px] font-bold border border-amber-100">
+                              <AlertCircle size={10} strokeWidth={3} className="text-amber-600" />{selectedOrder.paymentStatus}
+                            </span>
+                          );
+                        }
+                      })()}
                     </div>
-                    <div className="space-y-1 pt-1 border-t border-slate-100">
-                      <div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Razorpay Order ID</div>
-                        <div className="bg-slate-50 border border-slate-100 text-slate-600 px-2 py-1 rounded-md mt-0.5 font-mono truncate text-[10px] select-all">{selectedOrder.razorpayOrderId}</div>
+                    {String(selectedOrder.paymentMethod || '').toLowerCase().includes('ccavenue') && (
+                      <div className="space-y-1 pt-1 border-t border-slate-100">
+                        <div>
+                          <div className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">CCAvenue Tracking ID</div>
+                          <div className="bg-slate-50 border border-slate-100 text-slate-600 px-2 py-1 rounded-md mt-0.5 font-mono truncate text-[10px] select-all">{selectedOrder.ccavenueTrackingId || 'N/A'}</div>
+                        </div>
+                        <div className="pt-1">
+                          <div className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Bank Ref No</div>
+                          <div className="bg-slate-50 border border-slate-100 text-slate-600 px-2 py-1 rounded-md mt-0.5 font-mono truncate text-[10px] select-all">{selectedOrder.bankRefNo || 'N/A'}</div>
+                        </div>
                       </div>
-                      <div className="pt-1">
-                        <div className="text-[10px] text-slate-400 uppercase tracking-wide font-bold">Razorpay Payment ID</div>
-                        <div className="bg-slate-50 border border-slate-100 text-slate-600 px-2 py-1 rounded-md mt-0.5 font-mono truncate text-[10px] select-all">{selectedOrder.razorpayPaymentId}</div>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* ADMIN ACTION: ORDER REFUND WORKFLOW */}
+              {(selectedOrder.paymentStatus === 'Paid - Refund Required' || selectedOrder.paymentStatus === 'Refund Pending') && (
+                <div className="bg-orange-50/40 border border-orange-200 rounded-2xl p-5 space-y-4">
+                  <div className="flex items-center justify-between border-b border-orange-200/60 pb-2">
+                    <h4 className="text-xs font-black text-orange-700 uppercase tracking-wider">Delayed Payment - Refund Management</h4>
+                    <span className="bg-orange-600 text-white font-bold text-[9px] px-2 py-0.5 rounded-full uppercase">Action Required</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-xs font-medium text-slate-600">
+                      <p className="font-bold text-slate-800">
+                        {selectedOrder.paymentStatus === 'Paid - Refund Required' 
+                          ? 'This payment was received after stock reservations expired, and items are out of stock. A refund must be issued.'
+                          : 'A refund has been initiated for this order and is currently pending completion.'}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-1">Order Total: ₹{selectedOrder.amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div>
+                      {selectedOrder.paymentStatus === 'Paid - Refund Required' ? (
+                        <button
+                          type="button"
+                          onClick={() => handleInitiateRefund(selectedOrder._id)}
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+                        >
+                          <RotateCw size={14} /> Initiate Refund
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleCompleteRefund(selectedOrder._id)}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+                        >
+                          <CheckCircle2 size={14} /> Complete Refund
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* TRACKING INFORMATION */}
               {selectedOrder.fulfillmentStatus === 'Shipped' && (
@@ -970,13 +1161,33 @@ const OrderManagement = () => {
                         <tr key={item._id || index}>
                           <td className="py-3 px-4">
                             {item.image ? (
-                              <img src={formatImageUrl(item.image)} alt={item.title} className="w-10 h-10 object-cover rounded-lg border border-slate-100" />
+                              <img 
+                                src={formatImageUrl(item.image)} 
+                                alt={item.title} 
+                                title={`Click to view ${item.title} on storefront`}
+                                onClick={() => {
+                                  if (item.productId) {
+                                    window.open(getFrontendProductUrl(item), '_blank');
+                                  }
+                                }}
+                                className="w-10 h-10 object-cover rounded-lg border border-slate-100 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200"
+                              />
                             ) : (
                               <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-lg text-slate-400 font-bold text-[9px] flex items-center justify-center">N/A</div>
                             )}
                           </td>
                            <td className="py-3 px-4 max-w-[180px]">
-                            <div className="text-red-600 font-bold truncate">{item.title}</div>
+                            <div 
+                              className="text-red-600 font-bold truncate cursor-pointer hover:text-red-800 transition-colors"
+                              title={`Click to view ${item.title} on storefront`}
+                              onClick={() => {
+                                if (item.productId) {
+                                  window.open(getFrontendProductUrl(item), '_blank');
+                                }
+                              }}
+                            >
+                              {item.title}
+                            </div>
                             {item.isComboProduct && item.includedProducts && item.includedProducts.length > 0 && (
                               <div className="mt-2 space-y-2 border-t border-slate-100 pt-2">
                                 <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Combo Pack Items:</div>

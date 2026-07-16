@@ -761,7 +761,7 @@ const Checkout = ({
   }, 1000);
 
   if (step === 3 && placedOrder) {
-    const isPaid = placedOrder.paymentStatus === 'paid';
+    const isPaid = placedOrder.paymentStatus?.toLowerCase() === 'paid';
     return (
     
       <div className="w-full max-w-4xl mx-auto sm:py-10 px-3 sm:px-4 font-sans flex flex-col items-center select-none antialiased">
@@ -1412,7 +1412,7 @@ const Checkout = ({
                     type="text"
                     name="fullName"
                     required
-                    placeholder="e.g. Zubair Zubair"
+                    placeholder="Enter your full name"
                     value={newAddress.fullName}
                     onChange={handleInputChange}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-xs sm:text-sm bg-gray-50/50"
