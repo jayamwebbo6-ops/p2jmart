@@ -337,25 +337,26 @@ const OrderDetails = () => {
   }
 };
 
-  const handleCancelConfirm = async () => {
-    try {
-      setCancelling(true);
-      const response = await cancelOrderAPI(id);
-      if (response && response.success) {
-        toast.success('Order cancelled successfully.');
-        setOrder(response.data);
-      } else {
-        toast.success('Order cancelled.');
-        fetchOrderDetails();
-      }
-    } catch (err) {
-      console.error('Error cancelling order:', err);
-      toast.error(err.response?.data?.message || 'Failed to cancel order.');
-    } finally {
-      setCancelling(false);
-      setIsCancelModalOpen(false);
+  const handleCancelConfirm = async (reason) => {
+  try {
+    setCancelling(true);
+    // Pass the reason value down to your updated orderApi method
+    const response = await cancelOrderAPI(id, reason); 
+    if (response && response.success) {
+      toast.success('Cancellation request submitted successfully.');
+      setOrder(response.data);
+    } else {
+      toast.success('Cancellation request submitted.');
+      fetchOrderDetails();
     }
-  };
+  } catch (err) {
+    console.error('Error cancelling order:', err);
+    toast.error(err.response?.data?.message || 'Failed to submit cancellation request.');
+  } finally {
+    setCancelling(false);
+    setIsCancelModalOpen(false);
+  }
+};
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
@@ -787,15 +788,16 @@ const OrderDetails = () => {
         />
       </div>
 
-      <ConfirmationModal
-        isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
-        onConfirm={handleCancelConfirm}
-        title="Cancel Order"
-        message={`Are you sure you want to cancel this order? This action cannot be reversed.`}
-        confirmText="Cancel Order"
-        isDanger={true}
-      />
+  <ConfirmationModal
+  isOpen={isCancelModalOpen}
+  onClose={() => setIsCancelModalOpen(false)}
+  onConfirm={handleCancelConfirm}
+  title="Cancel Order"
+  message="Are you sure you want to cancel this order? This action cannot be reversed."
+  confirmText="Cancel Order"
+  isDanger={true}
+  showReasonInput={true}
+/>
        
       <ReviewModal
         isOpen={isReviewModalOpen}

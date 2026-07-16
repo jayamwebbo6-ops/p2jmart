@@ -19,9 +19,9 @@ export const getOrderByIdAPI = async (id) => {
   return response.data;
 };
 
-// Cancel an order
-export const cancelOrderAPI = async (id) => {
-  const response = await userApi.put(`/orders/cancel-order/${id}`);
+// Cancel an order (Updated to accept and pass the reason object)
+export const cancelOrderAPI = async (id, reason) => {
+  const response = await userApi.put(`/orders/cancel-order/${id}`, { reason });
   return response.data;
 };
 
@@ -43,11 +43,6 @@ export const requestItemReturnAPI = async (orderId, itemId, returnData) => {
   return response.data;
 };
 
-// Admin: Approve or Reject a return request
-export const adminReviewReturnAPI = async (orderId, itemId, action) => {
-  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { action });
-  return response.data;
-};
 
 // Admin: Mark returned item parcel as received
 export const adminReceiveParcelAPI = async (orderId, itemId) => {
@@ -61,7 +56,9 @@ export const adminRefundItemAPI = async (orderId, itemId) => {
   return response.data;
 };
 
-// Admin: Get all return requests
+
+
+// Admin: Get all return requests (Points to the pooled backend route)
 export const adminGetReturnRequestsAPI = async () => {
   const response = await api.get('/orders/admin/return-requests');
   return response.data;
