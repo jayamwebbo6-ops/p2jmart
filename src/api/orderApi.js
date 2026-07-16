@@ -82,11 +82,6 @@ export const adminCompleteOrderRefundAPI = async (id, notes = '') => {
   return response.data;
 };
 
-// Admin: Get all return requests (Points to the pooled backend route)
-export const adminGetReturnRequestsAPI = async () => {
-  const response = await api.get('/orders/admin/return-requests');
-  return response.data;
-};
 
 // Admin: Get all cancellation requests (Pulls from the pooled data route)
 export const adminGetCancellationRequestsAPI = async () => {
