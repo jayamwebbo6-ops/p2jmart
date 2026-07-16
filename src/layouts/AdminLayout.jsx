@@ -24,6 +24,7 @@ import {
 import { isAdminAuthenticated, adminLogout } from '../api/adminApi';
 import { getEnqueriesAPI } from '../api/enqueriesApi';
 import { getProductsAPI } from '../api/productApi';
+import { adminGetReturnRequestsAPI, adminGetCancellationRequestsAPI } from '../api/orderApi';
 
 const AdminLayout = () => {
   const location = useLocation();
@@ -109,6 +110,7 @@ const AdminLayout = () => {
   }, []);
 
   const [lowStockCount, setLowStockCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   const fetchLowStockCount = async () => {
     if (!isAdminAuthenticated()) return;
@@ -143,13 +145,42 @@ const AdminLayout = () => {
     }
   };
 
+  const fetchPendingRequestsCount = async () => {
+    if (!isAdminAuthenticated()) return;
+    try {
+      // 1. Get return requests
+      const returnsRes = await adminGetReturnRequestsAPI();
+      let returnCount = 0;
+      if (returnsRes && returnsRes.success && Array.isArray(returnsRes.data)) {
+        returnCount = returnsRes.data.filter(item => item.returnStatus === 'Return Requested').length;
+      }
+
+      // 2. Get cancellation requests
+      const cancellationsRes = await adminGetCancellationRequestsAPI();
+      let cancellationCount = 0;
+      if (cancellationsRes && cancellationsRes.success && Array.isArray(cancellationsRes.data)) {
+        cancellationCount = cancellationsRes.data.filter(order => order.status === 'Cancellation Requested').length;
+      }
+
+      setPendingRequestsCount(returnCount + cancellationCount);
+    } catch (err) {
+      console.error("Error fetching pending requests count for badge:", err);
+    }
+  };
+
   useEffect(() => {
     fetchLowStockCount();
-    const interval = setInterval(fetchLowStockCount, 15000);
+    fetchPendingRequestsCount();
+    const interval = setInterval(() => {
+      fetchLowStockCount();
+      fetchPendingRequestsCount();
+    }, 15000);
     window.addEventListener('stockRestocked', fetchLowStockCount);
+    window.addEventListener('pendingRequestsUpdated', fetchPendingRequestsCount);
     return () => {
       clearInterval(interval);
       window.removeEventListener('stockRestocked', fetchLowStockCount);
+      window.removeEventListener('pendingRequestsUpdated', fetchPendingRequestsCount);
     };
   }, [location.pathname]);
 
@@ -222,9 +253,16 @@ const AdminLayout = () => {
             <ShoppingBag size={18} className="flex-shrink-0" />
             <span className="text-sm">Orders</span>
           </Link>
-          <Link to="/admin/return-requests" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/return-requests')}`}>
-            <RefreshCw size={18} className="flex-shrink-0" />
-            <span className="text-sm">Return Requests (Buyer)</span>
+          <Link to="/admin/return-requests" onClick={() => setIsSidebarOpen(false)} className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${isActive('/admin/return-requests')}`}>
+            <div className="flex items-center gap-3">
+              <RefreshCw size={18} className="flex-shrink-0" />
+              <span className="text-sm">Return & Cancel (Buyer)</span>
+            </div>
+            {pendingRequestsCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center min-w-5">
+                {pendingRequestsCount}
+              </span>
+            )}
           </Link>
           <Link to="/admin/shippingCost" onClick={() => setIsSidebarOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive('/admin/shippingCost')}`}>
             <Truck size={18} className="flex-shrink-0" />
