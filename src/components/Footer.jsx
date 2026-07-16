@@ -140,34 +140,7 @@ const Footer = () => {
 
         </div>
 
-        {/* Divider */}
-        {/* <hr className="border-gray-500/40 my-8" /> */}
-
-        {/* Middle Section: Value Props */}
-        {/* <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 text-center sm:text-left">
-          <div className="flex flex-col items-center sm:items-start">
-            <Truck size={32} className="text-[#1890ff] mb-3" strokeWidth={1.5} />
-            <h5 className="text-white font-bold mb-1 text-[14px]">Free Delivery</h5>
-            <p className="text-[13px] text-gray-200 leading-relaxed max-w-xs">
-              Phasellus blandit massa enim elit, of passage varius nunc.
-            </p>
-          </div>
-          <div className="flex flex-col items-center sm:items-start">
-            <RotateCcw size={32} className="text-[#1890ff] mb-3" strokeWidth={1.5} />
-            <h5 className="text-white font-bold mb-1 text-[14px]">30 Day Returns Guarantee</h5>
-            <p className="text-[13px] text-gray-200 leading-relaxed max-w-xs">
-              Phasellus blandit massa enim elit, of passage varius nunc.
-            </p>
-          </div>
-          <div className="flex flex-col items-center sm:items-start sm:col-span-2 md:col-span-1">
-            <Headset size={32} className="text-[#1890ff] mb-3" strokeWidth={1.5} />
-            <h5 className="text-white font-bold mb-1 text-[14px]">24/7 Online Support</h5>
-            <p className="text-[13px] text-gray-200 leading-relaxed max-w-xs">
-              Phasellus blandit massa enim elit, of passage varius nunc.
-            </p>
-          </div>
-        </div> */}
-
+       
       </div>
 
       {/* Bottom Bar */}

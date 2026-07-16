@@ -129,6 +129,7 @@ const Home = ({ wishlist = [], addToWishlist, removeFromWishlist, onAddToCart })
       <div ref={collectionsRef}>
         {isCollectionsVisible ? <Collections /> : <SectionSkeleton height="500px" />}
       </div>
+
     </div>
   );
 };
