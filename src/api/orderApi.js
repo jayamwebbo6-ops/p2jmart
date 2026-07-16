@@ -82,5 +82,45 @@ export const adminCompleteOrderRefundAPI = async (id, notes = '') => {
   return response.data;
 };
 
+// Admin: Get all return requests (Points to the pooled backend route)
+export const adminGetReturnRequestsAPI = async () => {
+  const response = await api.get('/orders/admin/return-requests');
+  return response.data;
+};
+
+// Admin: Get all cancellation requests (Pulls from the pooled data route)
+export const adminGetCancellationRequestsAPI = async () => {
+  // Fix: Point this to your actual cancellation backend route
+  const response = await api.get('/orders/admin/cancellations'); 
+  return response.data;
+};
+
+export const adminReviewCancellationAPI = async (orderId, itemId, action) => {
+  const targetStatus = action === 'approve' ? 'Cancelled' : 'Cancellation Rejected';
+  const response = await api.put(`/orders/admin/orders/review-cancellation/${orderId}`, { 
+    status: targetStatus 
+  });
+  return response.data;
+};
+
+
+
+// Admin: Approve or Reject an individual item return request
+// FIX: Swapped from POST to PUT, matching your structural URL mapping
+export const adminReviewReturnAPI = async (orderId, itemId, action) => {
+  const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { 
+    action // expects 'approve' or 'reject' inside the request body
+  });
+  return response.data;
+};
+
+
+export const adminLogout = () => {
+  deleteCookie('p2jmart_admin_token');
+};
+
+export const isAdminAuthenticated = () => {
+  return !!getCookie('p2jmart_admin_token');
+};
 
 
