@@ -80,9 +80,6 @@ export const adminReviewCancellationAPI = async (orderId, itemId, action) => {
 };
 
 
-
-// Admin: Approve or Reject an individual item return request
-// FIX: Swapped from POST to PUT, matching your structural URL mapping
 export const adminReviewReturnAPI = async (orderId, itemId, action) => {
   const response = await api.put(`/orders/${orderId}/items/${itemId}/admin/review-return`, { 
     action // expects 'approve' or 'reject' inside the request body
