@@ -218,6 +218,7 @@ const [sortConfig, setSortConfig] = useState({ key: 'cancellationDate', directio
         toast.success(`${activeTab === 'returns' ? 'Return' : 'Cancellation'} request updated successfully.`);
         loadRequests();
         setIsViewModalOpen(false);
+        window.dispatchEvent(new Event('pendingRequestsUpdated'));
       } else {
         toast.error(res.message || 'Failed to process request');
       }
@@ -241,6 +242,7 @@ const [sortConfig, setSortConfig] = useState({ key: 'cancellationDate', directio
           if (res && res.success) {
             toast.success('Parcel marked as received.');
             loadRequests();
+            window.dispatchEvent(new Event('pendingRequestsUpdated'));
           } else {
             toast.error(res.message || 'Failed to mark parcel as received');
           }
@@ -263,6 +265,7 @@ const [sortConfig, setSortConfig] = useState({ key: 'cancellationDate', directio
           if (res && res.success) {
             toast.success('Refund processed successfully.');
             loadRequests();
+            window.dispatchEvent(new Event('pendingRequestsUpdated'));
           } else {
             toast.error(res.message || 'Failed to process refund');
           }
@@ -523,23 +526,21 @@ const [sortConfig, setSortConfig] = useState({ key: 'cancellationDate', directio
   
   {(selectedRequest.displayStatus === 'Return Requested' || selectedRequest.displayStatus === 'Cancellation Requested') && (
     <>
+      {/* <button 
+        type="button" 
+        onClick={() => handleReviewAction('reject')} 
+        className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed" 
+        disabled={actionLoading}
+      >
+        Reject Request
+      </button> */}
       <button 
         type="button" 
         onClick={() => handleReviewAction('approve')} 
         className="bg-primary hover:bg-[#002233] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed" 
         disabled={actionLoading}
       >
-        {actionLoading ? (
-          <>
-            <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Processing...
-          </>
-        ) : (
-          'Approve Request'
-        )}
+        {actionLoading ? 'Processing...' : 'Approve Request'}
       </button>
     </>
   )}

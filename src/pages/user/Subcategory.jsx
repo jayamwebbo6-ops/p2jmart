@@ -213,7 +213,10 @@ const SubCategoryPage = ({ wishlist = [], addToWishlist, removeFromWishlist, onA
     if (paramSubcategoryId) {
       const lower = paramSubcategoryId.toLowerCase();
       if (lower === 'sitemap.xml' || lower === 'sitemap.xsl') {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000/api';
+        let backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://p2jmart.in/p2jmart-backend/api';
+        if (backendUrl.startsWith('%VITE_') || !backendUrl) {
+          backendUrl = window.location.origin + '/p2jmart-backend/api';
+        }
         const rootBackendUrl = backendUrl.replace(/\/api$/, '');
         window.location.replace(`${rootBackendUrl}/${lower}`);
       }

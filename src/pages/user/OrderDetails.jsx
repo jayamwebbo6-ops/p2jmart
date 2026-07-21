@@ -13,6 +13,19 @@ import {
 import OrderInvoice from '../../components/OrderInvoice';
 import { getHomeCMS } from '../../api/homeCms';
 
+const slugify = (text) => {
+  if (!text) return '';
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')       // Remove all non-word chars except hyphens
+    .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start
+    .replace(/-+$/, '');            // Trim - from end
+};
+
 const OrderDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -625,7 +638,14 @@ const OrderDetails = () => {
                   return (
                     <div key={index} className="flex flex-col sm:flex-row sm:justify-between items-start gap-3 border-b border-dashed border-gray-100 pb-4 last:border-0 last:pb-0">
                       <div className="flex items-start space-x-4 min-w-0 flex-1">
-                        <div className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative">
+                        <div 
+                          onClick={() => {
+                            if (productId) {
+                              navigate(`/product/${slugify(item.title || item.name || '')}`);
+                            }
+                          }}
+                          className="w-14 h-14 bg-gray-50 rounded-lg overflow-hidden border border-gray-100 p-1 flex-shrink-0 relative cursor-pointer hover:opacity-80 transition-opacity"
+                        >
                           <img src={formatImageUrl(item.image || (item.includedProducts && item.includedProducts[0]?.image))} alt={item.title || item.name} className="w-full h-full object-cover rounded-md" />
                           {item.isComboProduct && (
                             <div className="absolute bottom-0 inset-x-0 bg-blue-900/90 text-white text-[8px] font-bold text-center py-0.5 tracking-wider uppercase flex items-center justify-center gap-0.5">
@@ -634,7 +654,16 @@ const OrderDetails = () => {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-gray-800 text-sm mb-0.5 truncate">{item.title || item.name}</p>
+                          <p 
+                            onClick={() => {
+                              if (productId) {
+                                navigate(`/product/${slugify(item.title || item.name || '')}`);
+                              }
+                            }}
+                            className="font-bold text-gray-800 text-sm mb-0.5 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                          >
+                            {item.title || item.name}
+                          </p>
                           {item.isComboProduct ? (
                             <>
                               <span className="inline-block mb-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-1.5 py-0.2 rounded-full">

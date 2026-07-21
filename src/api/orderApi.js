@@ -64,6 +64,25 @@ export const adminGetReturnRequestsAPI = async () => {
   return response.data;
 };
 
+// Admin: Get all orders requiring refund
+export const adminGetRefundRequiredOrdersAPI = async () => {
+  const response = await api.get('/orders/admin/refund-required');
+  return response.data;
+};
+
+// Admin: Initiate refund for order
+export const adminInitiateOrderRefundAPI = async (id, notes = '') => {
+  const response = await api.put(`/orders/admin/refund/${id}/initiate`, { notes });
+  return response.data;
+};
+
+// Admin: Complete refund for order
+export const adminCompleteOrderRefundAPI = async (id, notes = '') => {
+  const response = await api.put(`/orders/admin/refund/${id}/complete`, { notes });
+  return response.data;
+};
+
+
 // Admin: Get all cancellation requests (Pulls from the pooled data route)
 export const adminGetCancellationRequestsAPI = async () => {
   // Fix: Point this to your actual cancellation backend route
@@ -95,3 +114,5 @@ export const adminLogout = () => {
 export const isAdminAuthenticated = () => {
   return !!getCookie('p2jmart_admin_token');
 };
+
+
