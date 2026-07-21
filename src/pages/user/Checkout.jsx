@@ -1565,15 +1565,15 @@ const Checkout = ({
               </div>
 
               <h3 className="text-[#2b183a] font-bold text-xl tracking-tight mb-2">Payment Testing Gateway</h3>
-              <p className="text-gray-500 text-xs sm:text-[13px] leading-relaxed px-2 mb-6">
+              {/* <p className="text-gray-500 text-xs sm:text-[13px] leading-relaxed px-2 mb-6">
                 Choose to simulate the payment callback directly or proceed to the CCAvenue Sandbox portal.
-              </p>
+              </p> */}
 
               <div className="bg-[#f5f7f9] rounded-xl p-4 mb-6 text-left border border-gray-100 space-y-2 text-xs">
-                <div className="flex justify-between items-center text-[#556370]">
+                {/* <div className="flex justify-between items-center text-[#556370]">
                   <span>Payment Provider:</span>
                   <span className="font-bold text-gray-800">CCAvenue Sandbox</span>
-                </div>
+                </div> */}
                 <div className="flex justify-between items-center text-[#556370]">
                   <span>Amount Due:</span>
                   <span className="font-bold text-gray-900 text-sm">₹{total.toFixed(2)}</span>
@@ -1597,7 +1597,7 @@ const Checkout = ({
                   <span className="bg-rose-800/50 text-white w-4 h-4 rounded flex items-center justify-center text-[10px]">✗</span>
                 </a>
 
-                <div className="relative flex py-2 items-center">
+                {/*<div className="relative flex py-2 items-center">
                   <div className="flex-grow border-t border-gray-200"></div>
                   <span className="flex-shrink mx-4 text-gray-400 text-[10px] font-bold uppercase tracking-wider">or</span>
                   <div className="flex-grow border-t border-gray-200"></div>
@@ -1629,7 +1629,7 @@ const Checkout = ({
                   className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 px-4 rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-2"
                 >
                   <span>Proceed to CCAvenue Sandbox Page</span>
-                </button>
+                </button> */}
 
                 <button
                   type="button"

@@ -526,14 +526,14 @@ const [sortConfig, setSortConfig] = useState({ key: 'cancellationDate', directio
   
   {(selectedRequest.displayStatus === 'Return Requested' || selectedRequest.displayStatus === 'Cancellation Requested') && (
     <>
-      <button 
+      {/* <button 
         type="button" 
         onClick={() => handleReviewAction('reject')} 
         className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-all shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed" 
         disabled={actionLoading}
       >
         Reject Request
-      </button>
+      </button> */}
       <button 
         type="button" 
         onClick={() => handleReviewAction('approve')} 
